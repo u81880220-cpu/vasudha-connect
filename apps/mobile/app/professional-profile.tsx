@@ -5,12 +5,15 @@ import {supabase} from "../src/lib/supabase";
 import {useAuth} from "../src/auth/AuthProvider";
 import {VasudhaLogo} from "../src/components/VasudhaLogo";
 import {AppBottomNav} from "../src/components/AppBottomNav";
+import { ServicePicker, ServiceSelection } from "../src/components/ServicePicker";
 
 type Skill={id:string;name:string;category:string};
 
 export default function ProfessionalProfile(){
  const{session}=useAuth();const uid=session?.user.id;
  const[p,setP]=useState<any>({headline:"",about:"",years_experience:"0",service_radius_km:"10",is_available:false,verification_status:"pending"});
+ const[serviceSelection,setServiceSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:null,serviceName:null,subServiceId:null,subServiceName:null});
+ const[selectedSubServices,setSelectedSubServices]=useState<any[]>([]);
  const[skills,setSkills]=useState<Skill[]>([]),[chosen,setChosen]=useState<string[]>([]),[areas,setAreas]=useState<any[]>([]);
  const[phone,setPhone]=useState("");
  const[port,setPort]=useState({title:"",description:"",media_url:""}),[area,setArea]=useState({label:"",city:"",state:"",radius_km:"10"}),[loading,setLoading]=useState(true);
@@ -25,7 +28,10 @@ export default function ProfessionalProfile(){
    supabase.from("user_contact_details").select("phone").eq("user_id",uid).maybeSingle()
   ]);
   if(q.data)setP({...q.data,years_experience:String(q.data.years_experience||0),service_radius_km:String(q.data.service_radius_km||10)});
-  setPhone(ct.data?.phone||"");setSkills(k.data||[]);setChosen((c.data||[]).map((x:any)=>x.skill_id));setAreas(a.data||[]);setLoading(false);
+  setPhone(ct.data?.phone||"");setSkills(k.data||[]);setChosen((c.data||[]).map((x:any)=>x.skill_id));setAreas(a.data||[]);
+  const ids=(pss.data||[]).map((x:any)=>x.sub_service_id);
+  if(ids.length){const{data:catalog}=await supabase.from("service_catalogue_sub_services").select("id,name,service_id,service_catalogue_services(name)").in("id",ids);setSelectedSubServices((catalog||[]).map((x:any)=>({id:x.id,name:x.name,serviceId:x.service_id,serviceName:x.service_catalogue_services?.name||"Service"})));}else setSelectedSubServices([]);
+  setLoading(false);
  }
  async function save(){
   const{error}=await supabase.from("professional_profiles").update({headline:p.headline?.trim()||null,about:p.about?.trim()||null,years_experience:Number(p.years_experience)||0,service_radius_km:Number(p.service_radius_km)||10,is_available:p.is_available}).eq("user_id",uid);
@@ -34,6 +40,8 @@ export default function ProfessionalProfile(){
   if(phoneError)return Alert.alert("Phone save failed",phoneError.message);
   await supabase.from("professional_skills").delete().eq("professional_id",uid);
   if(chosen.length)await supabase.from("professional_skills").insert(chosen.map((skill_id,i)=>({professional_id:uid,skill_id,years_experience:Number(p.years_experience)||0,is_primary:i===0})));
+  await supabase.from("professional_sub_services").delete().eq("professional_id",uid);
+  if(selectedSubServices.length){const{error:serviceError}=await supabase.from("professional_sub_services").insert(selectedSubServices.map((x,i)=>({professional_id:uid,sub_service_id:x.id,years_experience:Number(p.years_experience)||0,is_primary:i===0})));if(serviceError)return Alert.alert("Services save failed",serviceError.message);}
   Alert.alert("Saved","Professional profile updated.");load();
  }
  async function addArea(){
@@ -60,8 +68,8 @@ export default function ProfessionalProfile(){
     <View style={s.av}><View><Text style={s.bold}>Available for new work</Text><Text style={s.muted}>Customers can see your availability.</Text></View><Switch value={!!p.is_available} onValueChange={v=>setP({...p,is_available:v})}/></View>
     <Pressable style={s.p} onPress={save}><Text style={s.pt}>Save profile & skills</Text></Pressable>
    </View>
-   <Text style={s.section}>Skills & services</Text>
-   <View style={s.card}><Text style={s.helper}>Select all services you provide. Your first selected skill is your primary service.</Text><View style={s.wrap}>{skills.map(x=><Pressable key={x.id} onPress={()=>setChosen(z=>z.includes(x.id)?z.filter(id=>id!==x.id):[...z,x.id])} style={[s.chip,chosen.includes(x.id)&&s.on]}><Text style={[s.chipText,chosen.includes(x.id)&&s.chipOn]}>{chosen.includes(x.id)?"✓ ":""}{x.name}</Text></Pressable>)}</View></View>
+   <Text style={s.section}>Services you provide</Text>
+   <View style={s.card}><Text style={s.helper}>Choose the exact Category → Service → Sub-service combinations you provide. You can add multiple services.</Text><ServicePicker value={serviceSelection} onChange={v=>{setServiceSelection(v);if(v.subServiceId&&!selectedSubServices.some(x=>x.id===v.subServiceId))setSelectedSubServices(z=>[...z,{id:v.subServiceId,name:v.subServiceName||"Sub-service",serviceId:v.serviceId,serviceName:v.serviceName||"Service"}]);}}/><View style={s.selectedList}>{selectedSubServices.length===0?<Text style={s.muted}>No exact services selected yet.</Text>:selectedSubServices.map((x:any,i:number)=><View key={x.id} style={s.selectedService}><View style={{flex:1}}><Text style={s.bold}>{x.serviceName}</Text><Text style={s.muted}>{x.name}{i===0?" · Primary":""}</Text></View><Pressable onPress={()=>setSelectedSubServices(z=>z.filter(y=>y.id!==x.id))}><Text style={s.remove}>Remove</Text></Pressable></View>)}</View></View>
    <Text style={s.section}>Service areas</Text>
    <View style={s.card}>{areas.map(x=><View key={x.id} style={s.list}><View style={{flex:1}}><Text style={s.bold}>{x.label}</Text><Text style={s.muted}>{[x.city,x.state].filter(Boolean).join(", ")} · {x.radius_km} km</Text></View><Pressable onPress={async()=>{await supabase.from("service_areas").delete().eq("id",x.id);load()}}><Text style={s.remove}>Remove</Text></Pressable></View>)}<TextInput style={s.i} placeholder="Area / locality" value={area.label} onChangeText={v=>setArea({...area,label:v})}/><View style={s.inline}><TextInput style={[s.i,s.half]} placeholder="City" value={area.city} onChangeText={v=>setArea({...area,city:v})}/><TextInput style={[s.i,s.half]} placeholder="State" value={area.state} onChangeText={v=>setArea({...area,state:v})}/></View><TextInput style={s.i} placeholder="Radius km" keyboardType="number-pad" value={area.radius_km} onChangeText={v=>setArea({...area,radius_km:v})}/><Pressable style={s.secondary} onPress={addArea}><Text style={s.secondaryText}>+ Add service area</Text></Pressable></View>
    <Text style={s.section}>Portfolio</Text>
