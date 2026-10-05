@@ -1,2 +1,128 @@
-import {useEffect,useState} from "react";import{Alert,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,TextInput,View}from"react-native";import{router}from"expo-router";import{useAuth}from"../src/auth/AuthProvider";import{supabase}from"../src/lib/supabase";import{VasudhaLogo}from"../src/components/VasudhaLogo";import{AppBottomNav}from"../src/components/AppBottomNav";
-export default function CustomerProfile(){const{session}=useAuth();const[f,setF]=useState<any>({full_name:"",display_name:"",bio:"",city:"",state:"",country:"India"});const[rep,setRep]=useState<any>(null);const[loading,setLoading]=useState(true);useEffect(()=>{if(session)load()},[session?.user.id]);async function load(){setLoading(true);const{data,error}=await supabase.from("profiles").select("full_name,display_name,bio,city,state,country,customer_trust_score").eq("id",session!.user.id).maybeSingle();if(error)Alert.alert("Error",error.message);else if(data)setF(data);const{data:rp}=await supabase.rpc("get_customer_reputation",{p_customer_id:session!.user.id});if(rp)setRep(rp);setLoading(false)}async function save(){const{error}=await supabase.from("profiles").update(f).eq("id",session!.user.id);if(error)Alert.alert("Save failed",error.message);else{Alert.alert("Saved","Profile updated.");router.back()}}undefinedconst s=StyleSheet.create({safe:{flex:1,backgroundColor:"#fff"},c:{padding:18,paddingBottom:96},top:{height:48,flexDirection:"row",alignItems:"center",justifyContent:"space-between"},back:{width:40,height:40,borderRadius:20,backgroundColor:"#f2f7f5",alignItems:"center",justifyContent:"center"},backText:{fontSize:30,color:"#13201c",marginTop:-3},more:{fontSize:26,color:"#087D65"},t:{fontSize:28,fontWeight:"900",color:"#13201c",marginTop:18},sub:{color:"#66736e",lineHeight:20,marginTop:6},muted:{color:"#66736e",marginTop:10},trust:{marginTop:18,borderWidth:1,borderColor:"#bcd9d0",borderRadius:16,padding:16,backgroundColor:"#f2f8f6"},trustHead:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},trustTitle:{fontWeight:"900",fontSize:17,color:"#13201c"},trustCaption:{fontSize:12,color:"#66736e",marginTop:3},score:{fontSize:30,fontWeight:"900",color:"#087D65"},trustBar:{height:7,borderRadius:4,backgroundColor:"#dce9e5",overflow:"hidden",marginTop:14},trustFill:{height:7,borderRadius:4,backgroundColor:"#087D65"},trustMeta:{fontSize:12,color:"#66736e",marginTop:10},section:{fontSize:18,fontWeight:"900",color:"#13201c",marginTop:24,marginBottom:2},l:{fontWeight:"800",color:"#46534f",marginTop:14,textTransform:"capitalize"},i:{borderWidth:1,borderColor:"#cfdad6",borderRadius:12,padding:12,marginTop:6,minHeight:48,backgroundColor:"#fff",color:"#13201c"},bio:{minHeight:100,textAlignVertical:"top"},p:{marginTop:24,backgroundColor:"#087D65",padding:15,borderRadius:12,alignItems:"center",justifyContent:"center",minHeight:50},pt:{color:"#fff",fontWeight:"900"}});
+import { useEffect, useState } from "react";
+import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { router } from "expo-router";
+import { useAuth } from "../src/auth/AuthProvider";
+import { supabase } from "../src/lib/supabase";
+import { VasudhaLogo } from "../src/components/VasudhaLogo";
+import { AppBottomNav } from "../src/components/AppBottomNav";
+
+export default function CustomerProfile() {
+  const { session } = useAuth();
+  const [f, setF] = useState<any>({
+    full_name: "", display_name: "", bio: "", city: "", state: "", country: "India"
+  });
+  const [rep, setRep] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (session?.user.id) load();
+  }, [session?.user.id]);
+
+  async function load() {
+    if (!session?.user.id) return;
+    setLoading(true);
+    const { data, error } = await supabase.from("profiles")
+      .select("full_name,display_name,bio,city,state,country,customer_trust_score")
+      .eq("id", session.user.id).maybeSingle();
+    if (error) Alert.alert("Error", error.message);
+    else if (data) setF(data);
+
+    const { data: rp } = await supabase.rpc("get_customer_reputation", {
+      p_customer_id: session.user.id
+    });
+    if (rp) setRep(rp);
+    setLoading(false);
+  }
+
+  async function save() {
+    if (!session?.user.id) return;
+    const { error } = await supabase.from("profiles")
+      .update(f).eq("id", session.user.id);
+    if (error) Alert.alert("Save failed", error.message);
+    else {
+      Alert.alert("Saved", "Profile updated.");
+      router.back();
+    }
+  }
+
+  const score = Math.min(100, Math.max(0, Number(rep?.trust_score || 0)));
+
+  return (
+    <SafeAreaView style={s.safe}>
+      <ScrollView contentContainerStyle={s.c} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <View style={s.top}>
+          <Pressable onPress={() => router.back()} style={s.back} accessibilityLabel="Go back">
+            <Text style={s.backText}>‹</Text>
+          </Pressable>
+          <VasudhaLogo compact />
+          <Text style={s.more}>⋯</Text>
+        </View>
+
+        <Text style={s.t}>My Customer Profile</Text>
+        <Text style={s.sub}>Your profile helps professionals understand who they are working with.</Text>
+        {loading ? <Text style={s.muted}>Loading profile…</Text> : null}
+
+        <View style={s.trust}>
+          <View style={s.trustHead}>
+            <View>
+              <Text style={s.trustTitle}>Customer Trust</Text>
+              <Text style={s.trustCaption}>Your reputation on VASUDHA CONNECT</Text>
+            </View>
+            <Text style={s.score}>{Math.round(score)}</Text>
+          </View>
+          <View style={s.trustBar}>
+            <View style={[s.trustFill, { width: `${score}%` }]} />
+          </View>
+          <Text style={s.trustMeta}>
+            {rep?.jobs_completed || 0} completed jobs · {rep?.reviews_received || 0} reviews · {rep?.would_work_again || 0}% would work again
+          </Text>
+        </View>
+
+        <Text style={s.section}>Personal details</Text>
+        {Object.keys(f).map((k) => (
+          <View key={k}>
+            <Text style={s.l}>{k.replaceAll("_", " ")}</Text>
+            <TextInput
+              style={[s.i, k === "bio" && s.bio]}
+              value={f[k] || ""}
+              onChangeText={(v) => setF({ ...f, [k]: v })}
+              multiline={k === "bio"}
+              placeholder={`Enter ${k.replaceAll("_", " ")}`}
+            />
+          </View>
+        ))}
+
+        <Pressable style={s.p} onPress={save}>
+          <Text style={s.pt}>Save changes</Text>
+        </Pressable>
+      </ScrollView>
+      <AppBottomNav active="profile" />
+    </SafeAreaView>
+  );
+}
+
+const s = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: "#fff" },
+  c: { padding: 18, paddingBottom: 96 },
+  top: { height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  back: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#f2f7f5", alignItems: "center", justifyContent: "center" },
+  backText: { fontSize: 30, color: "#13201c", marginTop: -3 },
+  more: { fontSize: 26, color: "#087D65" },
+  t: { fontSize: 28, fontWeight: "900", color: "#13201c", marginTop: 18 },
+  sub: { color: "#66736e", lineHeight: 20, marginTop: 6 },
+  muted: { color: "#66736e", marginTop: 10 },
+  trust: { marginTop: 18, borderWidth: 1, borderColor: "#bcd9d0", borderRadius: 16, padding: 16, backgroundColor: "#f2f8f6" },
+  trustHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  trustTitle: { fontWeight: "900", fontSize: 17, color: "#13201c" },
+  trustCaption: { fontSize: 12, color: "#66736e", marginTop: 3 },
+  score: { fontSize: 30, fontWeight: "900", color: "#087D65" },
+  trustBar: { height: 7, borderRadius: 4, backgroundColor: "#dce9e5", overflow: "hidden", marginTop: 14 },
+  trustFill: { height: 7, borderRadius: 4, backgroundColor: "#087D65" },
+  trustMeta: { fontSize: 12, color: "#66736e", marginTop: 10 },
+  section: { fontSize: 18, fontWeight: "900", color: "#13201c", marginTop: 24, marginBottom: 2 },
+  l: { fontWeight: "800", color: "#46534f", marginTop: 14, textTransform: "capitalize" },
+  i: { borderWidth: 1, borderColor: "#cfdad6", borderRadius: 12, padding: 12, marginTop: 6, minHeight: 48, backgroundColor: "#fff", color: "#13201c" },
+  bio: { minHeight: 100, textAlignVertical: "top" },
+  p: { marginTop: 24, backgroundColor: "#087D65", padding: 15, borderRadius: 12, alignItems: "center", justifyContent: "center", minHeight: 50 },
+  pt: { color: "#fff", fontWeight: "900" }
+});
