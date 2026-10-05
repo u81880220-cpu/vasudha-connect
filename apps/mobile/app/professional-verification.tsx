@@ -61,7 +61,7 @@ export default function ProfessionalVerification() {
     try {
       if (!session) throw new Error("You are not signed in.");
       const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
-      const path = \`\${session.user.id}/\${Date.now()}-\${Math.random().toString(36).slice(2, 8)}.\${ext}\`;
+      const path = session.user.id + "/" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "." + ext;
       const response = await fetch(file.uri);
       const body = await response.arrayBuffer();
       const { error: uploadError } = await supabase.storage.from("verification-documents").upload(path, body, {
