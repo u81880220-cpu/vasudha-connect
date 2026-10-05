@@ -16,7 +16,7 @@ export default function AdminHome(){
  const[session,setSession]=useState<any>(null);
  const[email,setEmail]=useState(""),[password,setPassword]=useState(""),[message,setMessage]=useState("");
  const[items,setItems]=useState<Item[]>([]),[pros,setPros]=useState<Professional[]>([]),[skills,setSkills]=useState<Skill[]>([]);
- const[areas,setAreas]=useState<Area[]>([]),[reputation,setReputation]=useState<Reputation|null>(null),[customers,setCustomers]=useState<any[]>([]),[complaints,setComplaints]=useState<any[]>([]),[portfolio,setPortfolio]=useState<Portfolio[]>([]);
+ const[areas,setAreas]=useState<Area[]>([]),[reputation,setReputation]=useState<Reputation|null>(null),[customers,setCustomers]=useState<any[]>([]),[complaints,setComplaints]=useState<any[]>([]),[portfolio,setPortfolio]=useState<Portfolio[]>([]);\n const[areaDraft,setAreaDraft]=useState<Partial<Area>|null>(null),[areaSaving,setAreaSaving]=useState(false);
  const[selected,setSelected]=useState<Professional|null>(null),[loading,setLoading]=useState(false);
 
  useEffect(()=>{
@@ -44,7 +44,22 @@ export default function AdminHome(){
    if(a.error)setMessage(a.error.message);else setAreas((a.data||[]) as Area[]);
    if(r.error)setMessage(r.error.message);else setReputation(r.data||{});
  }
- async function setSkill(id:string,active:boolean){const{error}=await supabase.rpc("admin_set_skill_status",{p_skill_id:id,p_active:active});if(error)setMessage(error.message);else await loadSkills()}
+ async function saveArea(action:"create"|"update"|"delete",area?:Area){
+  if(!selected)return;
+  if(action!=="delete"&&!areaDraft)return;
+  setAreaSaving(true);
+  const d=areaDraft||area||{};
+  const {error}=await supabase.rpc("admin_save_professional_service_area",{
+    p_action:action,p_user_id:selected.user_id,p_area_id:area?.id||null,
+    p_label:d.label||null,p_city:d.city||null,p_state:d.state||null,
+    p_latitude:d.latitude??null,p_longitude:d.longitude??null,
+    p_radius_km:Number(d.radius_km||10),p_is_primary:Boolean(d.is_primary)
+  });
+  setAreaSaving(false);
+  if(error){setMessage(error.message);return;}
+  setAreaDraft(null);setMessage(action==="delete"?"Service area deleted.":"Service area saved.");await inspectProfessional(selected);
+}
+async function setSkill(id:string,active:boolean){const{error}=await supabase.rpc("admin_set_skill_status",{p_skill_id:id,p_active:active});if(error)setMessage(error.message);else await loadSkills()}
  async function reviewPortfolio(id:string,decision:"approved"|"rejected"){const note=window.prompt(decision==="rejected"?"Reason for rejection (optional):":"Admin note (optional):")||null;const{error}=await supabase.rpc("admin_review_portfolio",{p_portfolio_id:id,p_decision:decision,p_note:note});if(error)setMessage(error.message);else{setMessage(decision==="approved"?"Portfolio item approved.":"Portfolio item rejected.");await loadPortfolio()}}
 
  if(!session)return <main style={s.wrap}><div style={s.card}><h1>VASUDHA CONNECT</h1><p style={s.muted}>Admin control centre</p><input style={s.input} placeholder="Admin email" value={email} onChange={e=>setEmail(e.target.value)}/><input style={s.input} type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)}/><button style={s.primary} onClick={login}>Sign in</button>{message&&<p>{message}</p>}<p style={s.note}>Only users explicitly added to the VASUDHA admin allow-list can access this dashboard.</p></div></main>;
@@ -75,7 +90,15 @@ export default function AdminHome(){
     ["Would hire again",\`\${reputation?.would_hire_again_pct??0}%\`],
     ["Reviews",\`\${reputation?.reviews_total??0}\`],
    ].map(([a,b])=><div key={a} style={s.metric}><span style={s.muted}>{a}</span><strong>{b}</strong></div>)}</div>
-   <h3>Service areas</h3>{!areas.length?<p style={s.muted}>No service areas configured.</p>:areas.map(a=><div key={a.id} style={s.area}><strong>{a.label}</strong><span>{a.city||""}{a.state?", "+a.state:""} • {a.radius_km} km{a.is_primary?" • Primary":""}</span></div>)}
+   <h3>Service areas</h3><button style={s.primary} onClick={()=>setAreaDraft({label:"",city:selected.city||"",state:selected.state||"",radius_km:10,is_primary:areas.length===0})}>Add service area</button>
+   {areaDraft&&<div style={s.editor}>
+    <input style={s.input} placeholder="Area label" value={areaDraft.label||""} onChange={e=>setAreaDraft({...areaDraft,label:e.target.value})}/>
+    <div style={s.two}><input style={s.input} placeholder="City" value={areaDraft.city||""} onChange={e=>setAreaDraft({...areaDraft,city:e.target.value})}/><input style={s.input} placeholder="State" value={areaDraft.state||""} onChange={e=>setAreaDraft({...areaDraft,state:e.target.value})}/></div>
+    <div style={s.two}><input style={s.input} type="number" step="0.000001" placeholder="Latitude" value={areaDraft.latitude??""} onChange={e=>setAreaDraft({...areaDraft,latitude:e.target.value===""?null:Number(e.target.value)})}/><input style={s.input} type="number" step="0.000001" placeholder="Longitude" value={areaDraft.longitude??""} onChange={e=>setAreaDraft({...areaDraft,longitude:e.target.value===""?null:Number(e.target.value)})}/></div>
+    <div style={s.two}><input style={s.input} type="number" min="1" max="500" placeholder="Radius km" value={areaDraft.radius_km??10} onChange={e=>setAreaDraft({...areaDraft,radius_km:Number(e.target.value)})}/><label style={s.check}><input type="checkbox" checked={Boolean(areaDraft.is_primary)} onChange={e=>setAreaDraft({...areaDraft,is_primary:e.target.checked})}/> Primary area</label></div>
+    <div style={s.actions}><button style={s.primary} disabled={areaSaving} onClick={()=>saveArea(areaDraft.id?"update":"create",areaDraft as Area)}>{areaSaving?"Saving...":"Save area"}</button><button style={s.secondary} onClick={()=>setAreaDraft(null)}>Cancel</button></div>
+   </div>}
+   {!areas.length?<p style={s.muted}>No service areas configured.</p>:areas.map(a=><div key={a.id} style={s.area}><div><strong>{a.label}</strong><span style={{display:"block"}}>{a.city||""}{a.state?", "+a.state:""} • {a.radius_km} km{a.is_primary?" • Primary":""}</span></div><div style={s.actions}><button style={s.secondary} onClick={()=>setAreaDraft({...a})}>Edit</button><button style={s.danger} onClick={()=>saveArea("delete",a)}>Delete</button></div></div>)}
   </section>}
 
   <section style={s.card}><div style={s.row}><h2>Complaints & Disputes</h2><button style={s.secondary} onClick={loadComplaints}>Refresh</button></div>{!complaints.length?<p style={s.muted}>No complaints reported.</p>:complaints.map(x=><article key={x.id} style={s.item}><div style={{flex:1}}><h3>{x.category.replaceAll("_"," ")} • {x.status}</h3><p>{x.reporter_name||"User"} reported {x.against_name||"User"}</p><p>{x.description}</p><p style={s.muted}>Job: {x.job_id} • {new Date(x.created_at).toLocaleString()}</p></div><div style={s.actions}>{x.status==="open"&&<button style={s.secondary} onClick={()=>reviewComplaint(x.id,"under_review")}>Review</button>}{x.status==="under_review"&&<><button style={s.danger} onClick={()=>reviewComplaint(x.id,"upheld")}>Uphold</button><button style={s.secondary} onClick={()=>reviewComplaint(x.id,"dismissed")}>Dismiss</button></>}{x.status==="upheld"&&<button style={s.secondary} onClick={()=>reviewComplaint(x.id,"resolved")}>Resolve</button>}</div></article>)}</section>
@@ -106,5 +129,5 @@ const s:any={
  note:{fontSize:12,color:"#777",marginTop:16},
  grid:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,margin:"18px 0 24px"},
  metric:{border:"1px solid #eee",borderRadius:12,padding:14,display:"flex",flexDirection:"column",gap:6},
- area:{display:"flex",justifyContent:"space-between",gap:16,borderTop:"1px solid #eee",padding:"12px 0",flexWrap:"wrap"}
+ area:{display:"flex",justifyContent:"space-between",gap:16,borderTop:"1px solid #eee",padding:"12px 0",flexWrap:"wrap"},editor:{border:"1px solid #ddd",borderRadius:12,padding:14,margin:"14px 0"},two:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10},check:{display:"flex",alignItems:"center",gap:8,padding:12,border:"1px solid #ddd",borderRadius:10}
 };
