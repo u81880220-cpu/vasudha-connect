@@ -15,7 +15,7 @@ export default function AdminHome(){
  const[session,setSession]=useState<any>(null);
  const[email,setEmail]=useState(""),[password,setPassword]=useState(""),[message,setMessage]=useState("");
  const[items,setItems]=useState<Item[]>([]),[pros,setPros]=useState<Professional[]>([]),[skills,setSkills]=useState<Skill[]>([]);
- const[areas,setAreas]=useState<Area[]>([]),[reputation,setReputation]=useState<Reputation|null>(null);
+ const[areas,setAreas]=useState<Area[]>([]),[reputation,setReputation]=useState<Reputation|null>(null),[customers,setCustomers]=useState<any[]>([]);
  const[selected,setSelected]=useState<Professional|null>(null),[loading,setLoading]=useState(false);
 
  useEffect(()=>{
@@ -25,10 +25,11 @@ export default function AdminHome(){
  },[]);
 
  async function login(){setMessage("");const{error}=await supabase.auth.signInWithPassword({email,password});if(error)setMessage(error.message)}
- async function loadAll(){await Promise.all([load(),loadMarketplace(),loadSkills()])}
+ async function loadAll(){await Promise.all([load(),loadMarketplace(),loadSkills(),loadCustomers()])}
  async function load(){setLoading(true);const{data,error}=await supabase.rpc("admin_pending_verifications");if(error)setMessage(error.message);else setItems((data||[]) as Item[]);setLoading(false)}
  async function loadMarketplace(){const{data,error}=await supabase.rpc("admin_marketplace_professionals");if(error)setMessage(error.message);else setPros((data||[]) as Professional[])}
  async function loadSkills(){const{data,error}=await supabase.rpc("admin_marketplace_skills");if(error)setMessage(error.message);else setSkills((data||[]) as Skill[])}
+ async function loadCustomers(){const{data,error}=await supabase.rpc("admin_customer_reputation");if(error)setMessage(error.message);else setCustomers(data||[])}
  async function review(id:string,decision:"approved"|"rejected"){const note=decision==="rejected"?window.prompt("Reason for rejection (optional):")||null:null;setLoading(true);const{error}=await supabase.rpc("admin_review_verification",{p_document_id:id,p_decision:decision,p_note:note});if(error)setMessage(error.message);else{setMessage(decision==="approved"?"Professional approved.":"Professional rejected.");await loadMarketplace();await load()}}
  async function openDocument(item:Item){const{data,error}=await supabase.storage.from("verification-documents").createSignedUrl(item.document_path,300);if(error)setMessage(error.message);else if(data?.signedUrl)window.open(data.signedUrl,"_blank")}
  async function setStatus(id:string,status:"active"|"suspended"){const{error}=await supabase.rpc("admin_set_professional_status",{p_user_id:id,p_status:status});if(error)setMessage(error.message);else await loadMarketplace()}
@@ -72,7 +73,7 @@ export default function AdminHome(){
    <h3>Service areas</h3>{!areas.length?<p style={s.muted}>No service areas configured.</p>:areas.map(a=><div key={a.id} style={s.area}><strong>{a.label}</strong><span>{a.city||""}{a.state?", "+a.state:""} • {a.radius_km} km{a.is_primary?" • Primary":""}</span></div>)}
   </section>}
 
-  <section style={s.card}><div style={s.row}><h2>Skill catalogue</h2><button style={s.secondary} onClick={loadSkills}>Refresh</button></div>
+  <section style={s.card}><div style={s.row}><h2>Customers & Reputation</h2><button style={s.secondary} onClick={loadCustomers}>Refresh</button></div>{!customers.length?<p style={s.muted}>No customer reputation data yet.</p>:customers.map(x=><article key={x.user_id} style={s.item}><div style={{flex:1}}><h3>{x.display_name||"Customer"}</h3><p>{x.city||""}{x.state?", "+x.state:""}</p><p style={s.muted}>Trust {Math.round(x.customer_trust_score||0)}/100 • {x.jobs_completed||0} jobs completed • {x.reviews_received||0} reviews • Would work again {x.would_work_again_pct||0}%</p></div></article>)}</section>\n\n  <section style={s.card}><div style={s.row}><h2>Skill catalogue</h2><button style={s.secondary} onClick={loadSkills}>Refresh</button></div>
    {skills.map(x=><article key={x.id} style={s.item}><div style={{flex:1}}><h3>{x.name}</h3><p style={s.muted}>{x.category} • {x.professional_count} professionals{x.description?" • "+x.description:""}</p></div><button style={x.is_active?s.danger:s.primary} onClick={()=>setSkill(x.id,!x.is_active)}>{x.is_active?"Deactivate":"Activate"}</button></article>)}
   </section>
  </main>
