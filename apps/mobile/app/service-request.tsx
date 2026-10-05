@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as Location from "expo-location";
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput } from "react-native";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { useLocalSearchParams, router } from "expo-router";
@@ -11,7 +12,9 @@ export default function ServiceRequest(){
   if(!professionalId||title.trim().length<3||description.trim().length<3||location.trim().length<3){Alert.alert("Complete request","Add the work requirement and the service location.");return;}
   setBusy(true);
   const {data:{user}}=await supabase.auth.getUser(); if(!user){setBusy(false);return;}
-  const {error}=await supabase.from("service_requests").insert({customer_id:user.id,professional_id:professionalId,title:title.trim(),description:description.trim(),preferred_date:date||null,preferred_time:time||null,location_text:location.trim()});
+  let latitude:null|number=null, longitude:null|number=null;
+  try{if(await Location.hasServicesEnabledAsync()){const perm=await Location.requestForegroundPermissionsAsync();if(perm.status==="granted"){const places=await Location.geocodeAsync(location.trim());if(places[0]){latitude=places[0].latitude;longitude=places[0].longitude;}}}}catch{}
+  const {error}=await supabase.from("service_requests").insert({customer_id:user.id,professional_id:professionalId,title:title.trim(),description:description.trim(),preferred_date:date||null,preferred_time:time||null,location_text:location.trim(),location_latitude:latitude,location_longitude:longitude});
   setBusy(false);
   if(error)Alert.alert("Request failed",error.message);
   else{Alert.alert("Request sent","The professional can discuss the work with you and accept the job when you agree.");router.back();}
