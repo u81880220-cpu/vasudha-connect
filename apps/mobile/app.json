@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "VASUDHA CONNECT",
+    "slug": "vasudha-connect",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "vasudhaconnect",
+    "userInterfaceStyle": "automatic",
+    "plugins": ["expo-router"],
+    "android": {
+      "package": "com.vasudha.connect"
+    }
+  }
+}
