@@ -59,7 +59,7 @@ export default function HomeScreen(){
 function CustomerHome(){
  return <View>
   <Text style={s.greeting}>Good morning 👋</Text>
-  <Text style={s.heading}>Find trusted professionals{"\n"}around you.</Text>
+  <Text style={s.heading}>Find trusted professionals</Text><Text style={s.heading}>around you.</Text>
   <Pressable accessibilityRole="button" accessibilityLabel="Search for services" onPress={()=>router.push("/marketplace")} style={s.search}><Text style={s.searchIcon}>⌕</Text><Text style={s.searchText}>Search for services...</Text></Pressable>
   <Text style={s.section}>Popular services</Text>
   <View style={s.services}>{services.map(x=><Link key={x} href="/marketplace" asChild><Pressable style={s.service}><ServiceIcon name={x} size={52}/><Text style={s.serviceText}>{x}</Text></Pressable></Link>)}</View>
