@@ -30,7 +30,7 @@ export default function Marketplace(){
   const visibleItems=items.filter(x=>(!verifiedOnly||x.verification_status==="verified")&&(!availableOnly||x.is_available)&&(Math.round(x.trust_score)/20)>=minRating);
 
   useEffect(()=>{requestLocation();},[]);
-  useEffect(()=>{if(userCoords) searchProfessionals(userCoords);},[selection.subServiceId,radius]);
+  useEffect(()=>{if(userCoords) searchProfessionals(userCoords);},[selection.serviceId,selection.subServiceId,radius]);
 
   async function requestLocation(){
     setLoading(true);
@@ -54,7 +54,7 @@ export default function Marketplace(){
   async function searchProfessionals(coords:Coords){
     setLoading(true);
     const{data,error}=await supabase.rpc("nearby_professionals_map",{
-      p_latitude:coords.latitude,p_longitude:coords.longitude,p_radius_km:radius,p_skill_id:null,p_sub_service_id:selection.subServiceId
+      p_latitude:coords.latitude,p_longitude:coords.longitude,p_radius_km:radius,p_skill_id:selection.legacySkillId||null,p_sub_service_id:selection.subServiceId||null
     });
     if(!error && (data??[]).length){
       setItems((data??[]) as Professional[]);
@@ -91,7 +91,7 @@ export default function Marketplace(){
       </View>
 
       <View style={{paddingHorizontal:14,paddingTop:10}}>
-        <ServicePicker value={selection} onChange={setSelection} title="What service do you need?"/>
+        <ServicePicker value={selection} optionalSubService onChange={setSelection} title="What service do you need?"/>
       </View>
 
       <View style={s.radiusRow}>
@@ -112,7 +112,7 @@ export default function Marketplace(){
       </View>
 
       <View style={s.listHeader}>
-        <Text style={s.listTitle}>{selection.subServiceName||selection.serviceName||"All professionals"}</Text>
+        <Text style={s.listTitle}>{selection.serviceName||"All professionals"}</Text>
         <Text style={s.listHint}>Swipe to view list</Text>
       </View>
 
