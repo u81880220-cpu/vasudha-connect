@@ -5,9 +5,8 @@ import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { AppBottomNav } from "../src/components/AppBottomNav";
-import { ServiceIcon } from "../src/components/ServiceIcon";
+import { ServicePicker, ServiceSelection } from "../src/components/ServicePicker";
 
-type Skill={id:string;name:string;category:string};
 type Professional={
   professional_id:string; display_name:string; headline:string|null; city:string|null; state:string|null;
   avatar_url:string|null; trust_score:number; verification_status:string; is_available:boolean;
@@ -19,8 +18,7 @@ type Coords={latitude:number;longitude:number};
 const MAP_HEIGHT=Math.min(Math.max(Math.round(Dimensions.get("window").height*0.42),300),460);
 
 export default function Marketplace(){
-  const[skills,setSkills]=useState<Skill[]>([]);
-  const[selected,setSelected]=useState<string|null>(null);
+  const[selection,setSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:null,serviceName:null,subServiceId:null,subServiceName:null});
   const[items,setItems]=useState<Professional[]>([]);
   const[loading,setLoading]=useState(true);
   const[userCoords,setUserCoords]=useState<Coords|null>(null);
@@ -31,13 +29,8 @@ export default function Marketplace(){
   const[minRating,setMinRating]=useState(4);
   const visibleItems=items.filter(x=>(!verifiedOnly||x.verification_status==="verified")&&(!availableOnly||x.is_available)&&(Math.round(x.trust_score)/20)>=minRating);
 
-  useEffect(()=>{loadSkills();requestLocation();},[]);
-  useEffect(()=>{if(userCoords) searchProfessionals(userCoords);},[selected,radius]);
-
-  async function loadSkills(){
-    const{data}=await supabase.from("skills").select("id,name,category").eq("is_active",true).order("category").order("name");
-    setSkills(data??[]);
-  }
+  useEffect(()=>{requestLocation();},[]);
+  useEffect(()=>{if(userCoords) searchProfessionals(userCoords);},[selection.subServiceId,radius]);
 
   async function requestLocation(){
     setLoading(true);
@@ -61,7 +54,7 @@ export default function Marketplace(){
   async function searchProfessionals(coords:Coords){
     setLoading(true);
     const{data,error}=await supabase.rpc("nearby_professionals_map",{
-      p_latitude:coords.latitude,p_longitude:coords.longitude,p_radius_km:radius,p_skill_id:selected
+      p_latitude:coords.latitude,p_longitude:coords.longitude,p_radius_km:radius,p_skill_id:null,p_sub_service_id:selection.subServiceId
     });
     if(!error && (data??[]).length){
       setItems((data??[]) as Professional[]);
@@ -69,7 +62,7 @@ export default function Marketplace(){
       // Visual preview fallback only; Android/production remains database-driven.
       const demoNames=["Ramesh Kumar","Amit Singh","Vikram Rao","Suresh Yadav","Priya Sharma"];
       const demoSkills=["Electrician","Plumber","Carpenter","Painter","AC Technician"];
-      const demo=(selected ? demoNames.slice(0,3) : demoNames).map((name,i)=>({
+      const demo=(selection.subServiceId ? demoNames.slice(0,3) : demoNames).map((name,i)=>({
         professional_id:`demo-${i}`,
         display_name:name,
         headline:`${demoSkills[i%demoSkills.length]} • Verified professional`,
@@ -97,17 +90,9 @@ export default function Marketplace(){
         <View style={s.headerActions}><Pressable style={s.filterButton} onPress={()=>setFiltersOpen(true)}><Text style={s.filterButtonText}>☷</Text></Pressable><Pressable style={s.refresh} onPress={requestLocation}><Text style={s.refreshText}>↻</Text></Pressable></View>
       </View>
 
-      <FlatList
-        horizontal showsHorizontalScrollIndicator={false}
-        data={[{id:"all",name:"All",category:""} as Skill,...skills]}
-        keyExtractor={x=>x.id}
-        contentContainerStyle={s.skills}
-        renderItem={({item})=><Pressable
-          onPress={()=>setSelected(item.id==="all"?null:item.id)}
-          style={[s.skill,((item.id==="all"&&selected===null)||selected===item.id)&&s.skillSelected]}>
-          <ServiceIcon name={item.name} size={30}/><Text style={[s.skillText,((item.id==="all"&&selected===null)||selected===item.id)&&s.skillTextSelected]}>{item.name}</Text>
-        </Pressable>}
-      />
+      <View style={{paddingHorizontal:14,paddingTop:10}}>
+        <ServicePicker value={selection} onChange={setSelection} title="What service do you need?"/>
+      </View>
 
       <View style={s.radiusRow}>
         <Text style={s.label}>Nearby</Text>
@@ -127,7 +112,7 @@ export default function Marketplace(){
       </View>
 
       <View style={s.listHeader}>
-        <Text style={s.listTitle}>{selected?skills.find(x=>x.id===selected)?.name:"All professionals"}</Text>
+        <Text style={s.listTitle}>{selection.subServiceName||selection.serviceName||"All professionals"}</Text>
         <Text style={s.listHint}>Swipe to view list</Text>
       </View>
 
@@ -138,7 +123,7 @@ export default function Marketplace(){
         keyExtractor={x=>x.professional_id}
         contentContainerStyle={s.workerRow}
         ListEmptyComponent={!loading?<Text style={s.empty}>No professionals found in this area.</Text>:null}
-        renderItem={({item})=><Pressable style={s.card} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:item.professional_id}})}>
+        renderItem={({item})=><Pressable style={s.card} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:item.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}>
           <View style={s.cardTop}>
             <View style={s.avatar}><Text>{item.display_name.slice(0,1).toUpperCase()}</Text></View>
             <View style={{flex:1}}>
@@ -177,7 +162,7 @@ function WebMap({userCoords,items}:{userCoords:Coords;items:Professional[]}) {
     <View style={s.youMarker}><Text style={s.youMarkerText}>●</Text></View>
     {items.slice(0,8).map((worker,i)=>
       <Pressable key={worker.professional_id}
-        onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:worker.professional_id}})}
+        onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:worker.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}
         style={[s.webMarker,{left:`${15+(i*17)%72}%`,top:`${22+(i*29)%58}%`}]}>
         <Text style={s.webMarkerText}>{worker.display_name.slice(0,1).toUpperCase()}</Text>
       </Pressable>
