@@ -166,6 +166,7 @@ export default function Marketplace(){
           </View>
         </View>
       </Modal>
+      <AppBottomNav active="map"/>
   </SafeAreaView>;
 }
 
