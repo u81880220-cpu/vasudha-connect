@@ -4,23 +4,26 @@ import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { useLocalSearchParams, router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
+import { ServicePicker, ServiceSelection } from "../src/components/ServicePicker";
 
 export default function ServiceRequest(){
- const {professionalId}=useLocalSearchParams<{professionalId:string}>();
+ const {professionalId,serviceId,subServiceId,serviceName,subServiceName}=useLocalSearchParams<{professionalId:string;serviceId?:string;subServiceId?:string;serviceName?:string;subServiceName?:string}>();
+ const [selection,setSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:serviceId||null,serviceName:serviceName||null,subServiceId:subServiceId||null,subServiceName:subServiceName||null});
  const [title,setTitle]=useState(""); const [description,setDescription]=useState(""); const [date,setDate]=useState(""); const [time,setTime]=useState(""); const [location,setLocation]=useState(""); const [busy,setBusy]=useState(false);
  async function submit(){
-  if(!professionalId||title.trim().length<3||description.trim().length<3||location.trim().length<3){Alert.alert("Complete request","Add the work requirement and the service location.");return;}
+  if(!professionalId||!selection.subServiceId||title.trim().length<3||description.trim().length<3||location.trim().length<3){Alert.alert("Complete request","Choose a sub-service, add the work requirement and the service location.");return;}
   setBusy(true);
   const {data:{user}}=await supabase.auth.getUser(); if(!user){setBusy(false);return;}
   let latitude:null|number=null, longitude:null|number=null;
   try{if(await Location.hasServicesEnabledAsync()){const perm=await Location.requestForegroundPermissionsAsync();if(perm.status==="granted"){const places=await Location.geocodeAsync(location.trim());if(places[0]){latitude=places[0].latitude;longitude=places[0].longitude;}}}}catch{}
-  const {error}=await supabase.from("service_requests").insert({customer_id:user.id,professional_id:professionalId,title:title.trim(),description:description.trim(),preferred_date:date||null,preferred_time:time||null,location_text:location.trim(),location_latitude:latitude,location_longitude:longitude});
+  const {error}=await supabase.from("service_requests").insert({customer_id:user.id,professional_id:professionalId,title:title.trim(),description:description.trim(),preferred_date:date||null,preferred_time:time||null,location_text:location.trim(),location_latitude:latitude,location_longitude:longitude,service_id:selection.serviceId,sub_service_id:selection.subServiceId});
   setBusy(false);
   if(error)Alert.alert("Request failed",error.message);
   else{Alert.alert("Request sent","The professional can discuss the work with you and accept the job when you agree.");router.back();}
  }
  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
-  <VasudhaLogo compact/><Text style={s.title}>Tell the Professional What You Need</Text><Text style={s.muted}>Discuss the work directly in VASUDHA chat or by phone. No quotation is required.</Text>
+  <VasudhaLogo compact/><Text style={s.title}>Tell the Professional What You Need</Text><Text style={s.muted}>Choose the exact service, then tell the professional what you need. No quotation is required.</Text>
+  <ServicePicker value={selection} onChange={setSelection}/>
   <Text style={s.label}>What do you need?</Text><TextInput value={title} onChangeText={setTitle} placeholder="e.g. Fix kitchen plumbing" style={s.input}/>
   <Text style={s.label}>Work details</Text><TextInput value={description} onChangeText={setDescription} placeholder="Describe the work required..." multiline style={[s.input,s.large]}/>
   <Text style={s.label}>Preferred date (optional)</Text><TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" style={s.input}/>
