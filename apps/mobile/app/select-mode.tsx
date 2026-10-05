@@ -1,1 +1,56 @@
-import { router } from "expo-router";\nimport { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";\nimport { VasudhaLogo } from "../src/components/VasudhaLogo";\n\nexport default function SelectMode(){\n return <SafeAreaView style={s.safe}>\n  <View style={s.container}>\n   <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={()=>router.back()} style={s.backButton}><Text style={s.back}>‹</Text></Pressable>\n   <VasudhaLogo/>\n   <Text style={s.title}>How do you want to use{"\\n"}VASUDHA CONNECT?</Text>\n   <Text style={s.sub}>Choose your role to get started.</Text>\n\n   <Pressable style={s.card} onPress={()=>router.replace({pathname:"/auth",params:{mode:"customer"}})}>\n    <View style={[s.iconBox,s.customerBox]}><Text style={s.icon}>⌕</Text></View>\n    <View style={s.copy}><Text style={s.cardTitle}>I need a professional</Text><Text style={s.cardSub}>Find trusted skills around you for your work.</Text></View>\n    <Text style={s.arrow}>›</Text>\n   </Pressable>\n\n   <Pressable style={s.card} onPress={()=>router.replace({pathname:"/auth",params:{mode:"professional"}})}>\n    <View style={[s.iconBox,s.proBox]}><Text style={s.icon}>⚒</Text></View>\n    <View style={s.copy}><Text style={s.cardTitle}>I am a professional</Text><Text style={s.cardSub}>Show your skills and connect with customers.</Text></View>\n    <Text style={s.arrow}>›</Text>\n   </Pressable>\n\n   <View style={s.footer}><Text style={s.footerText}>Find skills. Connect. Get things done.</Text></View>\n  </View>\n </SafeAreaView>\n}\n\nconst s=StyleSheet.create({\n safe:{flex:1,backgroundColor:"#F7FAF8"},\n container:{flex:1,padding:22,alignItems:"center"},\n backButton:{alignSelf:"flex-start",width:42,height:42,justifyContent:"center"},\n back:{fontSize:34,lineHeight:38,color:"#13201C"},\n title:{fontSize:23,fontWeight:"900",textAlign:"center",color:"#13201C",marginTop:22,lineHeight:29},\n sub:{fontSize:13,color:"#71807A",marginTop:7,marginBottom:25},\n card:{width:"100%",minHeight:116,borderWidth:1,borderColor:"#DCE8E3",borderRadius:18,backgroundColor:"#FFFFFF",padding:16,marginBottom:14,flexDirection:"row",alignItems:"center",shadowColor:"#087D65",shadowOpacity:.04,shadowRadius:8,shadowOffset:{width:0,height:3},elevation:2},\n iconBox:{width:70,height:70,borderRadius:18,alignItems:"center",justifyContent:"center"},\n customerBox:{backgroundColor:"#E7F7F2"},proBox:{backgroundColor:"#FFF1E2"},\n icon:{fontSize:34,fontWeight:"900",color:"#087D65"},\n copy:{flex:1,marginLeft:15,paddingRight:8},\n cardTitle:{fontSize:17,fontWeight:"900",color:"#13201C"},\n cardSub:{fontSize:12,color:"#71807A",lineHeight:18,marginTop:5},\n arrow:{fontSize:30,color:"#087D65",fontWeight:"400"},\n footer:{flex:1,justifyContent:"flex-end",paddingBottom:18},\n footerText:{fontSize:11,color:"#8A9691"}\n});
+import { router } from "expo-router";
+import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { VasudhaLogo } from "../src/components/VasudhaLogo";
+
+export default function SelectMode(){
+ return <SafeAreaView style={s.safe}>
+  <View style={s.container}>
+   <Pressable accessibilityRole="button" accessibilityLabel="Go back" onPress={()=>router.back()} style={s.backButton}>
+    <Text style={s.back}>‹</Text>
+   </Pressable>
+
+   <VasudhaLogo/>
+   <Text style={s.title}>How do you want to use{"\n"}VASUDHA CONNECT?</Text>
+   <Text style={s.sub}>Choose your role to get started.</Text>
+
+   <Pressable style={s.card} onPress={()=>router.replace({pathname:"/auth",params:{mode:"customer"}})}>
+    <View style={[s.iconBox,s.customerBox]}><Text style={s.icon}>⌕</Text></View>
+    <View style={s.copy}>
+     <Text style={s.cardTitle}>I need a professional</Text>
+     <Text style={s.cardSub}>Find trusted skills around you for your work.</Text>
+    </View>
+    <Text style={s.arrow}>›</Text>
+   </Pressable>
+
+   <Pressable style={s.card} onPress={()=>router.replace({pathname:"/auth",params:{mode:"professional"}})}>
+    <View style={[s.iconBox,s.proBox]}><Text style={s.icon}>⚒</Text></View>
+    <View style={s.copy}>
+     <Text style={s.cardTitle}>I am a professional</Text>
+     <Text style={s.cardSub}>Show your skills and connect with customers.</Text>
+    </View>
+    <Text style={s.arrow}>›</Text>
+   </Pressable>
+
+   <View style={s.footer}><Text style={s.footerText}>Find skills. Connect. Get things done.</Text></View>
+  </View>
+ </SafeAreaView>
+}
+
+const s=StyleSheet.create({
+ safe:{flex:1,backgroundColor:"#F7FAF8"},
+ container:{flex:1,padding:22,alignItems:"center"},
+ backButton:{alignSelf:"flex-start",width:42,height:42,justifyContent:"center"},
+ back:{fontSize:34,lineHeight:38,color:"#13201C"},
+ title:{fontSize:23,fontWeight:"900",textAlign:"center",color:"#13201C",marginTop:22,lineHeight:29},
+ sub:{fontSize:13,color:"#71807A",marginTop:7,marginBottom:25},
+ card:{width:"100%",minHeight:116,borderWidth:1,borderColor:"#DCE8E3",borderRadius:18,backgroundColor:"#FFFFFF",padding:16,marginBottom:14,flexDirection:"row",alignItems:"center",shadowColor:"#087D65",shadowOpacity:.04,shadowRadius:8,shadowOffset:{width:0,height:3},elevation:2},
+ iconBox:{width:70,height:70,borderRadius:18,alignItems:"center",justifyContent:"center"},
+ customerBox:{backgroundColor:"#E7F7F2"},proBox:{backgroundColor:"#FFF1E2"},
+ icon:{fontSize:34,fontWeight:"900",color:"#087D65"},
+ copy:{flex:1,marginLeft:15,paddingRight:8},
+ cardTitle:{fontSize:17,fontWeight:"900",color:"#13201C"},
+ cardSub:{fontSize:12,color:"#71807A",lineHeight:18,marginTop:5},
+ arrow:{fontSize:30,color:"#087D65",fontWeight:"400"},
+ footer:{flex:1,justifyContent:"flex-end",paddingBottom:18},
+ footerText:{fontSize:11,color:"#8A9691"}
+});
