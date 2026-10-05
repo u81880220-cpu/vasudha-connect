@@ -33,17 +33,55 @@ export function ServicePicker({value,onChange,title="Choose a service",optionalS
  const currentServices=services.filter(x=>x.category_id===categoryId);
  const currentSubs=subs.filter(x=>x.service_id===serviceId);
  const category=categories.find(x=>x.id===categoryId),service=services.find(x=>x.id===serviceId),sub=currentSubs.find(x=>x.id===subId);
+
  function chooseCategory(id:string){setCategoryId(id);setServiceId(null);setSubId(null);}
- function chooseService(id:string){setServiceId(id);setSubId(null);const svc=services.find(x=>x.id===id);const cat=categories.find(x=>x.id===svc?.category_id);if(svc)onChange({categoryId:cat?.id||null,categoryName:cat?.name||null,serviceId:svc.id,serviceName:svc.name,legacySkillId:svc.legacy_skill_id||null,subServiceId:null,subServiceName:null});}
- function chooseSub(id:string){setSubId(id);const s=subs.find(x=>x.id===id);if(!s)return;const svc=services.find(x=>x.id===s.service_id);const cat=categories.find(x=>x.id===svc?.category_id);onChange({categoryId:cat?.id||null,categoryName:cat?.name||null,serviceId:svc?.id||null,serviceName:svc?.name||null,legacySkillId:svc?.legacy_skill_id||null,subServiceId:s.id,subServiceName:s.name});}
+
+ function chooseService(id:string){
+  setServiceId(id);
+  const svc=services.find(x=>x.id===id);
+  const cat=categories.find(x=>x.id===svc?.category_id);
+  const general=currentSubsFor(id).find(x=>x.name.toLowerCase()==="general / any");
+  if(svc){
+   if(optionalSubService && general){
+    setSubId(general.id);
+    onChange({categoryId:cat?.id||null,categoryName:cat?.name||null,serviceId:svc.id,serviceName:svc.name,legacySkillId:svc.legacy_skill_id||null,subServiceId:general.id,subServiceName:"General service"});
+   }else{
+    setSubId(null);
+    onChange({categoryId:cat?.id||null,categoryName:cat?.name||null,serviceId:svc.id,serviceName:svc.name,legacySkillId:svc.legacy_skill_id||null,subServiceId:null,subServiceName:null});
+   }
+  }
+ }
+
+ function currentSubsFor(id:string){return subs.filter(x=>x.service_id===id);}
+
+ function chooseSub(id:string){
+  setSubId(id);
+  const selected=subs.find(x=>x.id===id);
+  if(!selected)return;
+  const svc=services.find(x=>x.id===selected.service_id);
+  const cat=categories.find(x=>x.id===svc?.category_id);
+  onChange({categoryId:cat?.id||null,categoryName:cat?.name||null,serviceId:svc?.id||null,serviceName:svc?.name||null,legacySkillId:svc?.legacy_skill_id||null,subServiceId:selected.id,subServiceName:selected.name});
+ }
+
+ function chooseGeneral(){
+  const svc=services.find(x=>x.id===serviceId);
+  const cat=categories.find(x=>x.id===svc?.category_id);
+  const general=currentSubs.find(x=>x.name.toLowerCase()==="general / any");
+  if(!svc||!general)return;
+  setSubId(general.id);
+  onChange({categoryId:cat?.id||null,categoryName:cat?.name||null,serviceId:svc.id,serviceName:svc.name,legacySkillId:svc.legacy_skill_id||null,subServiceId:general.id,subServiceName:"General service"});
+ }
+
  if(loading)return <View style={s.loading}><ActivityIndicator color="#087D65"/><Text style={s.muted}>Loading services…</Text></View>;
+
  return <View style={s.wrap}>
   <Text style={s.title}>{title}</Text>
   <Text style={s.step}>1. Category</Text>
   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}>{categories.map(x=><Pressable key={x.id} onPress={()=>chooseCategory(x.id)} style={[s.chip,categoryId===x.id&&s.on]}><Text style={[s.chipText,categoryId===x.id&&s.onText]}>{x.name}</Text></Pressable>)}</ScrollView>
   {categoryId?<><Text style={s.step}>2. Service</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}>{currentServices.map(x=><Pressable key={x.id} onPress={()=>chooseService(x.id)} style={[s.chip,serviceId===x.id&&s.on]}><Text style={[s.chipText,serviceId===x.id&&s.onText]}>{x.name}</Text></Pressable>)}</ScrollView></>:null}
-  {serviceId?<><Text style={s.step}>3. Sub-service {optionalSubService?"(optional)":""}</Text><View style={s.subGrid}>{optionalSubService?<Pressable onPress={()=>{const svc=services.find(x=>x.id===serviceId);const cat=categories.find(x=>x.id===svc?.category_id);setSubId(null);if(svc)onChange({categoryId:cat?.id||null,categoryName:cat?.name||null,serviceId:svc.id,serviceName:svc.name,legacySkillId:svc.legacy_skill_id||null,subServiceId:null,subServiceName:null});}} style={[s.subChip,!subId&&s.on]}><Text style={[s.chipText,!subId&&s.onText]}>General service</Text></Pressable>:null}{currentSubs.map(x=><Pressable key={x.id} onPress={()=>chooseSub(x.id)} style={[s.subChip,subId===x.id&&s.on]}><Text style={[s.chipText,subId===x.id&&s.onText]}>{x.name}</Text></Pressable>)}</View></>:null}
-  {sub?<View style={s.selected}><Text style={s.selectedLabel}>Selected</Text><Text style={s.selectedText}>{category?.name} › {service?.name} › {sub.name}</Text></View>:null}
+  {serviceId?<><Text style={s.step}>3. Sub-service {optionalSubService?"(optional)":""}</Text><View style={s.subGrid}>{optionalSubService?<Pressable onPress={chooseGeneral} style={[s.subChip,sub?.name.toLowerCase()==="general / any"&&s.on]}><Text style={[s.chipText,sub?.name.toLowerCase()==="general / any"&&s.onText]}>General service</Text></Pressable>:null}{currentSubs.map(x=><Pressable key={x.id} onPress={()=>chooseSub(x.id)} style={[s.subChip,subId===x.id&&s.on]}><Text style={[s.chipText,subId===x.id&&s.onText]}>{x.name}</Text></Pressable>)}</View></>:null}
+  {sub?<View style={s.selected}><Text style={s.selectedLabel}>Selected</Text><Text style={s.selectedText}>{category?.name} › {service?.name} › {sub.name==="General / Any"?"General service":sub.name}</Text></View>:null}
  </View>;
 }
+
 const s=StyleSheet.create({wrap:{borderWidth:1,borderColor:"#e0e8e5",borderRadius:16,padding:14,backgroundColor:"#fff"},loading:{padding:18,alignItems:"center"},muted:{color:"#66736e",marginTop:6},title:{fontSize:17,fontWeight:"900",color:"#13201c"},step:{fontSize:12,fontWeight:"900",color:"#66736e",marginTop:14,marginBottom:7,textTransform:"uppercase",letterSpacing:.5},row:{gap:7,paddingBottom:2},chip:{borderWidth:1,borderColor:"#cfdad6",borderRadius:18,paddingHorizontal:12,paddingVertical:9,backgroundColor:"#fff"},on:{backgroundColor:"#e7f7f2",borderColor:"#087D65",borderWidth:2},chipText:{fontSize:12,fontWeight:"700",color:"#46534f"},onText:{color:"#087D65"},subGrid:{flexDirection:"row",flexWrap:"wrap",gap:7},subChip:{borderWidth:1,borderColor:"#cfdad6",borderRadius:14,paddingHorizontal:11,paddingVertical:9},selected:{marginTop:12,padding:11,borderRadius:12,backgroundColor:"#f2f8f6"},selectedLabel:{fontSize:10,fontWeight:"900",color:"#087D65",textTransform:"uppercase"},selectedText:{fontWeight:"800",color:"#13201c",marginTop:3}});
