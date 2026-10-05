@@ -37,7 +37,16 @@ export default function Marketplace(){
   async function requestLocation(){
     setLoading(true);
     const permission=await Location.requestForegroundPermissionsAsync();
-    if(permission.status!=="granted"){setLoading(false);return;}
+    if(permission.status!=="granted"){
+      // Laptop/browser visual testing: use a safe demo location instead of blocking the UI.
+      if(Platform.OS==="web"){
+        const demoCoords={latitude:25.3176,longitude:82.9739};
+        setUserCoords(demoCoords);
+        await searchProfessionals(demoCoords);
+      }
+      setLoading(false);
+      return;
+    }
     const pos=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});
     const coords={latitude:pos.coords.latitude,longitude:pos.coords.longitude};
     setUserCoords(coords);
