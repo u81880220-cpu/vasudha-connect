@@ -9,7 +9,7 @@ type Method="otp"|"email";
 export default function AuthScreen(){
  const params=useLocalSearchParams<{mode?:string}>();
  const [mode,setMode]=useState<"customer"|"professional">(params.mode==="professional"?"professional":"customer");
- const [method,setMethod]=useState<Method>("otp");
+ const [method,setMethod]=useState<Method>("email");
  const [phone,setPhone]=useState(""); const [otp,setOtp]=useState("");
  const [email,setEmail]=useState(""); const [password,setPassword]=useState("");
  const [sent,setSent]=useState(false); const [busy,setBusy]=useState(false);
