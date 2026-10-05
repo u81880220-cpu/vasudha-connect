@@ -1,13 +1,20 @@
-import * as Notifications from "expo-notifications";
-import Constants from "expo-constants";
 import { Platform } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "./supabase";
 
-Notifications.setNotificationHandler({handleNotification:async()=>({shouldPlaySound:true,shouldSetBadge:true,shouldShowBanner:true,shouldShowList:true})});
+function nativeNotifications(){
+  // Keep the native-only module out of the browser runtime.
+  return require("expo-notifications") as typeof import("expo-notifications");
+}
+function nativeConstants(){
+  return require("expo-constants").default as typeof import("expo-constants").default;
+}
 
 export async function registerForPushNotifications(userId:string){
  if(Platform.OS!=="android"&&Platform.OS!=="ios")return null;
+ const Notifications=nativeNotifications();
+ const Constants=nativeConstants();
+ Notifications.setNotificationHandler({handleNotification:async()=>({shouldPlaySound:true,shouldSetBadge:true,shouldShowBanner:true,shouldShowList:true})});
  const current=await Notifications.getPermissionsAsync();
  let status=current.status;
  if(status!=="granted"){const asked=await Notifications.requestPermissionsAsync();status=asked.status;}
@@ -24,7 +31,8 @@ export async function registerForPushNotifications(userId:string){
 }
 
 export function registerNotificationTapHandler(){
- if(Platform.OS!=="android"&&Platform.OS!=="ios") return {remove:()=>{}};
+ if(Platform.OS!=="android"&&Platform.OS!=="ios")return {remove:()=>{}};
+ const Notifications=nativeNotifications();
  return Notifications.addNotificationResponseReceivedListener(response=>{
   const data=(response.notification.request.content.data||{}) as any;
   if(data.screen==="jobs")router.push("/jobs");
