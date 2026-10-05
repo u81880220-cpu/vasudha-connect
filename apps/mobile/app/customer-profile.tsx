@@ -57,7 +57,7 @@ export default function CustomerProfile() {
             <Text style={s.backText}>‹</Text>
           </Pressable>
           <VasudhaLogo compact />
-          <Text style={s.more}>⋯</Text>
+          <View style={{width:40}}/>
         </View>
 
         <Text style={s.t}>My Customer Profile</Text>
