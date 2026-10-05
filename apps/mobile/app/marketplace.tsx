@@ -34,14 +34,16 @@ export default function Marketplace(){
 
   async function requestLocation(){
     setLoading(true);
+    // Browser QA uses the VASUDHA demo location (Varanasi) so laptop geolocation
+    // permissions or inaccurate browser location never block marketplace testing.
+    if(Platform.OS==="web"){
+      const demoCoords={latitude:25.3176,longitude:82.9739};
+      setUserCoords(demoCoords);
+      await searchProfessionals(demoCoords);
+      return;
+    }
     const permission=await Location.requestForegroundPermissionsAsync();
     if(permission.status!=="granted"){
-      // Laptop/browser visual testing: use a safe demo location instead of blocking the UI.
-      if(Platform.OS==="web"){
-        const demoCoords={latitude:25.3176,longitude:82.9739};
-        setUserCoords(demoCoords);
-        await searchProfessionals(demoCoords);
-      }
       setLoading(false);
       return;
     }
