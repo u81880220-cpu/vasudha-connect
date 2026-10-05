@@ -12,7 +12,7 @@ export default function JobTracking(){
  async function load(){if(!jobId){setLoading(false);return;}const{data}=await supabase.from("jobs").select("*").eq("id",jobId).maybeSingle();setJob(data);if(data){const{data:pd}=await supabase.rpc("get_job_contact_details",{p_job_id:jobId});setPrivateData(pd||{});}setLoading(false);}
  const idx=Math.max(0,steps.findIndex(x=>x[0]===job?.status));
  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.c}>
-   <View style={s.top}><Pressable onPress={()=>router.back()} style={s.back}><Text style={s.backText}>‹</Text></Pressable><VasudhaLogo compact/><Text style={s.more}>⋯</Text></View>
+   <View style={s.top}><Pressable onPress={()=>router.back()} style={s.back}><Text style={s.backText}>‹</Text></Pressable><VasudhaLogo compact/><View style={{width:24}}/></View>
    <Text style={s.title}>Job Tracking</Text><Text style={s.sub}>{job?.title||"Electrical work at home"}</Text>
    {loading?<View style={s.state}><ActivityIndicator color="#087D65"/><Text style={s.muted}>Loading tracking…</Text></View>:<View style={s.card}>
      <Text style={s.jobId}>JOB · {String(job?.id||jobId||"12345").slice(0,8).toUpperCase()}</Text>
