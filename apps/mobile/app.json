@@ -6,11 +6,19 @@
     "orientation": "portrait",
     "scheme": "vasudhaconnect",
     "userInterfaceStyle": "automatic",
-    "plugins": ["expo-router", "expo-notifications"],
+    "plugins": [
+      "expo-router",
+      "expo-notifications"
+    ],
     "android": {
       "package": "com.vasudha.connect",
       "versionCode": 1,
-      "permissions": ["POST_NOTIFICATIONS"]
+      "permissions": [
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "web": {
+      "output": "single"
     }
   }
 }
