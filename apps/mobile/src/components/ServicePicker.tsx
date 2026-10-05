@@ -7,7 +7,7 @@ export type ServiceSelection = {
   categoryName: string | null;
   serviceId: string | null;
   serviceName: string | null;
-  legacySkillId: string | null;
+  legacySkillId?: string | null;
   subServiceId: string | null;
   subServiceName: string | null;
 };
