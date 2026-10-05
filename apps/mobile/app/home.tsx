@@ -59,7 +59,7 @@ export default function HomeScreen(){
 function CustomerHome(){
  return <View>
   <Text style={s.greeting}>Good morning 👋</Text>
-  <Text style={s.heading}>Find trusted professionals</Text><Text style={s.heading}>around you.</Text>
+  <Text style={s.heading}>Find trusted professionals</Text><Text style={s.heading}>around you.</Text><Text style={s.heading}>around you.</Text>
   <Pressable accessibilityRole="button" accessibilityLabel="Search for services" onPress={()=>router.push("/marketplace")} style={s.search}><Text style={s.searchIcon}>⌕</Text><Text style={s.searchText}>Search for services...</Text></Pressable>
   <Text style={s.section}>Popular services</Text>
   <View style={s.services}>{services.map(x=><Link key={x} href="/marketplace" asChild><Pressable style={s.service}><ServiceIcon name={x} size={52}/><Text style={s.serviceText}>{x}</Text></Pressable></Link>)}</View>
@@ -71,8 +71,7 @@ function CustomerHome(){
 function ProfessionalHome(){
  return <View>
   <Text style={s.greeting}>Welcome back 👋</Text>
-  <Text style={s.heading}>Grow your business.{"
-"}Get more customers.</Text>
+  <Text style={s.heading}>Grow your business.</Text><Text style={s.heading}>Get more customers.</Text>
   <View style={s.statHero}><Text style={s.statLabel}>Professional Trust</Text><Text style={s.statValue}>4.8 <Text style={s.statSmall}>/ 5.0</Text></Text><Text style={s.meta}>Verified profile • Available for jobs</Text></View>
   <View style={s.grid}><Link href="/professional-dashboard" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>0</Text><Text>New requests</Text></Pressable></Link><Link href="/jobs" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>0</Text><Text>Active jobs</Text></Pressable></Link></View>
   <Link href="/professional-profile" asChild><Pressable style={s.primary}><Text style={s.primaryText}>Complete professional profile</Text></Pressable></Link>
