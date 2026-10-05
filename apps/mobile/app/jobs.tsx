@@ -12,7 +12,7 @@ const labels=["Quote accepted","Worker accepted","On the way","Arrived","Work st
 export default function Jobs(){
  const{user,mode}=useAuth();const[jobs,setJobs]=useState<any[]>([]);const[loading,setLoading]=useState(true);
  useEffect(()=>{load()},[user?.id,mode]);
- async function load(){if(!user)return;setLoading(true);const{data,error}=await supabase.from("jobs").select("*").or(`customer_id.eq.${user.id},professional_id.eq.${user.id}`).order("created_at",{ascending:false});if(error)Alert.alert("Unable to load jobs",error.message);else setJobs(data||[]);setLoading(false)}
+ async function load(){if(!user){setLoading(false);return;}setLoading(true);const{data,error}=await supabase.from("jobs").select("*").or(`customer_id.eq.${user.id},professional_id.eq.${user.id}`).order("created_at",{ascending:false});if(error)Alert.alert("Unable to load jobs",error.message);else setJobs(data||[]);setLoading(false)}
  async function status(job:any,next:string){const{error}=await supabase.rpc("update_job_status",{p_job_id:job.id,p_status:next});if(error)Alert.alert("Status update failed",error.message);else load()}
  function nextFor(j:any){const i=steps.indexOf(j.status);return i>=0&&i<steps.length-1?steps[i+1]:null}
  return <SafeAreaView style={s.safe}>
