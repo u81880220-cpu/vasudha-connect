@@ -56,7 +56,8 @@ export default function Marketplace(){
   return <SafeAreaView style={s.safe}>
     <View style={s.container}>
       <View style={s.header}>
-        <View>
+        <VasudhaLogo compact/>
+        <View style={s.headerText}>
           <Text style={s.title}>Find Skills Around You</Text>
           <Text style={s.subtitle}>{items.length} professionals nearby</Text>
         </View>
@@ -83,26 +84,10 @@ export default function Marketplace(){
       </View>
 
       <View style={[s.mapWrap,{height:MAP_HEIGHT}]}>
-        {userCoords&&<MapView
-          style={s.map}
-          initialRegion={{...userCoords,latitudeDelta:0.12,longitudeDelta:0.12}}
-          showsUserLocation showsMyLocationButton>
-          {items.map(worker=><Marker
-            key={worker.professional_id}
-            coordinate={{latitude:worker.latitude,longitude:worker.longitude}}
-            title={worker.display_name}
-            description={`${worker.headline||"Verified professional"} • ${worker.distance_km} km away`}>
-            <View style={s.marker}><Text style={s.markerText}>{worker.display_name.slice(0,1).toUpperCase()}</Text></View>
-            <Callout onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:worker.professional_id}})}>
-              <View style={s.callout}>
-                <Text style={s.calloutName}>{worker.display_name}</Text>
-                <Text>{worker.headline||"Verified professional"}</Text>
-                <Text>{worker.distance_km} km • Trust {Math.round(worker.trust_score)}/100</Text>
-                <Text style={s.calloutLink}>View profile</Text>
-              </View>
-            </Callout>
-          </Marker>)}
-        </MapView>}
+        {userCoords && (Platform.OS==="web"
+          ? <WebMap userCoords={userCoords} items={items}/>
+          : <NativeMap userCoords={userCoords} items={items}/>
+        )}
         {!userCoords&&!loading&&<View style={s.locationEmpty}><Text style={s.locationTitle}>Location required</Text><Text>Allow location to see nearby professionals on the map.</Text><Pressable style={s.locationButton} onPress={requestLocation}><Text style={s.locationButtonText}>Enable location</Text></Pressable></View>}
         {loading&&<View style={s.loadingOverlay}><ActivityIndicator size="large"/><Text style={s.loadingText}>Finding nearby professionals…</Text></View>}
         <View style={s.mapBadge}><Text style={s.mapBadgeText}>{items.length} on map</Text></View>
