@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { Link } from "expo-router";
 import { supabase } from "../src/lib/supabase";
@@ -18,7 +18,7 @@ export default function ConnectionPackages(){
   if(pe||be) Alert.alert("Unable to load packages",pe?.message||be?.message||"Please try again.");
   setPackages(p||[]); setBalance(Number(b||0)); setLoading(false);
  }
- async function startPayment(code:string){
+ async function openRazorpayWeb(data:any,packageName:string){ if(Platform.OS!=="web"||typeof window==="undefined")return false; const w=window as any; const launch=()=>{ if(!w.Razorpay){Alert.alert("Payment unavailable","Razorpay checkout could not be loaded.");return;} const rz=new w.Razorpay({key:data.key_id,amount:data.amount,currency:data.currency,name:"VASUDHA CONNECT",description:packageName,order_id:data.razorpay_order_id,theme:{color:"#087D65"},handler:()=>{Alert.alert("Payment submitted","Payment was received by Razorpay. Credits will appear after server confirmation.");setTimeout(load,2000);}}); rz.on("payment.failed",(r:any)=>Alert.alert("Payment failed",r?.error?.description||"Please try again.")); rz.open(); }; if(w.Razorpay){launch();return true;} await new Promise<void>((resolve,reject)=>{const s=document.createElement("script");s.src="https://checkout.razorpay.com/v1/checkout.js";s.onload=()=>resolve();s.onerror=()=>reject();document.head.appendChild(s);}).then(()=>launch()).catch(()=>Alert.alert("Payment unavailable","Razorpay checkout could not be loaded.")); return true; }\n async function startPayment(code:string){
   setCreating(code);
   const {data,error}=await supabase.functions.invoke("create-razorpay-order",{body:{package_code:code}});
   setCreating(null);
