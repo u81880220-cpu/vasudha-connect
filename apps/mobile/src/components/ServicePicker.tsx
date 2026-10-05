@@ -1,0 +1,48 @@
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { supabase } from "../lib/supabase";
+
+export type ServiceSelection = {
+  categoryId: string | null;
+  categoryName: string | null;
+  serviceId: string | null;
+  serviceName: string | null;
+  subServiceId: string | null;
+  subServiceName: string | null;
+};
+
+type Category={id:string;name:string;icon?:string|null};
+type Service={id:string;category_id:string;name:string;icon?:string|null};
+type SubService={id:string;service_id:string;name:string};
+
+export function ServicePicker({value,onChange,title="Choose a service"}:{value?:Partial<ServiceSelection>;onChange:(value:ServiceSelection)=>void;title?:string}){
+ const[categories,setCategories]=useState<Category[]>([]),[services,setServices]=useState<Service[]>([]),[subs,setSubs]=useState<SubService[]>([]);
+ const[categoryId,setCategoryId]=useState(value?.categoryId||null),[serviceId,setServiceId]=useState(value?.serviceId||null),[subId,setSubId]=useState(value?.subServiceId||null);
+ const[loading,setLoading]=useState(true);
+ useEffect(()=>{load();},[]);
+ async function load(){
+  setLoading(true);
+  const[a,b,c]=await Promise.all([
+   supabase.from("service_categories").select("id,name,icon").eq("status","active").order("sort_order").order("name"),
+   supabase.from("service_catalogue_services").select("id,category_id,name,icon").eq("status","active").order("sort_order").order("name"),
+   supabase.from("service_catalogue_sub_services").select("id,service_id,name").eq("status","active").order("sort_order").order("name")
+  ]);
+  setCategories(a.data||[]);setServices(b.data||[]);setSubs(c.data||[]);setLoading(false);
+ }
+ const currentServices=services.filter(x=>x.category_id===categoryId);
+ const currentSubs=subs.filter(x=>x.service_id===serviceId);
+ const category=categories.find(x=>x.id===categoryId),service=services.find(x=>x.id===serviceId),sub=currentSubs.find(x=>x.id===subId);
+ function chooseCategory(id:string){setCategoryId(id);setServiceId(null);setSubId(null);}
+ function chooseService(id:string){setServiceId(id);setSubId(null);}
+ function chooseSub(id:string){setSubId(id);const s=subs.find(x=>x.id===id);if(!s)return;const svc=services.find(x=>x.id===s.service_id);const cat=categories.find(x=>x.id===svc?.category_id);onChange({categoryId:cat?.id||null,categoryName:cat?.name||null,serviceId:svc?.id||null,serviceName:svc?.name||null,subServiceId:s.id,subServiceName:s.name});}
+ if(loading)return <View style={s.loading}><ActivityIndicator color="#087D65"/><Text style={s.muted}>Loading services…</Text></View>;
+ return <View style={s.wrap}>
+  <Text style={s.title}>{title}</Text>
+  <Text style={s.step}>1. Category</Text>
+  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}>{categories.map(x=><Pressable key={x.id} onPress={()=>chooseCategory(x.id)} style={[s.chip,categoryId===x.id&&s.on]}><Text style={[s.chipText,categoryId===x.id&&s.onText]}>{x.name}</Text></Pressable>)}</ScrollView>
+  {categoryId?<><Text style={s.step}>2. Service</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}>{currentServices.map(x=><Pressable key={x.id} onPress={()=>chooseService(x.id)} style={[s.chip,serviceId===x.id&&s.on]}><Text style={[s.chipText,serviceId===x.id&&s.onText]}>{x.name}</Text></Pressable>)}</ScrollView></>:null}
+  {serviceId?<><Text style={s.step}>3. Sub-service</Text><View style={s.subGrid}>{currentSubs.map(x=><Pressable key={x.id} onPress={()=>chooseSub(x.id)} style={[s.subChip,subId===x.id&&s.on]}><Text style={[s.chipText,subId===x.id&&s.onText]}>{x.name}</Text></Pressable>)}</View></>:null}
+  {sub?<View style={s.selected}><Text style={s.selectedLabel}>Selected</Text><Text style={s.selectedText}>{category?.name} › {service?.name} › {sub.name}</Text></View>:null}
+ </View>;
+}
+const s=StyleSheet.create({wrap:{borderWidth:1,borderColor:"#e0e8e5",borderRadius:16,padding:14,backgroundColor:"#fff"},loading:{padding:18,alignItems:"center"},muted:{color:"#66736e",marginTop:6},title:{fontSize:17,fontWeight:"900",color:"#13201c"},step:{fontSize:12,fontWeight:"900",color:"#66736e",marginTop:14,marginBottom:7,textTransform:"uppercase",letterSpacing:.5},row:{gap:7,paddingBottom:2},chip:{borderWidth:1,borderColor:"#cfdad6",borderRadius:18,paddingHorizontal:12,paddingVertical:9,backgroundColor:"#fff"},on:{backgroundColor:"#e7f7f2",borderColor:"#087D65",borderWidth:2},chipText:{fontSize:12,fontWeight:"700",color:"#46534f"},onText:{color:"#087D65"},subGrid:{flexDirection:"row",flexWrap:"wrap",gap:7},subChip:{borderWidth:1,borderColor:"#cfdad6",borderRadius:14,paddingHorizontal:11,paddingVertical:9},selected:{marginTop:12,padding:11,borderRadius:12,backgroundColor:"#f2f8f6"},selectedLabel:{fontSize:10,fontWeight:"900",color:"#087D65",textTransform:"uppercase"},selectedText:{fontWeight:"800",color:"#13201c",marginTop:3}});
