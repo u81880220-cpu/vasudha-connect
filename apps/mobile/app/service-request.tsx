@@ -11,7 +11,7 @@ export default function ServiceRequest(){
  const [selection,setSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:serviceId||null,serviceName:serviceName||null,subServiceId:subServiceId||null,subServiceName:subServiceName||null});
  const [title,setTitle]=useState(""); const [description,setDescription]=useState(""); const [date,setDate]=useState(""); const [time,setTime]=useState(""); const [location,setLocation]=useState(""); const [busy,setBusy]=useState(false);
  async function submit(){
-  if(!professionalId||!selection.subServiceId||title.trim().length<3||description.trim().length<3||location.trim().length<3){Alert.alert("Complete request","Choose a sub-service, add the work requirement and the service location.");return;}
+  if(!professionalId||!selection.serviceId||title.trim().length<3||description.trim().length<3||location.trim().length<3){Alert.alert("Complete request","Choose a service, then optionally refine it with a sub-service. Add the work requirement and service location.");return;}
   setBusy(true);
   const {data:{user}}=await supabase.auth.getUser(); if(!user){setBusy(false);return;}
   let latitude:null|number=null, longitude:null|number=null;
@@ -23,7 +23,7 @@ export default function ServiceRequest(){
  }
  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
   <VasudhaLogo compact/><Text style={s.title}>Tell the Professional What You Need</Text><Text style={s.muted}>Choose the exact service, then tell the professional what you need. No quotation is required.</Text>
-  <ServicePicker value={selection} onChange={setSelection}/>
+  <ServicePicker value={selection} optionalSubService onChange={setSelection}/>
   <Text style={s.label}>What do you need?</Text><TextInput value={title} onChangeText={setTitle} placeholder="e.g. Fix kitchen plumbing" style={s.input}/>
   <Text style={s.label}>Work details</Text><TextInput value={description} onChangeText={setDescription} placeholder="Describe the work required..." multiline style={[s.input,s.large]}/>
   <Text style={s.label}>Preferred date (optional)</Text><TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" style={s.input}/>
