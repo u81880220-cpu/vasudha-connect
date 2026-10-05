@@ -13,6 +13,7 @@ export default function CustomerProfile() {
   });
   const [rep, setRep] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const editableFields = ["full_name","display_name","bio","city","state"];
 
   useEffect(() => {
     if (session?.user.id) load();
@@ -45,7 +46,7 @@ export default function CustomerProfile() {
     }
   }
 
-  const score = Math.min(100, Math.max(0, Number(rep?.trust_score || 0)));
+  const score = Math.min(100, Math.max(0, Number(rep?.trust_score ?? f.customer_trust_score ?? 0)));
 
   return (
     <SafeAreaView style={s.safe}>
@@ -79,7 +80,7 @@ export default function CustomerProfile() {
         </View>
 
         <Text style={s.section}>Personal details</Text>
-        {Object.keys(f).map((k) => (
+        {editableFields.map((k) => (
           <View key={k}>
             <Text style={s.l}>{k.replaceAll("_", " ")}</Text>
             <TextInput
