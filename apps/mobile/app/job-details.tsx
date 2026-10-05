@@ -22,7 +22,7 @@ export default function JobDetails(){
   if(phone)await Linking.openURL(`tel:${phone}`);else Alert.alert("Phone unavailable","Contact details are not available yet.");
  }
  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.c}>
-   <View style={s.top}><Pressable onPress={()=>router.back()} style={s.back}><Text style={s.backText}>‹</Text></Pressable><VasudhaLogo compact/><Text style={s.more}>⋯</Text></View>
+   <View style={s.top}><Pressable onPress={()=>router.back()} style={s.back}><Text style={s.backText}>‹</Text></Pressable><VasudhaLogo compact/><View style={{width:24}}/></View>
    <Text style={s.title}>Job Details</Text>
    {loading?<View style={s.state}><ActivityIndicator color="#087D65"/><Text style={s.muted}>Loading job…</Text></View>:!job?<Text style={s.muted}>Job not found.</Text>:<>
     <View style={s.card}><Text style={s.name}>{job.title||"Service job"}</Text><Text style={s.badge}>{job.status||"In Progress"}</Text><Text style={s.label}>{mode==="professional"?"Customer":"Professional"}</Text><Text style={s.value}>{privateData?.customer_name||privateData?.professional_name||"Connected participant"}</Text><Text style={s.label}>Job location</Text><Text style={s.value}>{privateData?.location_text||"Location will be available after the job is accepted."}</Text></View>
