@@ -13,24 +13,22 @@ export function AuthProvider({children}:PropsWithChildren){
 
  useEffect(()=>{
    let mounted=true;
-   const init=async()=>{
-     try{
-       const {data}=await supabase.auth.getSession();
-       if(!mounted)return;
-       setSession(data.session);
-       if(data.session) await loadMode(data.session.user.id);
-     }finally{
-       if(mounted)setLoading(false);
-     }
-   };
-   void init();
 
-   const{data:listener}=supabase.auth.onAuthStateChange(async(_event,next)=>{
+   supabase.auth.getSession().then(({data})=>{
+     if(!mounted)return;
+     setSession(data.session);
+     setLoading(false);
+     if(data.session) void loadMode(data.session.user.id);
+   }).catch(()=>{
+     if(mounted)setLoading(false);
+   });
+
+   const{data:listener}=supabase.auth.onAuthStateChange((_event,next)=>{
      if(!mounted)return;
      setSession(next);
-     if(next) await loadMode(next.user.id);
+     if(next) void loadMode(next.user.id);
      else setModeState("customer");
-     if(mounted)setLoading(false);
+     setLoading(false);
    });
 
    return()=>{
@@ -44,12 +42,14 @@ export function AuthProvider({children}:PropsWithChildren){
    if(data?.current_mode==="professional")setModeState("professional");
    else setModeState("customer");
  }
+
  async function setMode(nextMode:AppMode){
-   if(!session)return;
+   if(!session) return;
    const{error}=await supabase.rpc("switch_app_mode",{p_mode:nextMode});
    if(error)throw error;
    setModeState(nextMode);
  }
+
  async function signOut(){await supabase.auth.signOut();}
 
  return <AuthContext.Provider value={{session,loading,mode,setMode,signOut}}>{children}</AuthContext.Provider>;
