@@ -1,6 +1,6 @@
 import * as Location from "expo-location";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Dimensions, FlatList, Platform, Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Dimensions, FlatList, Modal, Platform, Pressable, SafeAreaView, StyleSheet, Switch, Text, View } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
@@ -25,6 +25,11 @@ export default function Marketplace(){
   const[loading,setLoading]=useState(true);
   const[userCoords,setUserCoords]=useState<Coords|null>(null);
   const[radius,setRadius]=useState(10);
+  const[filtersOpen,setFiltersOpen]=useState(false);
+  const[verifiedOnly,setVerifiedOnly]=useState(true);
+  const[availableOnly,setAvailableOnly]=useState(true);
+  const[minRating,setMinRating]=useState(4);
+  const visibleItems=items.filter(x=>(!verifiedOnly||x.verification_status==="verified")&&(!availableOnly||x.is_available)&&(Math.round(x.trust_score)/20)>=minRating);
 
   useEffect(()=>{loadSkills();requestLocation();},[]);
   useEffect(()=>{if(userCoords) searchProfessionals(userCoords);},[selected,radius]);
@@ -89,7 +94,7 @@ export default function Marketplace(){
           <Text style={s.title}>Find Skills Around You</Text>
           <Text style={s.subtitle}>{items.length} professionals nearby</Text>
         </View>
-        <Pressable style={s.refresh} onPress={requestLocation}><Text style={s.refreshText}>↻</Text></Pressable>
+        <View style={s.headerActions}><Pressable style={s.filterButton} onPress={()=>setFiltersOpen(true)}><Text style={s.filterButtonText}>☷</Text></Pressable><Pressable style={s.refresh} onPress={requestLocation}><Text style={s.refreshText}>↻</Text></Pressable></View>
       </View>
 
       <FlatList
@@ -113,12 +118,12 @@ export default function Marketplace(){
 
       <View style={[s.mapWrap,{height:MAP_HEIGHT}]}>
         {userCoords && (Platform.OS==="web"
-          ? <WebMap userCoords={userCoords} items={items}/>
-          : <NativeMap userCoords={userCoords} items={items}/>
+          ? <WebMap userCoords={userCoords} items={visibleItems}/>
+          : <NativeMap userCoords={userCoords} items={visibleItems}/>
         )}
         {!userCoords&&!loading&&<View style={s.locationEmpty}><Text style={s.locationTitle}>Location required</Text><Text>Allow location to see nearby professionals on the map.</Text><Pressable style={s.locationButton} onPress={requestLocation}><Text style={s.locationButtonText}>Enable location</Text></Pressable></View>}
         {loading&&<View style={s.loadingOverlay}><ActivityIndicator size="large"/><Text style={s.loadingText}>Finding nearby professionals…</Text></View>}
-        <View style={s.mapBadge}><Text style={s.mapBadgeText}>{items.length} on map</Text></View>
+        <View style={s.mapBadge}><Text style={s.mapBadgeText}>{visibleItems.length} on map</Text></View>
       </View>
 
       <View style={s.listHeader}>
@@ -129,7 +134,7 @@ export default function Marketplace(){
       <FlatList
         horizontal
         showsHorizontalScrollIndicator={false}
-        data={items}
+        data={visibleItems}
         keyExtractor={x=>x.professional_id}
         contentContainerStyle={s.workerRow}
         ListEmptyComponent={!loading?<Text style={s.empty}>No professionals found in this area.</Text>:null}
@@ -148,6 +153,19 @@ export default function Marketplace(){
         </Pressable>}
       />
     </View>
+<Modal visible={filtersOpen} transparent animationType="slide" onRequestClose={()=>setFiltersOpen(false)}>
+        <View style={s.modalBackdrop}>
+          <View style={s.filterSheet}>
+            <View style={s.sheetHead}><Text style={s.sheetTitle}>Filter Professionals</Text><Pressable onPress={()=>setFiltersOpen(false)}><Text style={s.close}>×</Text></Pressable></View>
+            <View style={s.filterRow}><Text style={s.filterLabel}>Verified only</Text><Switch value={verifiedOnly} onValueChange={setVerifiedOnly} trackColor={{false:"#cfdad6",true:"#087D65"}} /></View>
+            <View style={s.filterRow}><Text style={s.filterLabel}>Available now</Text><Switch value={availableOnly} onValueChange={setAvailableOnly} trackColor={{false:"#cfdad6",true:"#087D65"}} /></View>
+            <Text style={s.filterLabel}>Minimum rating</Text>
+            <View style={s.ratingRow}>{[0,4,4.5,5].map(x=><Pressable key={x} onPress={()=>setMinRating(x)} style={[s.ratingChip,minRating===x&&s.ratingChipOn]}><Text style={minRating===x?s.ratingOn:s.ratingText}>{x===0?"Any":x.toFixed(1)+"+"}</Text></Pressable>)}</View>
+            <Text style={s.filterHint}>Distance: {radius} km</Text>
+            <Pressable style={s.apply} onPress={()=>setFiltersOpen(false)}><Text style={s.applyText}>Apply Filters</Text></Pressable>
+          </View>
+        </View>
+      </Modal>
   </SafeAreaView>;
 }
 
@@ -188,7 +206,7 @@ function NativeMap({userCoords,items}:{userCoords:Coords;items:Professional[]}) 
 }
 
 const s=StyleSheet.create({
-  safe:{flex:1,backgroundColor:"#fff"}, container:{flex:1}, header:{paddingHorizontal:14,paddingTop:8,flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:10},headerText:{flex:1},
+  safe:{flex:1,backgroundColor:"#fff"}, container:{flex:1}, header:{paddingHorizontal:14,paddingTop:8,flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:10},headerText:{flex:1},headerActions:{flexDirection:"row",alignItems:"center",gap:8},filterButton:{width:40,height:40,borderRadius:20,backgroundColor:"#f1f5f4",alignItems:"center",justifyContent:"center"},filterButtonText:{fontSize:21,color:"#087D65"},
   title:{fontSize:22,fontWeight:"800"},subtitle:{marginTop:2,opacity:.6},refresh:{width:40,height:40,borderRadius:20,backgroundColor:"#f1f5f4",alignItems:"center",justifyContent:"center"},refreshText:{fontSize:24},
   skills:{paddingHorizontal:14,paddingVertical:10,gap:8},skill:{paddingHorizontal:12,paddingVertical:7,borderRadius:16,backgroundColor:"#f3f5f5",alignItems:"center",minWidth:66},skillSelected:{backgroundColor:"#0b8f72"},skillText:{fontWeight:"700"},skillTextSelected:{color:"#fff"},
   radiusRow:{flexDirection:"row",alignItems:"center",gap:7,paddingHorizontal:16,paddingBottom:10},label:{fontWeight:"800",marginRight:3},radius:{paddingHorizontal:11,paddingVertical:6,borderRadius:14,backgroundColor:"#f3f5f5"},radiusSelected:{backgroundColor:"#d8f4eb"},radiusText:{fontSize:12},radiusTextSelected:{fontSize:12,fontWeight:"800"},
@@ -196,5 +214,5 @@ const s=StyleSheet.create({
   marker:{width:42,height:42,borderRadius:21,borderWidth:3,borderColor:"#fff",backgroundColor:"#0b8f72",alignItems:"center",justifyContent:"center",elevation:4},markerText:{color:"#fff",fontWeight:"900",fontSize:15},
   callout:{width:190,padding:6},calloutName:{fontWeight:"800",fontSize:15},calloutLink:{fontWeight:"800",marginTop:5,color:"#087d65"},loadingOverlay:{position:"absolute",inset:0,backgroundColor:"rgba(255,255,255,.72)",alignItems:"center",justifyContent:"center"},loadingText:{marginTop:8,fontWeight:"700"},
   locationEmpty:{flex:1,alignItems:"center",justifyContent:"center",padding:30},locationTitle:{fontSize:18,fontWeight:"800",marginBottom:6},locationButton:{marginTop:14,backgroundColor:"#0b8f72",paddingHorizontal:18,paddingVertical:11,borderRadius:12},locationButtonText:{color:"#fff",fontWeight:"800"},
-  listHeader:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:16,paddingTop:12},listTitle:{fontSize:17,fontWeight:"800"},listHint:{fontSize:12,opacity:.55},workerRow:{paddingHorizontal:12,paddingBottom:10,gap:10},card:{width:250,borderRadius:16,borderWidth:1,borderColor:"#e2e7e6",padding:12,marginTop:8,backgroundColor:"#fff",elevation:2},cardTop:{flexDirection:"row",alignItems:"center",gap:9},avatar:{width:42,height:42,borderRadius:21,backgroundColor:"#edf1f5",alignItems:"center",justifyContent:"center"},name:{fontSize:15,fontWeight:"800"},headline:{fontSize:12,opacity:.6,marginTop:2},verified:{color:"#0b8f72",fontSize:18},distance:{marginTop:10,fontSize:12,opacity:.65},rate:{marginTop:8,alignSelf:"flex-start",paddingHorizontal:9,paddingVertical:5,borderRadius:10,backgroundColor:"#e9f8f2"},rateText:{fontSize:12,fontWeight:"800",color:"#087d65"},view:{marginTop:9,fontWeight:"800",color:"#087d65"},empty:{padding:20,opacity:.6}
+  modalBackdrop:{flex:1,backgroundColor:"rgba(19,32,28,.28)",justifyContent:"flex-end"},filterSheet:{backgroundColor:"#fff",borderTopLeftRadius:26,borderTopRightRadius:26,padding:22,paddingBottom:30},sheetHead:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},sheetTitle:{fontSize:21,fontWeight:"900",color:"#13201c"},close:{fontSize:28,color:"#13201c"},filterRow:{minHeight:54,flexDirection:"row",alignItems:"center",justifyContent:"space-between",borderBottomWidth:1,borderBottomColor:"#eef2f0"},filterLabel:{fontSize:15,fontWeight:"800",color:"#13201c",marginTop:16},ratingRow:{flexDirection:"row",gap:8,marginTop:10},ratingChip:{borderWidth:1,borderColor:"#cfdad6",borderRadius:18,paddingHorizontal:14,paddingVertical:9},ratingChipOn:{backgroundColor:"#087D65",borderColor:"#087D65"},ratingText:{color:"#13201c",fontWeight:"700"},ratingOn:{color:"#fff",fontWeight:"800"},filterHint:{color:"#66736e",marginTop:15},apply:{height:50,borderRadius:12,backgroundColor:"#087D65",alignItems:"center",justifyContent:"center",marginTop:18},applyText:{color:"#fff",fontWeight:"900",fontSize:16},listHeader:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:16,paddingTop:12},listTitle:{fontSize:17,fontWeight:"800"},listHint:{fontSize:12,opacity:.55},workerRow:{paddingHorizontal:12,paddingBottom:10,gap:10},card:{width:250,borderRadius:16,borderWidth:1,borderColor:"#e2e7e6",padding:12,marginTop:8,backgroundColor:"#fff",elevation:2},cardTop:{flexDirection:"row",alignItems:"center",gap:9},avatar:{width:42,height:42,borderRadius:21,backgroundColor:"#edf1f5",alignItems:"center",justifyContent:"center"},name:{fontSize:15,fontWeight:"800"},headline:{fontSize:12,opacity:.6,marginTop:2},verified:{color:"#0b8f72",fontSize:18},distance:{marginTop:10,fontSize:12,opacity:.65},rate:{marginTop:8,alignSelf:"flex-start",paddingHorizontal:9,paddingVertical:5,borderRadius:10,backgroundColor:"#e9f8f2"},rateText:{fontSize:12,fontWeight:"800",color:"#087d65"},view:{marginTop:9,fontWeight:"800",color:"#087d65"},empty:{padding:20,opacity:.6}
 });
