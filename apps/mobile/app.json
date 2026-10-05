@@ -8,7 +8,9 @@
     "userInterfaceStyle": "automatic",
     "plugins": ["expo-router", "expo-notifications"],
     "android": {
-      "package": "com.vasudha.connect"
+      "package": "com.vasudha.connect",
+      "versionCode": 1,
+      "permissions": ["POST_NOTIFICATIONS"]
     }
   }
 }
