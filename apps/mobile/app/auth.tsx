@@ -11,20 +11,22 @@ export default function AuthScreen(){
  const [mode,setMode]=useState<"customer"|"professional">(params.mode==="professional"?"professional":"customer");
  const [method,setMethod]=useState<Method>("email");
  const [phone,setPhone]=useState(""); const [otp,setOtp]=useState("");
- const [email,setEmail]=useState(""); const [password,setPassword]=useState("");
+ const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [fullName,setFullName]=useState("");
+ const [accountMode,setAccountMode]=useState<"login"|"signup">("login");
  const [sent,setSent]=useState(false); const [busy,setBusy]=useState(false);
 
  async function sendOtp(){
+  if(accountMode==="signup"&&fullName.trim().length<2)return Alert.alert("Enter your name","Please enter your full name before creating your account.");
   if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
   setBusy(true);
-  try{const{error}=await supabase.auth.signInWithOtp({phone:"+91"+phone.replace(/\D/g,"").slice(-10),options:{data:{initial_mode:mode}}});if(error)throw error;setSent(true);}
+  try{const{error}=await supabase.auth.signInWithOtp({phone:"+91"+phone.replace(/\D/g,"").slice(-10),options:{data:{initial_mode:mode,full_name:fullName.trim()||undefined}}});if(error)throw error;setSent(true);}
   catch(e){Alert.alert("Unable to send OTP",e instanceof Error?e.message:"Please try again.");}
   finally{setBusy(false);}
  }
  async function verifyOtp(){
   if(otp.trim().length<4)return Alert.alert("Enter OTP","Please enter the OTP you received.");
   setBusy(true);
-  try{const{error}=await supabase.auth.verifyOtp({phone:"+91"+phone.replace(/\D/g,"").slice(-10),token:otp.trim(),type:"sms"});if(error)throw error;router.replace("/home");}
+  try{const{data,error}=await supabase.auth.verifyOtp({phone:"+91"+phone.replace(/\D/g,"").slice(-10),token:otp.trim(),type:"sms"});if(error)throw error;if(accountMode==="signup"&&data.user&&fullName.trim())await supabase.from("profiles").update({full_name:fullName.trim(),display_name:fullName.trim()}).eq("id",data.user.id);router.replace("/home");}
   catch(e){Alert.alert("OTP verification failed",e instanceof Error?e.message:"Please try again.");}
   finally{setBusy(false);}
  }
@@ -36,9 +38,10 @@ export default function AuthScreen(){
   finally{setBusy(false);}
  }
  async function emailSignup(){
+  if(fullName.trim().length<2)return Alert.alert("Enter your name","Please enter your full name.");
   if(!email.includes("@")||password.length<6)return Alert.alert("Check details","Enter a valid email and a password of at least 6 characters.");
   setBusy(true);
-  try{const{data,error}=await supabase.auth.signUp({email:email.trim(),password,options:{data:{initial_mode:mode},emailRedirectTo:getAuthRedirect()}});if(error)throw error;if(data.session)router.replace("/home");else Alert.alert("Check your email","We sent a confirmation link to your email address.");}
+  try{const{data,error}=await supabase.auth.signUp({email:email.trim(),password,options:{data:{initial_mode:mode,full_name:fullName.trim()},emailRedirectTo:getAuthRedirect()}});if(error)throw error;if(data.session)router.replace("/home");else Alert.alert("Check your email","We sent a confirmation link to your email address.");}
   catch(e){Alert.alert("Account creation failed",e instanceof Error?e.message:"Please try again.");}
   finally{setBusy(false);}
  }
@@ -55,17 +58,19 @@ export default function AuthScreen(){
  return <SafeAreaView style={s.safe}><KeyboardAvoidingView style={s.flex} behavior={Platform.OS==="ios"?"padding":"height"}><View style={s.container}>
   <VasudhaLogo/>
   <Text style={s.heading}>Welcome Back</Text>
-  <Text style={s.sub}>Sign in to continue</Text>
+  <Text style={s.sub}>{accountMode==="signup"?"Create your VASUDHA CONNECT account":"Sign in to continue"}</Text>
   <View style={s.tabs}>
    <Pressable onPress={()=>setMethod("otp")} style={[s.tab,method==="otp"&&s.tabOn]}><Text style={[s.tabText,method==="otp"&&s.tabTextOn]}>Mobile OTP</Text></Pressable>
    <Pressable onPress={()=>setMethod("email")} style={[s.tab,method==="email"&&s.tabOn]}><Text style={[s.tabText,method==="email"&&s.tabTextOn]}>Email</Text></Pressable>
   </View>
+  {accountMode==="signup"&&<TextInput value={fullName} onChangeText={setFullName} placeholder="Full name" style={s.input} autoCapitalize="words"/>}
   {method==="otp"?(
    !sent?<><View style={s.phoneRow}><View style={s.code}><Text>🇮🇳 +91</Text></View><TextInput value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="98765 43210" style={s.phone}/></View>
    <Pressable disabled={busy} onPress={sendOtp} style={s.primary}><Text style={s.primaryText}>{busy?"Sending…":"Send OTP"}</Text></Pressable></>
    :<><Text style={s.otpLabel}>Enter OTP sent to +91 {phone}</Text><TextInput value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} placeholder="••••••" style={s.otp}/><Pressable disabled={busy} onPress={verifyOtp} style={s.primary}><Text style={s.primaryText}>{busy?"Verifying…":"Verify & Continue"}</Text></Pressable><Pressable onPress={()=>setSent(false)}><Text style={s.change}>Change mobile number</Text></Pressable></>
   ):(
-   <><TextInput autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="Email address" style={s.input}/><TextInput secureTextEntry value={password} onChangeText={setPassword} placeholder="Password" style={s.input}/><Pressable disabled={busy} onPress={emailLogin} style={s.primary}><Text style={s.primaryText}>{busy?"Signing in…":"Sign in with Email"}</Text></Pressable><Pressable disabled={busy} onPress={emailSignup}><Text style={s.create}>Create account with Email</Text></Pressable></>
+   <><TextInput autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="Email address" style={s.input}/><TextInput secureTextEntry value={password} onChangeText={setPassword} placeholder="Password" style={s.input}/><Pressable disabled={busy} onPress={emailLogin} style={s.primary}><Text style={s.primaryText}>{busy?"Signing in…":"Sign in with Email"}</Text></Pressable><Pressable disabled={busy} onPress={accountMode==="signup"?emailSignup:()=>setAccountMode("signup")}><Text style={s.create}>{accountMode==="signup"?"Create account with Email":"Create a new account"}</Text></Pressable>
+   {accountMode==="signup"&&<Pressable onPress={()=>setAccountMode("login")}><Text style={s.change}>Already have an account? Sign in</Text></Pressable>}</>
   )}
   <View style={s.or}><View style={s.line}/><Text style={s.orText}>or</Text><View style={s.line}/></View>
   <Pressable disabled={busy} onPress={google} style={s.google}><Text style={s.googleG}>G</Text><Text style={s.googleText}>Continue with Google</Text></Pressable>
