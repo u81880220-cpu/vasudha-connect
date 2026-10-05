@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { Link } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 
@@ -36,4 +37,4 @@ export default function ConnectionPackages(){
   <Link href="/marketplace" asChild><Pressable style={s.back}><Text style={s.backText}>Back to professionals</Text></Pressable></Link>
  </ScrollView></SafeAreaView>;
 }
-const s=StyleSheet.create({safe:{flex:1},container:{padding:20,paddingBottom:50},title:{fontSize:28,fontWeight:"800"},sub:{marginTop:5,opacity:.65,marginBottom:18},balance:{borderWidth:1,borderRadius:16,padding:16,marginBottom:12},balanceValue:{fontSize:30,fontWeight:"800",marginTop:4},balanceHint:{fontSize:12,opacity:.6,marginTop:4},notice:{borderWidth:1,borderRadius:14,padding:14,marginBottom:16},noticeTitle:{fontWeight:"800",marginBottom:4},card:{borderWidth:1,borderRadius:16,padding:16,marginBottom:12},row:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},name:{fontSize:18,fontWeight:"800"},price:{fontSize:20,fontWeight:"800"},muted:{opacity:.6,marginTop:4},per:{fontSize:12,opacity:.65,marginTop:8},buy:{marginTop:12,borderRadius:10,padding:13,alignItems:"center",backgroundColor:"#111"},buyDisabled:{opacity:.55},buyText:{color:"#fff",fontWeight:"800"},back:{borderWidth:1,borderRadius:12,padding:14,alignItems:"center",marginTop:8},backText:{fontWeight:"800"}});
+const s=StyleSheet.create({safe:{flex:1},container:{padding:20,paddingBottom:50},title:{fontSize:28,fontWeight:"800"},sub:{marginTop:5,opacity:.65,marginBottom:18},balance:{borderWidth:1,borderRadius:16,padding:16,marginBottom:12},balanceValue:{fontSize:30,fontWeight:"800",marginTop:4},balanceHint:{fontSize:12,opacity:.6,marginTop:4},notice:{borderWidth:1,borderRadius:14,padding:14,marginBottom:16},noticeTitle:{fontWeight:"800",marginBottom:4},card:{borderWidth:1,borderRadius:16,padding:16,marginBottom:12},row:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},name:{fontSize:18,fontWeight:"800"},price:{fontSize:20,fontWeight:"800"},muted:{opacity:.6,marginTop:4},per:{fontSize:12,opacity:.65,marginTop:8},buy:{marginTop:12,borderRadius:10,padding:13,alignItems:"center",backgroundColor:"#087D65"},buyDisabled:{opacity:.55},buyText:{color:"#fff",fontWeight:"800"},back:{borderWidth:1,borderRadius:12,padding:14,alignItems:"center",marginTop:8},backText:{fontWeight:"800"}});
