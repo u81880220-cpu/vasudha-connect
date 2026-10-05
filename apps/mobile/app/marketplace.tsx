@@ -5,6 +5,7 @@ import MapView, { Callout, Marker } from "react-native-maps";
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
+import { AppBottomNav } from "../src/components/AppBottomNav";
 import { ServiceIcon } from "../src/components/ServiceIcon";
 
 type Skill={id:string;name:string;category:string};
