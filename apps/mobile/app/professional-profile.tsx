@@ -19,7 +19,7 @@ export default function ProfessionalProfile(){
  useEffect(()=>{if(uid)load()},[uid]);
  async function load(){
   setLoading(true);
-  const[q,k,c,a,ct,pss]=await Promise.all([
+  const[q,a,ct,pss]=await Promise.all([
    supabase.from("professional_profiles").select("headline,about,years_experience,service_radius_km,is_available,verification_status").eq("user_id",uid).maybeSingle(),
    supabase.from("service_areas").select("id,label,city,state,radius_km").eq("professional_id",uid).order("created_at"),
    supabase.from("user_contact_details").select("phone").eq("user_id",uid).maybeSingle(),
