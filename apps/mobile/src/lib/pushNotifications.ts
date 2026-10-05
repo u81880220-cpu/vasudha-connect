@@ -24,6 +24,7 @@ export async function registerForPushNotifications(userId:string){
 }
 
 export function registerNotificationTapHandler(){
+ if(Platform.OS!=="android"&&Platform.OS!=="ios") return {remove:()=>{}};
  return Notifications.addNotificationResponseReceivedListener(response=>{
   const data=(response.notification.request.content.data||{}) as any;
   if(data.screen==="jobs")router.push("/jobs");
