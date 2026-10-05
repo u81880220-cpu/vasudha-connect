@@ -5,6 +5,7 @@ import {useAuth} from "../src/auth/AuthProvider";
 import {VasudhaLogo} from "../src/components/VasudhaLogo";
 import {AppBottomNav} from "../src/components/AppBottomNav";
 import {ServiceIcon} from "../src/components/ServiceIcon";
+import {supabase} from "../src/lib/supabase";
 import {registerForPushNotifications,registerNotificationTapHandler} from "../src/lib/pushNotifications";
 
 const services=["Electrician","Plumber","Carpenter","Painter","AC Technician"];
@@ -14,7 +15,25 @@ export default function HomeScreen(){
  const[switching,setSwitching]=useState(false);
  const[checkingOnboarding,setCheckingOnboarding]=useState(true);
  useEffect(()=>{if(!loading&&!session)router.replace("/auth")},[loading,session]);
- useEffect(()=>{\n  if(loading||!session)return;\n  let active=true;\n  (async()=>{\n   const{data:profile}=await supabase.from("profiles").select("full_name").eq("id",session.user.id).maybeSingle();\n   if(!active)return;\n   if(!profile?.full_name?.trim()){router.replace("/basic-profile");return;}\n   if(mode==="professional"){\n    const[{data:pp},{data:ss},{data:area}]=await Promise.all([\n     supabase.from("professional_profiles").select("headline,about").eq("user_id",session.user.id).maybeSingle(),\n     supabase.from("professional_sub_services").select("sub_service_id").eq("professional_id",session.user.id).limit(1),\n     supabase.from("service_areas").select("id").eq("professional_id",session.user.id).limit(1)\n    ]);\n    if(!pp?.headline?.trim()||!pp?.about?.trim()||!ss?.length||!area?.length){router.replace("/professional-onboarding");return;}\n   }\n   setCheckingOnboarding(false);\n  })();\n  return()=>{active=false};\n },[loading,session?.user.id,mode]);\n useEffect(()=>{if(!session)return; void registerForPushNotifications(session.user.id); const sub=registerNotificationTapHandler(); return()=>sub.remove()},[session?.user.id]);
+ useEffect(()=>{
+  if(loading||!session)return;
+  let active=true;
+  (async()=>{
+   const{data:profile}=await supabase.from("profiles").select("full_name").eq("id",session.user.id).maybeSingle();
+   if(!active)return;
+   if(!profile?.full_name?.trim()){router.replace("/basic-profile");return;}
+   if(mode==="professional"){
+    const[{data:pp},{data:ss},{data:area}]=await Promise.all([
+     supabase.from("professional_profiles").select("headline,about").eq("user_id",session.user.id).maybeSingle(),
+     supabase.from("professional_sub_services").select("sub_service_id").eq("professional_id",session.user.id).limit(1),
+     supabase.from("service_areas").select("id").eq("professional_id",session.user.id).limit(1)
+    ]);
+    if(!pp?.headline?.trim()||!pp?.about?.trim()||!ss?.length||!area?.length){router.replace("/professional-onboarding");return;}
+   }
+   setCheckingOnboarding(false);
+  })();
+  return()=>{active=false};
+ },[loading,session?.user.id,mode]);\n useEffect(()=>{if(!session)return; void registerForPushNotifications(session.user.id); const sub=registerNotificationTapHandler(); return()=>sub.remove()},[session?.user.id]);
  if(loading||!session||checkingOnboarding)return <SafeAreaView style={s.safe}><View style={s.loading}><ActivityIndicator color="#087D65"/><Text style={s.muted}>Loading…</Text></View></SafeAreaView>;
  const customer=mode==="customer";
  async function toggleMode(){
