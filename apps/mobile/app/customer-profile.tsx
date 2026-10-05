@@ -12,6 +12,7 @@ export default function CustomerProfile() {
     full_name: "", display_name: "", bio: "", city: "", state: "", country: "India"
   });
   const [rep, setRep] = useState<any>(null);
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(true);
   const editableFields = ["full_name","display_name","bio","city","state"];
 
