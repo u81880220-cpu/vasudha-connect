@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
+import { AppBottomNav } from "../src/components/AppBottomNav";
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { useAuth } from "../src/context/AuthProvider";
@@ -38,6 +39,6 @@ export default function Connections(){
   {loading?<Text style={s.muted}>Loading...</Text>:items.length===0?<View style={s.empty}><Text style={s.emptyTitle}>No active connections</Text><Text style={s.muted}>{mode==="customer"?"Unlock a verified professional to start a connection.":"When a customer unlocks you, the connection will appear here."}</Text></View>:
    items.map(x=><View key={x.id} style={s.card}><Text style={s.name}>{x.profile?.display_name||x.profile?.full_name||"User"}</Text>{x.professional?.headline?<Text style={s.muted}>{x.professional.headline}</Text>:null}{x.professional?.trust_score!=null?<Text style={s.score}>Trust {Math.round(x.professional.trust_score)}/100</Text>:null}<Text style={s.expiry}>Access until {new Date(x.expires_at).toLocaleDateString()}</Text><Pressable style={s.primary} onPress={()=>open(x)}><Text style={s.primaryText}>Open Chat</Text></Pressable></View>)
   }
- </ScrollView></SafeAreaView>;
+ </ScrollView><AppBottomNav/></SafeAreaView>;
 }
 const s=StyleSheet.create({safe:{flex:1},container:{padding:20,paddingBottom:50},title:{fontSize:28,fontWeight:"800"},muted:{opacity:.65,marginTop:5},card:{borderWidth:1,borderRadius:16,padding:16,marginTop:14},name:{fontSize:19,fontWeight:"800"},score:{fontWeight:"800",marginTop:8},expiry:{fontSize:12,opacity:.6,marginTop:8},primary:{marginTop:12,borderRadius:12,padding:13,alignItems:"center",backgroundColor:"#087D65"},primaryText:{color:"#fff",fontWeight:"800"},empty:{borderWidth:1,borderRadius:16,padding:20,marginTop:20},emptyTitle:{fontSize:18,fontWeight:"800"}});
