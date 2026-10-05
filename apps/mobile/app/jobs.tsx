@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
-import { supabase } from "../src/lib/supabase";\nimport { router } from "expo-router";
+import { supabase } from "../src/lib/supabase";
+import { router } from "expo-router";
 import { useAuth } from "../src/auth/AuthProvider";
 
 const steps=["quote_accepted","worker_accepted","on_the_way","arrived","work_started","work_completed","customer_confirmed"];
