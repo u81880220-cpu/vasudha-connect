@@ -28,6 +28,7 @@ export default function CustomerProfile() {
     if (error) Alert.alert("Error", error.message);
     else if (data) setF(data);
 
+    const { data:ct } = await supabase.from("user_contact_details").select("phone").eq("user_id",session.user.id).maybeSingle(); if(ct) setPhone(ct.phone||"");
     const { data: rp } = await supabase.rpc("get_customer_reputation", {
       p_customer_id: session.user.id
     });
@@ -37,10 +38,9 @@ export default function CustomerProfile() {
 
   async function save() {
     if (!session?.user.id) return;
-    const { error } = await supabase.from("profiles")
-      .update(f).eq("id", session.user.id);
+    const { error } = await supabase.from("profiles").update(f).eq("id", session.user.id);
     if (error) Alert.alert("Save failed", error.message);
-    else {
+    else { const {error:phoneError}=await supabase.from("user_contact_details").upsert({user_id:session.user.id,phone:phone.trim()||null,updated_at:new Date().toISOString()}); if(phoneError){Alert.alert("Phone save failed",phoneError.message);return;}
       Alert.alert("Saved", "Profile updated.");
       router.back();
     }
@@ -79,7 +79,7 @@ export default function CustomerProfile() {
           </Text>
         </View>
 
-        <Text style={s.section}>Personal details</Text>
+        <Text style={s.section}>Personal details</Text><Text style={s.l}>Contact phone</Text><TextInput style={s.i} keyboardType="phone-pad" value={phone} onChangeText={setPhone} placeholder="+91 98765 43210"/><Text style={s.muted}>Your phone is shared with a professional only after you accept their job.</Text>
         {editableFields.map((k) => (
           <View key={k}>
             <Text style={s.l}>{k.replaceAll("_", " ")}</Text>
