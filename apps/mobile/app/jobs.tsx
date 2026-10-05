@@ -1,0 +1,16 @@
+import { useEffect, useState } from "react";
+import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { supabase } from "../src/lib/supabase";
+import { useAuth } from "../src/auth/AuthProvider";
+
+const steps=["quote_accepted","worker_accepted","on_the_way","arrived","work_started","work_completed","customer_confirmed"];
+const labels=["Quote accepted","Worker accepted","On the way","Arrived","Work started","Work completed","Customer confirmed"];
+export default function Jobs(){
+ const {user,mode}=useAuth(); const [jobs,setJobs]=useState<any[]>([]); const [loading,setLoading]=useState(true);
+ useEffect(()=>{load();},[user?.id,mode]);
+ async function load(){if(!user)return;setLoading(true);const {data,error}=await supabase.from("jobs").select("*").or(`customer_id.eq.${user.id},professional_id.eq.${user.id}`).order("created_at",{ascending:false});if(error)Alert.alert("Unable to load jobs",error.message);else setJobs(data||[]);setLoading(false);}
+ async function status(job:any,next:string){const {error}=await supabase.rpc("update_job_status",{p_job_id:job.id,p_status:next});if(error)Alert.alert("Status update failed",error.message);else load();}
+ function nextFor(j:any){const i=steps.indexOf(j.status);return i>=0&&i<steps.length-1?steps[i+1]:null;}
+ return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container}><Text style={s.title}>My Jobs</Text><Text style={s.muted}>{mode==="customer"?"Track work and confirm completion":"Manage assigned work"}</Text>{loading?<Text style={s.muted}>Loading...</Text>:jobs.length===0?<Text style={s.muted}>No jobs yet.</Text>:jobs.map(j=>{const n=nextFor(j);const idx=steps.indexOf(j.status);return <View key={j.id} style={s.card}><Text style={s.name}>{j.title}</Text><Text>₹{Number(j.agreed_amount_inr).toLocaleString("en-IN")}</Text><Text style={s.status}>{labels[idx]||j.status}</Text><View style={s.timeline}>{labels.map((x,i)=><View key={x} style={s.row}><View style={[s.dot,i<=idx?s.active:s.inactive]}/><Text style={[s.step,i<=idx?s.done:null]}>{x}</Text></View>)}</View>{n&&((mode==="professional"&&steps.indexOf(n)<=5)||(mode==="customer"&&n==="customer_confirmed"))?<Pressable onPress={()=>status(j,n)} style={s.primary}><Text style={s.primaryText}>{mode==="customer"?"Confirm work completed":"Mark "+labels[steps.indexOf(n)]}</Text></Pressable>:null}</View>})}</ScrollView></SafeAreaView>;
+}
+const s=StyleSheet.create({safe:{flex:1},container:{padding:20,paddingBottom:50},title:{fontSize:28,fontWeight:"800"},muted:{opacity:.65,marginTop:6},card:{borderWidth:1,borderRadius:16,padding:16,marginTop:14},name:{fontSize:19,fontWeight:"800"},status:{fontWeight:"800",marginTop:8},timeline:{marginTop:14},row:{flexDirection:"row",alignItems:"center",marginVertical:5},dot:{width:10,height:10,borderRadius:5,marginRight:9},active:{borderWidth:1},inactive:{borderWidth:1,opacity:.25},step:{opacity:.45},done:{fontWeight:"700",opacity:1},primary:{marginTop:14,borderRadius:12,padding:13,alignItems:"center",backgroundColor:"#111"},primaryText:{color:"#fff",fontWeight:"800"}});
