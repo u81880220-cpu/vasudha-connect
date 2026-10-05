@@ -32,3 +32,6 @@ This repository is the fresh VASUDHA CONNECT codebase. VASUDHA CARE is intention
 - Secure server-side privileged operations
 - Role-based access
 - Customer and Professional modes in one mobile app
+
+## Deployment
+- Vercel production deployment trigger verified for the main branch.
