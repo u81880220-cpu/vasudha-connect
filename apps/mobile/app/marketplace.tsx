@@ -26,7 +26,7 @@ export default function Marketplace(){
   const[filtersOpen,setFiltersOpen]=useState(false);
   const[verifiedOnly,setVerifiedOnly]=useState(true);
   const[availableOnly,setAvailableOnly]=useState(true);
-  const[minRating,setMinRating]=useState(4);
+  const[minRating,setMinRating]=useState(0);
   const visibleItems=items.filter(x=>(!verifiedOnly||x.verification_status==="verified")&&(!availableOnly||x.is_available)&&(Math.round(x.trust_score)/20)>=minRating);
 
   useEffect(()=>{requestLocation();},[]);
