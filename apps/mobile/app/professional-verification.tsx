@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { supabase } from "../src/lib/supabase";
 import { useAuth } from "../src/auth/AuthProvider";
+import { router } from "expo-router";
 
 export default function ProfessionalVerification() {
   const { session } = useAuth();
@@ -91,6 +92,7 @@ export default function ProfessionalVerification() {
   }
 
   return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
+    <View style={s.top}><Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={()=>router.back()} style={s.back}><Text style={s.backText}>‹</Text></Pressable><Text style={s.topTitle}>VASUDHA CONNECT</Text><View style={s.topSpacer}/></View>
     <Text style={s.title}>Professional Verification</Text>
     <Text style={s.sub}>Build trust before customers connect with you.</Text>
     <View style={s.score}><Text style={s.scoreTitle}>Profile completeness</Text><Text style={s.scoreValue}>{completeness}%</Text><Text style={s.muted}>Complete your professional details and submit verification.</Text></View>
@@ -111,6 +113,11 @@ export default function ProfessionalVerification() {
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#fff" },
   container: { padding: 20, paddingBottom: 40 },
+  top: { height: 42, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  back: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  backText: { fontSize: 32, lineHeight: 32, color: "#13201c" },
+  topTitle: { fontSize: 12, fontWeight: "800", color: "#087D65", letterSpacing: 1 },
+  topSpacer: { width: 36 },
   title: { fontSize: 27, fontWeight: "800" },
   sub: { marginTop: 5, opacity: 0.65, marginBottom: 18 },
   score: { borderWidth: 1, borderRadius: 16, padding: 16 },
