@@ -5,6 +5,7 @@ import {useAuth} from "../src/auth/AuthProvider";
 import {VasudhaLogo} from "../src/components/VasudhaLogo";
 import {AppBottomNav} from "../src/components/AppBottomNav";
 import {ServiceIcon} from "../src/components/ServiceIcon";
+import {registerForPushNotifications,registerNotificationTapHandler} from "../src/lib/pushNotifications";
 
 const services=["Electrician","Plumber","Carpenter","Painter","AC Technician"];
 
@@ -12,6 +13,7 @@ export default function HomeScreen(){
  const{session,loading,mode,setMode,signOut}=useAuth();
  const[switching,setSwitching]=useState(false);
  useEffect(()=>{if(!loading&&!session)router.replace("/auth")},[loading,session]);
+ useEffect(()=>{if(!session)return; void registerForPushNotifications(session.user.id); const sub=registerNotificationTapHandler(); return()=>sub.remove()},[session?.user.id]);
  if(loading||!session)return <SafeAreaView style={s.safe}><View style={s.loading}><ActivityIndicator color="#087D65"/><Text style={s.muted}>Loading…</Text></View></SafeAreaView>;
  const customer=mode==="customer";
  async function toggleMode(){
