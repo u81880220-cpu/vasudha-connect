@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { useAuth } from "../src/context/AuthProvider";
@@ -39,4 +40,4 @@ export default function Connections(){
   }
  </ScrollView></SafeAreaView>;
 }
-const s=StyleSheet.create({safe:{flex:1},container:{padding:20,paddingBottom:50},title:{fontSize:28,fontWeight:"800"},muted:{opacity:.65,marginTop:5},card:{borderWidth:1,borderRadius:16,padding:16,marginTop:14},name:{fontSize:19,fontWeight:"800"},score:{fontWeight:"800",marginTop:8},expiry:{fontSize:12,opacity:.6,marginTop:8},primary:{marginTop:12,borderRadius:12,padding:13,alignItems:"center",backgroundColor:"#111"},primaryText:{color:"#fff",fontWeight:"800"},empty:{borderWidth:1,borderRadius:16,padding:20,marginTop:20},emptyTitle:{fontSize:18,fontWeight:"800"}});
+const s=StyleSheet.create({safe:{flex:1},container:{padding:20,paddingBottom:50},title:{fontSize:28,fontWeight:"800"},muted:{opacity:.65,marginTop:5},card:{borderWidth:1,borderRadius:16,padding:16,marginTop:14},name:{fontSize:19,fontWeight:"800"},score:{fontWeight:"800",marginTop:8},expiry:{fontSize:12,opacity:.6,marginTop:8},primary:{marginTop:12,borderRadius:12,padding:13,alignItems:"center",backgroundColor:"#087D65"},primaryText:{color:"#fff",fontWeight:"800"},empty:{borderWidth:1,borderRadius:16,padding:20,marginTop:20},emptyTitle:{fontSize:18,fontWeight:"800"}});
