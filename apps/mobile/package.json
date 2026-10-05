@@ -25,5 +25,8 @@
     "react-dom": "19.1.0",
     "react-native-web": "0.21.0",
     "@expo/metro-runtime": "~5.0.4"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
