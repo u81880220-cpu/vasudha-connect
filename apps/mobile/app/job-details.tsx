@@ -16,6 +16,7 @@ export default function JobDetails(){
   if(data){const{data:pd}=await supabase.rpc("get_job_contact_details",{p_job_id:jobId});setPrivateData(pd||{});}
   setLoading(false);
  }
+ async function openChat(){if(!job)return;if(mode==="customer"){const{data:conversationId,error}=await supabase.rpc("get_or_create_conversation",{p_professional_id:job.professional_id});if(error||!conversationId){Alert.alert("Chat unavailable",error?.message||"Unable to open chat.");return;}router.push({pathname:"/chat",params:{conversationId,otherName:privateData?.professional_name||"Professional"}});}else{const{data,error}=await supabase.from("conversations").select("id").eq("customer_id",job.customer_id).eq("professional_id",job.professional_id).maybeSingle();if(error||!data){Alert.alert("Chat unavailable","No conversation is available yet.");return;}router.push({pathname:"/chat",params:{conversationId:data.id,otherName:privateData?.customer_name||"Customer"}});}}
  async function call(){
   const phone=privateData?.customer_phone||privateData?.professional_phone;
   if(phone)await Linking.openURL(`tel:${phone}`);else Alert.alert("Phone unavailable","Contact details are not available yet.");
@@ -26,7 +27,7 @@ export default function JobDetails(){
    {loading?<View style={s.state}><ActivityIndicator color="#087D65"/><Text style={s.muted}>Loading job…</Text></View>:!job?<Text style={s.muted}>Job not found.</Text>:<>
     <View style={s.card}><Text style={s.name}>{job.title||"Service job"}</Text><Text style={s.badge}>{job.status||"In Progress"}</Text><Text style={s.label}>{mode==="professional"?"Customer":"Professional"}</Text><Text style={s.value}>{privateData?.customer_name||privateData?.professional_name||"Connected participant"}</Text><Text style={s.label}>Job location</Text><Text style={s.value}>{privateData?.location_text||"Location will be available after the job is accepted."}</Text></View>
     <View style={s.map}><View style={s.route}/><Text style={s.mapText}>{privateData?.location_text?"Service location unlocked":"Location locked"}</Text></View>
-    <View style={s.actions}><Pressable style={s.secondary} onPress={call}><Text style={s.secondaryText}>Call</Text></Pressable><Pressable style={s.primary} onPress={()=>router.push({pathname:"/connections"})}><Text style={s.primaryText}>Message</Text></Pressable></View>
+    <View style={s.actions}><Pressable style={s.secondary} onPress={call}><Text style={s.secondaryText}>Call</Text></Pressable><Pressable style={s.primary} onPress={openChat}><Text style={s.primaryText}>Message</Text></Pressable></View>
     <Pressable style={s.track} onPress={()=>router.push({pathname:"/job-tracking",params:{jobId}})}><Text style={s.trackText}>Track Job →</Text></Pressable>
    </>}
  </ScrollView></SafeAreaView>;
