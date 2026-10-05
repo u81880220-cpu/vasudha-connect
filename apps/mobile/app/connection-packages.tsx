@@ -19,15 +19,15 @@ export default function ConnectionPackages(){
  }
  async function startPayment(code:string){
   setCreating(code);
-  const {data,error}=await supabase.rpc("create_connection_payment_order",{p_package:code});
+  const {data,error}=await supabase.functions.invoke("create-razorpay-order",{body:{package_code:code}});
   setCreating(null);
   if(error){Alert.alert("Unable to start payment",error.message);return;}
-  Alert.alert("Payment gateway not connected","Order "+(data?.id||"")+" was created for ₹"+Number(data?.amount_inr||0).toLocaleString("en-IN")+". No connection credits were added. The secure checkout will be enabled when the gateway is connected.");
+  Alert.alert("Payment gateway ready","Razorpay order "+(data?.razorpay_order_id||"")+" is ready. The native checkout UI will be connected in the next mobile build.");
  }
  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container}>
   <Text style={s.title}>Connection Packages</Text><Text style={s.sub}>Unlock verified professionals and connect directly.</Text>
   <View style={s.balance}><Text>Available connections</Text><Text style={s.balanceValue}>{balance}</Text><Text style={s.balanceHint}>Credits are used only when you unlock a professional.</Text></View>
-  <View style={s.notice}><Text style={s.noticeTitle}>Secure payment coming next</Text><Text style={s.muted}>Packages are ready. Payment orders are separated from wallet credits, so credits can only be added after a verified gateway payment.</Text></View>
+  <View style={s.notice}><Text style={s.noticeTitle}>Secure payment</Text><Text style={s.muted}>Payments are processed through the secure gateway. Connection credits are added only after verified payment confirmation.</Text></View>
   {loading?<Text style={s.muted}>Loading packages...</Text>:packages.map(p=><View key={p.code} style={s.card}>
    <View style={s.row}><View><Text style={s.name}>{p.name}</Text><Text style={s.muted}>{p.connections} connections • {p.validity_days} days</Text></View><Text style={s.price}>₹{p.price_inr}</Text></View>
    <Text style={s.per}>₹{(p.price_inr/p.connections).toFixed(2)} per connection</Text>
