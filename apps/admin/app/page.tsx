@@ -1,8 +1,18 @@
-export default function AdminHome() {
-  return (
-    <main style={{ padding: 40, fontFamily: "system-ui" }}>
-      <h1>VASUDHA CONNECT ADMIN</h1>
-      <p>Administration foundation is ready.</p>
-    </main>
-  );
+"use client";
+import { useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+type Item={document_id:string;professional_id:string;professional_name:string;headline:string|null;city:string|null;state:string|null;years_experience:number;document_type:string;document_path:string;submitted_at:string};
+const supabase=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL||"",process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||"");
+
+export default function AdminHome(){
+ const[session,setSession]=useState<any>(null),[email,setEmail]=useState(""),[password,setPassword]=useState(""),[items,setItems]=useState<Item[]>([]),[loading,setLoading]=useState(false),[message,setMessage]=useState("");
+ useEffect(()=>{supabase.auth.getSession().then(({data})=>{setSession(data.session);if(data.session)load()});const sub=supabase.auth.onAuthStateChange((_e,s)=>{setSession(s);if(s)load()});return()=>sub.data.subscription.unsubscribe()},[]);
+ async function login(){setMessage("");const{error}=await supabase.auth.signInWithPassword({email,password});if(error)setMessage(error.message);}
+ async function load(){setLoading(true);const{data,error}=await supabase.rpc("admin_pending_verifications");if(error)setMessage(error.message);else setItems((data||[]) as Item[]);setLoading(false);}
+ async function review(id:string,decision:"approved"|"rejected"){const note=decision==="rejected"?window.prompt("Reason for rejection (optional):")||null:null;setLoading(true);const{error}=await supabase.rpc("admin_review_verification",{p_document_id:id,p_decision:decision,p_note:note});if(error)setMessage(error.message);else{setMessage(decision==="approved"?"Professional approved.":"Professional rejected.");await load();}}
+ async function openDocument(item:Item){const{data,error}=await supabase.storage.from("verification-documents").createSignedUrl(item.document_path,300);if(error)setMessage(error.message);else if(data?.signedUrl)window.open(data.signedUrl,"_blank");}
+ if(!session)return <main style={s.wrap}><div style={s.card}><h1>VASUDHA CONNECT</h1><p style={s.muted}>Admin verification</p><input style={s.input} placeholder="Admin email" value={email} onChange={e=>setEmail(e.target.value)}/><input style={s.input} type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)}/><button style={s.primary} onClick={login}>Sign in</button>{message&&<p>{message}</p>}<p style={s.note}>Only users explicitly added to the VASUDHA admin allow-list can review verification requests.</p></div></main>;
+ return <main style={s.wrap}><header style={s.header}><div><h1>VASUDHA CONNECT ADMIN</h1><p style={s.muted}>Professional verification queue</p></div><button style={s.secondary} onClick={()=>supabase.auth.signOut()}>Sign out</button></header><section style={s.card}><div style={s.row}><h2>Pending verification</h2><button style={s.secondary} onClick={load}>Refresh</button></div>{message&&<p>{message}</p>}{loading&&!items.length?<p>Loading...</p>:!items.length?<p style={s.muted}>No pending verification requests.</p>:items.map(x=><article key={x.document_id} style={s.item}><div style={{flex:1}}><h3>{x.professional_name}</h3><p>{x.headline||"Professional"}{x.city?" • "+x.city:""}{x.state?", "+x.state:""}</p><p style={s.muted}>{x.years_experience} years • {x.document_type} • {new Date(x.submitted_at).toLocaleString()}</p></div><div style={s.actions}><button style={s.secondary} onClick={()=>openDocument(x)}>View document</button><button style={s.primary} onClick={()=>review(x.document_id,"approved")}>Approve</button><button style={s.danger} onClick={()=>review(x.document_id,"rejected")}>Reject</button></div></article>)}</section></main>;
 }
+const s:any={wrap:{minHeight:"100vh",background:"#f5f6f8",padding:32,fontFamily:"system-ui"},header:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24},card:{background:"#fff",borderRadius:18,padding:24,maxWidth:1100,margin:"0 auto",boxShadow:"0 2px 12px rgba(0,0,0,.06)"},input:{display:"block",width:"100%",boxSizing:"border-box",padding:12,border:"1px solid #ddd",borderRadius:10,margin:"10px 0"},primary:{border:0,borderRadius:10,padding:"11px 16px",background:"#111",color:"#fff",fontWeight:700,cursor:"pointer"},secondary:{border:"1px solid #ccc",borderRadius:10,padding:"10px 14px",background:"#fff",cursor:"pointer"},danger:{border:0,borderRadius:10,padding:"10px 14px",background:"#fee2e2",color:"#991b1b",fontWeight:700,cursor:"pointer"},row:{display:"flex",justifyContent:"space-between",alignItems:"center"},item:{display:"flex",gap:20,alignItems:"center",borderTop:"1px solid #eee",padding:"18px 0"},actions:{display:"flex",gap:8,flexWrap:"wrap"},muted:{color:"#666"},note:{fontSize:12,color:"#777",marginTop:16}};
