@@ -45,7 +45,7 @@ export default function ProfessionalProfile(){
  return <SafeAreaView style={s.safe}>
   <ScrollView contentContainerStyle={s.c} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
    <View style={s.top}><Pressable onPress={()=>router.back()} style={s.back}><Text style={s.backText}>‹</Text></Pressable><VasudhaLogo compact/><Text style={s.more}>⋯</Text></View>
-   <Text style={s.t}>My Professional Profile</Text><Text style={s.sub}>Build a trusted profile that helps customers choose you.</Text>
+   <Text style={s.t}>My Professional Profile</Text><Text style={s.sub}>Build a trusted profile that helps customers choose you.</Text><Pressable style={s.earningsLink} onPress={()=>router.push("/earnings")}><Text style={s.earningsText}>View My Earnings →</Text></Pressable>
    {loading?<Text style={s.muted}>Loading profile…</Text>:null}
    <View style={s.status}><View><Text style={s.statusTitle}>Professional profile</Text><Text style={s.statusSub}>Verification: {p.verification_status||"pending"}</Text></View><View style={[s.dot,{backgroundColor:p.is_available?"#087D65":"#aebbb7"}]}/></View>
    <Text style={s.section}>Profile details</Text>
