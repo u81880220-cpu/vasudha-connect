@@ -20,12 +20,13 @@ export default function ProfessionalProfile(){
  useEffect(()=>{if(uid)load()},[uid]);
  async function load(){
   setLoading(true);
-  const[q,k,c,a,ct]=await Promise.all([
+  const[q,k,c,a,ct,pss]=await Promise.all([
    supabase.from("professional_profiles").select("headline,about,years_experience,service_radius_km,is_available,verification_status").eq("user_id",uid).maybeSingle(),
    supabase.from("skills").select("id,name,category").eq("is_active",true).order("category").order("name"),
    supabase.from("professional_skills").select("skill_id").eq("professional_id",uid),
    supabase.from("service_areas").select("id,label,city,state,radius_km").eq("professional_id",uid).order("created_at"),
-   supabase.from("user_contact_details").select("phone").eq("user_id",uid).maybeSingle()
+   supabase.from("user_contact_details").select("phone").eq("user_id",uid).maybeSingle(),
+   supabase.from("professional_sub_services").select("sub_service_id").eq("professional_id",uid)
   ]);
   if(q.data)setP({...q.data,years_experience:String(q.data.years_experience||0),service_radius_km:String(q.data.service_radius_km||10)});
   setPhone(ct.data?.phone||"");setSkills(k.data||[]);setChosen((c.data||[]).map((x:any)=>x.skill_id));setAreas(a.data||[]);
