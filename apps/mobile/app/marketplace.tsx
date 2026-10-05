@@ -151,7 +151,26 @@ export default function Marketplace(){
   </SafeAreaView>;
 }
 
-function WebMap({userCoords,items}:{userCoords:Coords;items:Professional[]}) {\n  return <View style={s.webMap}>\n    <View style={s.mapRoadA}/><View style={s.mapRoadB}/><View style={s.mapRoadC}/>\n    <View style={s.mapArea}><Text style={s.mapAreaText}>NEARBY AREA</Text></View>\n    <View style={s.youMarker}><Text style={s.youMarkerText}>●</Text></View>\n    {items.slice(0,8).map((worker,i)=><Pressable key={worker.professional_id} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:worker.professional_id}})} style={[s.webMarker,{left:`${15+(i*17)%72}%`,top:`${22+(i*29)%58}%`}]}><Text style={s.webMarkerText}>{worker.display_name.slice(0,1).toUpperCase()}</Text></Pressable>)}\n    <View style={s.mapLegend}><Text style={s.mapLegendTitle}>Nearby professionals</Text><Text style={s.mapLegendText}>{items.length} verified professionals found</Text></View>\n  </View>;\n}\n\nfunction NativeMap({userCoords,items}:{userCoords:Coords;items:Professional[]}) {
+function WebMap({userCoords,items}:{userCoords:Coords;items:Professional[]}) {
+  return <View style={s.webMap}>
+    <View style={s.mapRoadA}/><View style={s.mapRoadB}/><View style={s.mapRoadC}/>
+    <View style={s.mapArea}><Text style={s.mapAreaText}>NEARBY AREA</Text></View>
+    <View style={s.youMarker}><Text style={s.youMarkerText}>●</Text></View>
+    {items.slice(0,8).map((worker,i)=>
+      <Pressable key={worker.professional_id}
+        onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:worker.professional_id}})}
+        style={[s.webMarker,{left:`${15+(i*17)%72}%`,top:`${22+(i*29)%58}%`}]}>
+        <Text style={s.webMarkerText}>{worker.display_name.slice(0,1).toUpperCase()}</Text>
+      </Pressable>
+    )}
+    <View style={s.mapLegend}>
+      <Text style={s.mapLegendTitle}>Nearby professionals</Text>
+      <Text style={s.mapLegendText}>{items.length} verified professionals found</Text>
+    </View>
+  </View>;
+}
+
+function NativeMap({userCoords,items}:{userCoords:Coords;items:Professional[]}) {
   // react-native-maps is intentionally required only on native; importing it at module scope crashes Expo Web.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const Maps=require("react-native-maps");
