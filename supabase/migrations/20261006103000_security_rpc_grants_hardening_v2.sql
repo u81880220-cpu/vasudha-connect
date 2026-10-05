@@ -1,0 +1,21 @@
+revoke execute on all functions in schema public from public, anon;
+
+revoke execute on function handle_new_user() from authenticated;
+revoke execute on function is_admin() from authenticated;
+revoke execute on function recalculate_professional_trust(uuid) from authenticated;
+revoke execute on function recalculate_customer_trust(uuid) from authenticated;
+revoke execute on function notify_job_participant(uuid,text,text) from authenticated;
+revoke execute on function notify_service_request_created() from authenticated;
+revoke execute on function notify_quote_submitted() from authenticated;
+revoke execute on function notify_quote_accepted() from authenticated;
+revoke execute on function notify_message_created() from authenticated;
+revoke execute on function notify_job_status_changed() from authenticated;
+revoke execute on function notify_job_review_created() from authenticated;
+revoke execute on function notify_customer_review_created() from authenticated;
+revoke execute on function notify_complaint_event() from authenticated;
+revoke execute on function trg_recalculate_professional_trust() from authenticated;
+revoke execute on function trg_recalculate_customer_trust() from authenticated;
+revoke execute on function trg_recalculate_trust_after_complaint() from authenticated;
+revoke execute on function trg_portfolio_requires_moderation() from authenticated;
+revoke execute on function add_connection_package(public.connection_package_code) from authenticated;
+revoke execute on function create_connection_payment_order(public.connection_package_code) from authenticated;
