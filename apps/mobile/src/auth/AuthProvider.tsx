@@ -3,7 +3,7 @@ import { createContext, PropsWithChildren, useContext, useEffect, useState } fro
 import { supabase } from "../lib/supabase";
 
 type AppMode="customer"|"professional";
-type AuthContextValue={session:Session|null;loading:boolean;mode:AppMode;setMode:(mode:AppMode)=>Promise<void>;signOut:()=>Promise<void>};
+type AuthContextValue={session:Session|null;user:Session["user"]|null;loading:boolean;mode:AppMode;setMode:(mode:AppMode)=>Promise<void>;signOut:()=>Promise<void>};
 const AuthContext=createContext<AuthContextValue|undefined>(undefined);
 
 export function AuthProvider({children}:PropsWithChildren){
@@ -52,7 +52,7 @@ export function AuthProvider({children}:PropsWithChildren){
 
  async function signOut(){await supabase.auth.signOut();}
 
- return <AuthContext.Provider value={{session,loading,mode,setMode,signOut}}>{children}</AuthContext.Provider>;
+ return <AuthContext.Provider value={{session,user:session?.user??null,loading,mode,setMode,signOut}}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(){
