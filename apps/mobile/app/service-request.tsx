@@ -5,13 +5,26 @@ import { useLocalSearchParams, router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 
 export default function ServiceRequest(){
- const {professionalId}=useLocalSearchParams<{professionalId:string}>(); const [title,setTitle]=useState(""); const [description,setDescription]=useState(""); const [date,setDate]=useState(""); const [budget,setBudget]=useState(""); const [busy,setBusy]=useState(false);
- async function submit(){if(!professionalId||title.trim().length<3||description.trim().length<3){Alert.alert("Complete request","Add a title and describe the work.");return;}setBusy(true);
- const {data:{user}}=await supabase.auth.getUser(); if(!user){setBusy(false);return;}
- const [min,max]=budget.split("-").map(x=>Number(x.trim())).filter(x=>!Number.isNaN(x));
- const {error}=await supabase.from("service_requests").insert({customer_id:user.id,professional_id:professionalId,title:title.trim(),description:description.trim(),preferred_date:date||null,budget_min_inr:Number.isFinite(min)?min:null,budget_max_inr:Number.isFinite(max)?max:null});
- setBusy(false); if(error)Alert.alert("Request failed",error.message);else{Alert.alert("Request sent","The professional can now review your job and submit a quotation.");router.back();}
+ const {professionalId}=useLocalSearchParams<{professionalId:string}>();
+ const [title,setTitle]=useState(""); const [description,setDescription]=useState(""); const [date,setDate]=useState(""); const [time,setTime]=useState(""); const [location,setLocation]=useState(""); const [busy,setBusy]=useState(false);
+ async function submit(){
+  if(!professionalId||title.trim().length<3||description.trim().length<3||location.trim().length<3){Alert.alert("Complete request","Add the work requirement and the service location.");return;}
+  setBusy(true);
+  const {data:{user}}=await supabase.auth.getUser(); if(!user){setBusy(false);return;}
+  const {error}=await supabase.from("service_requests").insert({customer_id:user.id,professional_id:professionalId,title:title.trim(),description:description.trim(),preferred_date:date||null,preferred_time:time||null,location_text:location.trim()});
+  setBusy(false);
+  if(error)Alert.alert("Request failed",error.message);
+  else{Alert.alert("Request sent","The professional can discuss the work with you and accept the job when you agree.");router.back();}
  }
- return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled"><VasudhaLogo compact/><Text style={s.title}>Request a Quotation</Text><Text style={s.muted}>Describe what you need. You can discuss details in chat.</Text><Text style={s.label}>Job title</Text><TextInput value={title} onChangeText={setTitle} placeholder="e.g. Fix kitchen plumbing" style={s.input}/><Text style={s.label}>Work description</Text><TextInput value={description} onChangeText={setDescription} placeholder="Describe the work required..." multiline style={[s.input,s.large]}/><Text style={s.label}>Preferred date (optional)</Text><TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" style={s.input}/><Text style={s.label}>Budget range (optional)</Text><TextInput value={budget} onChangeText={setBudget} placeholder="e.g. 500-1500" keyboardType="numeric" style={s.input}/><Pressable onPress={submit} disabled={busy} style={s.primary}><Text style={s.primaryText}>{busy?"Sending...":"Send Request"}</Text></Pressable></ScrollView></SafeAreaView>;
+ return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
+  <VasudhaLogo compact/><Text style={s.title}>Tell the Professional What You Need</Text><Text style={s.muted}>Discuss the work directly in VASUDHA chat or by phone. No quotation is required.</Text>
+  <Text style={s.label}>What do you need?</Text><TextInput value={title} onChangeText={setTitle} placeholder="e.g. Fix kitchen plumbing" style={s.input}/>
+  <Text style={s.label}>Work details</Text><TextInput value={description} onChangeText={setDescription} placeholder="Describe the work required..." multiline style={[s.input,s.large]}/>
+  <Text style={s.label}>Preferred date (optional)</Text><TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" style={s.input}/>
+  <Text style={s.label}>Preferred time (optional)</Text><TextInput value={time} onChangeText={setTime} placeholder="e.g. 11:00 AM" style={s.input}/>
+  <Text style={s.label}>Service location</Text><TextInput value={location} onChangeText={setLocation} placeholder="Enter the property/service address" style={[s.input,s.large]}/>
+  <Text style={s.note}>Your exact service location is kept private until the professional accepts the job.</Text>
+  <Pressable onPress={submit} disabled={busy} style={s.primary}><Text style={s.primaryText}>{busy?"Sending...":"Send Job Request"}</Text></Pressable>
+ </ScrollView></SafeAreaView>;
 }
-const s=StyleSheet.create({safe:{flex:1,backgroundColor:"#fff"},container:{padding:20,paddingBottom:40},title:{fontSize:28,fontWeight:"800"},muted:{opacity:.65,marginTop:6},label:{fontWeight:"800",marginTop:20,marginBottom:7},input:{borderWidth:1,borderColor:"#cfdad6",borderRadius:12,padding:12,minHeight:48,backgroundColor:"#fff"},large:{height:140,textAlignVertical:"top"},primary:{marginTop:24,borderRadius:12,padding:15,alignItems:"center",justifyContent:"center",minHeight:48,backgroundColor:"#087D65"},primaryText:{color:"#fff",fontWeight:"800"}});
+const s=StyleSheet.create({safe:{flex:1,backgroundColor:"#fff"},container:{padding:20,paddingBottom:40},title:{fontSize:28,fontWeight:"800",color:"#13201c"},muted:{opacity:.65,marginTop:6,lineHeight:20},label:{fontWeight:"800",marginTop:20,marginBottom:7},input:{borderWidth:1,borderColor:"#cfdad6",borderRadius:12,padding:12,minHeight:48,backgroundColor:"#fff",color:"#13201c"},large:{height:120,textAlignVertical:"top"},note:{fontSize:12,color:"#66736e",marginTop:10,lineHeight:18},primary:{marginTop:24,borderRadius:12,padding:14,alignItems:"center",backgroundColor:"#087D65",minHeight:50,justifyContent:"center"},primaryText:{color:"#fff",fontWeight:"900"}});
