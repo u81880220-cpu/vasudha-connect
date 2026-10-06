@@ -95,7 +95,7 @@ test.describe("VASUDHA real-user free QA", () => {
 
     // Validate authenticated-session exit: a real user can sign out cleanly.
     await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(/\\/auth/);
+    await expect(page).toHaveURL(/\/auth/);
     await expect(page.getByText("Welcome Back")).toBeVisible();
   });
 
