@@ -66,4 +66,20 @@ for (const id of customerIds) {
   if (e) throw e;
 }
 
+// Reset demo professionals to the marketplace-ready state expected by every QA run.
+// Job progression can legitimately flip availability off; a fresh QA run must start clean.
+if (professionalIds.length) {
+  const { error: professionalResetError } = await admin
+    .from("professional_profiles")
+    .update({
+      verification_status: "verified",
+      is_available: true,
+      service_radius_km: 25,
+      base_latitude: 25.3176,
+      base_longitude: 82.9739,
+    })
+    .in("user_id", professionalIds);
+  if (professionalResetError) throw professionalResetError;
+}
+
 console.log(JSON.stringify({ ok: true, demoUsers: demos.map(x => x.email), clearedJobs: jobIds.length, clearedConversations: conversationIds.length }));
