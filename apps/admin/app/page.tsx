@@ -16,7 +16,7 @@ export default function AdminHome(){
  const[session,setSession]=useState<any>(null);
  const[email,setEmail]=useState(""),[password,setPassword]=useState(""),[message,setMessage]=useState("");
  const[items,setItems]=useState<Item[]>([]),[pros,setPros]=useState<Professional[]>([]),[skills,setSkills]=useState<Skill[]>([]);
- const[areas,setAreas]=useState<Area[]>([]),[reputation,setReputation]=useState<Reputation|null>(null),[customers,setCustomers]=useState<any[]>([]),[complaints,setComplaints]=useState<any[]>([]),[portfolio,setPortfolio]=useState<Portfolio[]>([]);\n const[areaDraft,setAreaDraft]=useState<Partial<Area>|null>(null),[areaSaving,setAreaSaving]=useState(false);
+ const[areas,setAreas]=useState<Area[]>([]),[reputation,setReputation]=useState<Reputation|null>(null),[customers,setCustomers]=useState<any[]>([]),[complaints,setComplaints]=useState<any[]>([]),[portfolio,setPortfolio]=useState<Portfolio[]>([]);\n const[areaDraft,setAreaDraft]=useState<Partial<Area>|null>(null),[areaSaving,setAreaSaving]=useState(false);\n const[activeTab,setActiveTab]=useState("overview");
  const[selected,setSelected]=useState<Professional|null>(null),[loading,setLoading]=useState(false);
 
  useEffect(()=>{
@@ -67,11 +67,18 @@ async function setSkill(id:string,active:boolean){const{error}=await supabase.rp
  return <main style={s.wrap}>
   <header style={s.header}><div><h1>VASUDHA CONNECT ADMIN</h1><p style={s.muted}>Marketplace control centre</p></div><button style={s.secondary} onClick={()=>supabase.auth.signOut()}>Sign out</button></header>
   {message&&<div style={s.alert}>{message}</div>}
+  <nav style={s.nav}>{[["overview","Dashboard"],["professionals","Professionals"],["verification","Verification"],["customers","Customers"],["services","Service Catalogue"],["complaints","Complaints"],["portfolio","Portfolio"]].map(([id,label])=><button key={id} style={activeTab===id?s.navActive:s.navItem} onClick={()=>setActiveTab(id)}>{label}</button>)}</nav>
 
+  {activeTab==="overview"&&<section style={s.card}><div style={s.row}><div><h2>Dashboard</h2><p style={s.muted}>Live marketplace administration overview</p></div><button style={s.secondary} onClick={loadAll}>Refresh all</button></div><div style={s.grid}>{[["Verified professionals",pros.filter(p=>p.verification_status==="verified").length],["Pending verification",items.length],["Customers",customers.length],["Open complaints",complaints.filter(x=>x.status==="open"||x.status==="under_review").length],["Portfolio pending",portfolio.filter(x=>x.moderation_status==="pending").length],["Active services",skills.filter(x=>x.is_active).length]].map(([a,b])=><div key={a} style={s.metric}><span style={s.muted}>{a}</span><strong style={{fontSize:28}}>{b}</strong></div>)}</div><div style={s.quick}><h3>Admin workflow</h3><p style={s.muted}>Manage the marketplace from the sections above. Jobs, payments, notifications and audit logs will be added after this core console is stabilized.</p><div style={s.actions}><button style={s.primary} onClick={()=>setActiveTab("verification")}>Review verification</button><button style={s.secondary} onClick={()=>setActiveTab("professionals")}>Manage professionals</button><button style={s.secondary} onClick={()=>setActiveTab("complaints")}>Open complaints</button></div></div></section>}
+
+
+  {activeTab==="verification"&&<>
   <section style={s.card}><div style={s.row}><h2>Pending verification</h2><button style={s.secondary} onClick={load}>Refresh</button></div>
    {loading&&!items.length?<p>Loading...</p>:!items.length?<p style={s.muted}>No pending verification requests.</p>:items.map(x=><article key={x.document_id} style={s.item}><div style={{flex:1}}><h3>{x.professional_name}</h3><p>{x.headline||"Professional"}{x.city?" • "+x.city:""}{x.state?", "+x.state:""}</p><p style={s.muted}>{x.years_experience} years • {x.document_type} • {new Date(x.submitted_at).toLocaleString()}</p></div><div style={s.actions}><button style={s.secondary} onClick={()=>openDocument(x)}>View document</button><button style={s.primary} onClick={()=>review(x.document_id,"approved")}>Approve</button><button style={s.danger} onClick={()=>review(x.document_id,"rejected")}>Reject</button></div></article>)}
   </section>
+  </>}
 
+  {activeTab==="professionals"&&<>
   <section style={s.card}><div style={s.row}><h2>Professionals</h2><button style={s.secondary} onClick={loadMarketplace}>Refresh</button></div>
    {!pros.length?<p style={s.muted}>No professionals registered yet.</p>:pros.map(x=><article key={x.user_id} style={s.item}>
     <div style={{flex:1}}><h3>{x.display_name||"Professional"}</h3><p>{x.headline||"No headline"}{x.city?" • "+x.city:""}{x.state?", "+x.state:""}</p><p style={s.muted}>{x.verification_status} • Trust {Math.round(x.trust_score||0)}/100 • {x.is_available?"Available":"Unavailable"} • {x.service_radius_km} km</p></div>
@@ -100,16 +107,25 @@ async function setSkill(id:string,active:boolean){const{error}=await supabase.rp
    </div>}
    {!areas.length?<p style={s.muted}>No service areas configured.</p>:areas.map(a=><div key={a.id} style={s.area}><div><strong>{a.label}</strong><span style={{display:"block"}}>{a.city||""}{a.state?", "+a.state:""} • {a.radius_km} km{a.is_primary?" • Primary":""}</span></div><div style={s.actions}><button style={s.secondary} onClick={()=>setAreaDraft({...a})}>Edit</button><button style={s.danger} onClick={()=>saveArea("delete",a)}>Delete</button></div></div>)}
   </section>}
+  </>}
 
+  {activeTab==="complaints"&&<>
   <section style={s.card}><div style={s.row}><h2>Complaints & Disputes</h2><button style={s.secondary} onClick={loadComplaints}>Refresh</button></div>{!complaints.length?<p style={s.muted}>No complaints reported.</p>:complaints.map(x=><article key={x.id} style={s.item}><div style={{flex:1}}><h3>{x.category.replaceAll("_"," ")} • {x.status}</h3><p>{x.reporter_name||"User"} reported {x.against_name||"User"}</p><p>{x.description}</p><p style={s.muted}>Job: {x.job_id} • {new Date(x.created_at).toLocaleString()}</p></div><div style={s.actions}>{x.status==="open"&&<button style={s.secondary} onClick={()=>reviewComplaint(x.id,"under_review")}>Review</button>}{x.status==="under_review"&&<><button style={s.danger} onClick={()=>reviewComplaint(x.id,"upheld")}>Uphold</button><button style={s.secondary} onClick={()=>reviewComplaint(x.id,"dismissed")}>Dismiss</button></>}{x.status==="upheld"&&<button style={s.secondary} onClick={()=>reviewComplaint(x.id,"resolved")}>Resolve</button>}</div></article>)}</section>
+  </>}
 
+  {activeTab==="portfolio"&&<>
   <section style={s.card}><div style={s.row}><h2>Portfolio Moderation</h2><button style={s.secondary} onClick={loadPortfolio}>Refresh</button></div>{!portfolio.length?<p style={s.muted}>No portfolio items submitted.</p>:portfolio.map(x=><article key={x.id} style={s.item}><div style={{flex:1}}><h3>{x.title} <span style={{fontSize:12,fontWeight:500}}>• {x.moderation_status}</span></h3><p>{x.professional_name}</p>{x.description&&<p>{x.description}</p>}<p style={s.muted}>{new Date(x.created_at).toLocaleString()}{x.moderation_note?" • "+x.moderation_note:""}</p><a href={x.media_url} target="_blank" rel="noreferrer">View media</a></div><div style={s.actions}>{x.moderation_status==="pending"&&<><button style={s.primary} onClick={()=>reviewPortfolio(x.id,"approved")}>Approve</button><button style={s.danger} onClick={()=>reviewPortfolio(x.id,"rejected")}>Reject</button></>}</div></article>)}</section>
+  </>}
 
+  {activeTab==="customers"&&<>
   <section style={s.card}><div style={s.row}><h2>Customers & Reputation</h2><button style={s.secondary} onClick={loadCustomers}>Refresh</button></div>{!customers.length?<p style={s.muted}>No customer reputation data yet.</p>:customers.map(x=><article key={x.user_id} style={s.item}><div style={{flex:1}}><h3>{x.display_name||"Customer"}</h3><p>{x.city||""}{x.state?", "+x.state:""}</p><p style={s.muted}>Trust {Math.round(x.customer_trust_score||0)}/100 • {x.jobs_completed||0} jobs completed • {x.reviews_received||0} reviews • Would work again {x.would_work_again_pct||0}%</p></div></article>)}</section>
+  </>}
 
+  {activeTab==="services"&&<>
   <section style={s.card}><div style={s.row}><h2>Skill catalogue</h2><button style={s.secondary} onClick={loadSkills}>Refresh</button></div>
    {skills.map(x=><article key={x.id} style={s.item}><div style={{flex:1}}><h3>{x.name}</h3><p style={s.muted}>{x.category} • {x.professional_count} professionals{x.description?" • "+x.description:""}</p></div><button style={x.is_active?s.danger:s.primary} onClick={()=>setSkill(x.id,!x.is_active)}>{x.is_active?"Deactivate":"Activate"}</button></article>)}
   </section>
+  </>}
  </main>
 }
 
