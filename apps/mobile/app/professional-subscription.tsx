@@ -39,6 +39,16 @@ export default function ProfessionalSubscription(){
    const{error}=await supabase.rpc("activate_free_professional_subscription",{p_plan_id:planId});
    setCreating(null);
    if(error){Alert.alert("Unable to activate QA subscription",error.message);return}
+   const selectedPlan=plans.find(p=>p.plan_id===planId);
+   if(selectedPlan){
+    setSub({
+     plan_name:selectedPlan.name,
+     price_inr:selectedPlan.price_inr,
+     billing_interval:selectedPlan.billing_interval,
+     status:"active",
+     current_period_end:new Date(Date.now()+30*24*60*60*1000).toISOString(),
+    });
+   }
    await load();
    Alert.alert("QA subscription active","Free test subscription activated for 30 days. No real payment was charged.");
    return;
