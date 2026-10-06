@@ -207,11 +207,11 @@ test.describe("VASUDHA real-user free QA", () => {
 
   test("Admin: authorized console opens and operational tabs render", async ({ page }) => {
     await page.goto("/admin");
-    await expect(page.getByText("Admin Console")).toBeVisible();
+    await expect(page.getByText("VASUDHA CONNECT ADMIN")).toBeVisible();
     await page.getByPlaceholder("Admin email").fill("demo.admin@vasudha.test");
     await page.getByPlaceholder("Password").fill("Demo@12345");
-    await page.getByText("Sign in to Admin", { exact: true }).click();
-    await expect(page.getByText("Admin Console")).toBeVisible();
+    await page.getByText("Sign in", { exact: true }).click();
+    await expect(page.getByText("VASUDHA CONNECT ADMIN")).toBeVisible();
     await expect(page.getByText("Dashboard", { exact: true })).toBeVisible({ timeout: 20_000 });
     for (const tab of ["Dashboard", "Professionals", "Verification", "Customers", "Service Catalogue", "Jobs", "Payments", "Notifications", "Complaints", "Portfolio", "Audit Logs"]) {
       await page.getByText(tab, { exact: true }).click();
