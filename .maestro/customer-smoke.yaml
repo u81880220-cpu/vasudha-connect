@@ -1,0 +1,31 @@
+appId: com.vasudha.connect
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Welcome Back"
+- tapOn: "Email"
+- tapOn: "Email address"
+- inputText: "demo.customer1@vasudha.test"
+- tapOn: "Password"
+- inputText: "Demo@12345"
+- tapOn: "Sign in with Email"
+- extendedWaitUntil:
+    visible: "Find trusted professionals"
+    timeout: 30000
+- takeScreenshot: customer-home
+- assertVisible: "Search for services..."
+- tapOn: "Search for services..."
+- extendedWaitUntil:
+    visible: "Find Skills Around You"
+    timeout: 15000
+- takeScreenshot: customer-marketplace
+- assertVisible: "Nearby professionals"
+- back
+- scrollUntilVisible:
+    element: "Sign out"
+    direction: DOWN
+    timeout: 15000
+- tapOn: "Sign out"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 15000
