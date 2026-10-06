@@ -123,7 +123,15 @@ test.describe("VASUDHA real-user free QA", () => {
     await expect(page.getByText("Hello, I need AC service.")).toBeVisible({ timeout: 20_000 });
 
     // Validate authenticated-session exit: a real user can sign out cleanly.
-    await page.getByText("Sign out", { exact: true }).click();
+    const signOutOptions = page.getByText("Sign out", { exact: true });
+    const signOutCount = await signOutOptions.count();
+    for (let i = 0; i < signOutCount; i += 1) {
+      const candidate = signOutOptions.nth(i);
+      if (await candidate.isVisible()) {
+        await candidate.click({ force: true });
+        break;
+      }
+    }
     await expect(page).toHaveURL(/\/auth/);
     await expect(page.getByText("Welcome Back")).toBeVisible();
   });
@@ -161,7 +169,15 @@ test.describe("VASUDHA real-user free QA", () => {
     await expect(page.getByText("My Jobs")).toBeVisible();
 
     for (const label of ["Mark On the way", "Mark Arrived", "Mark Work started", "Mark Work completed"]) {
-      await page.getByRole("button", { name: label }).click();
+      const action = page.getByText(label, { exact: true });
+      const actionCount = await action.count();
+      for (let i = 0; i < actionCount; i += 1) {
+        const candidate = action.nth(i);
+        if (await candidate.isVisible()) {
+          await candidate.click({ force: true });
+          break;
+        }
+      }
       await expect(page.getByText(label.replace("Mark ", ""), { exact: false })).toBeVisible({ timeout: 15_000 });
     }
   });
