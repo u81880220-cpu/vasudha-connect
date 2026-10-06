@@ -4,7 +4,6 @@ import { Pressable,StyleSheet,Text,View } from "react-native";
 const tabs=[
   ["/home","⌂","Home"],
   ["/marketplace","⌖","Map"],
-  ["/jobs","▣","Jobs"],
   ["/connections","◌","Messages"],
   ["/profile","◉","Profile"],
 ] as const;
