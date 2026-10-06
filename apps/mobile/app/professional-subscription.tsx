@@ -7,6 +7,8 @@ import { useAuth } from "../src/auth/AuthProvider";
 type Plan={plan_id:string;code:string;name:string;description?:string|null;price_inr:number;billing_interval:string};
 type Sub={plan_name:string;price_inr:number;billing_interval:string;status:string;current_period_end?:string|null};
 
+const TEST_PAYMENT_MODE=(process.env.EXPO_PUBLIC_PAYMENT_PROVIDER||"test").toLowerCase()==="test";
+
 export default function ProfessionalSubscription(){
  const{user}=useAuth();const[plans,setPlans]=useState<Plan[]>([]);const[sub,setSub]=useState<Sub|null>(null);const[loading,setLoading]=useState(true);const[creating,setCreating]=useState<string|null>(null);
  useEffect(()=>{load()},[user?.id]);
@@ -32,15 +34,27 @@ export default function ProfessionalSubscription(){
   try{await new Promise<void>((resolve,reject)=>{const script=document.createElement("script");script.src="https://checkout.razorpay.com/v1/checkout.js";script.onload=()=>resolve();script.onerror=()=>reject(new Error());document.head.appendChild(script)});launch()}catch{Alert.alert("Payment unavailable","Razorpay checkout could not be loaded.")}
  }
  async function subscribe(planId:string,name:string){
-  setCreating(planId);const{data,error}=await supabase.functions.invoke("create-professional-subscription-order",{body:{plan_id:planId}});setCreating(null);
+  setCreating(planId);
+  if(TEST_PAYMENT_MODE){
+   const{error}=await supabase.rpc("activate_free_professional_subscription",{p_plan_id:planId});
+   setCreating(null);
+   if(error){Alert.alert("Unable to activate QA subscription",error.message);return}
+   await load();
+   Alert.alert("QA subscription active","Free test subscription activated for 30 days. No real payment was charged.");
+   return;
+  }
+  const{data,error}=await supabase.functions.invoke("create-professional-subscription-order",{body:{plan_id:planId}});
+  setCreating(null);
   if(error){Alert.alert("Unable to start subscription",error.message);return}
-  await openCheckout(data,name); 
+  await openCheckout(data,name);
  }
  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container}>
-  <Text style={s.title}>Professional Subscription</Text><Text style={s.sub}>Choose a VASUDHA CONNECT professional plan to stay active on the marketplace.</Text>
-  {loading?<View style={s.center}><ActivityIndicator/><Text style={s.muted}>Loading plans…</Text></View>:sub?<View style={s.active}><Text style={s.activeTitle}>Subscription active</Text><Text>{sub.plan_name} • ₹{Number(sub.price_inr||0).toLocaleString("en-IN")} / {sub.billing_interval}</Text><Text style={s.muted}>Status: {sub.status} • Valid until {sub.current_period_end?new Date(sub.current_period_end).toLocaleDateString():"—"}</Text></View>:plans.length?plans.map(p=><View key={p.plan_id} style={s.card}><Text style={s.name}>{p.name}</Text>{p.description?<Text style={s.muted}>{p.description}</Text>:null}<Text style={s.price}>₹{Number(p.price_inr||0).toLocaleString("en-IN")} / {p.billing_interval}</Text><Pressable disabled={creating!==null} onPress={()=>subscribe(p.plan_id,p.name)} style={[s.primary,creating!==null&&s.disabled]}><Text style={s.primaryText}>{creating===p.plan_id?"Creating secure order…":"Continue to payment"}</Text></Pressable></View>):<Text style={s.muted}>No professional subscription plans are available yet. Please check again later.</Text>}
+  <Text style={s.title}>Professional Subscription</Text>
+  <Text style={s.sub}>Choose a VASUDHA CONNECT professional plan to stay active on the marketplace.</Text>
+  {TEST_PAYMENT_MODE?<View style={s.testBanner}><Text style={s.testTitle}>TEST MODE · FREE SUBSCRIPTION</Text><Text style={s.muted}>No real payment is collected. The QA plan activates through a protected test flow.</Text></View>:null}
+  {loading?<View style={s.center}><ActivityIndicator/><Text style={s.muted}>Loading plans…</Text></View>:sub?<View style={s.active}><Text style={s.activeTitle}>Subscription active</Text><Text>{sub.plan_name} • ₹{Number(sub.price_inr||0).toLocaleString("en-IN")} / {sub.billing_interval}</Text><Text style={s.muted}>Status: {sub.status} • Valid until {sub.current_period_end?new Date(sub.current_period_end).toLocaleDateString():"—"}</Text></View>:plans.length?plans.map(p=><View key={p.plan_id} style={s.card}><Text style={s.name}>{p.name}</Text>{p.description?<Text style={s.muted}>{p.description}</Text>:null}<Text style={s.price}>₹{Number(p.price_inr||0).toLocaleString("en-IN")} / {p.billing_interval}</Text><Pressable disabled={creating!==null} onPress={()=>subscribe(p.plan_id,p.name)} style={[s.primary,creating!==null&&s.disabled]}><Text style={s.primaryText}>{creating===p.plan_id?(TEST_PAYMENT_MODE?"Activating QA subscription…":"Creating secure order…"):(TEST_PAYMENT_MODE?"Activate Free QA Subscription":"Continue to payment")}</Text></Pressable></View>):<Text style={s.muted}>No professional subscription plans are available yet. Please check again later.</Text>}
   <View style={s.notice}><Text style={s.noticeTitle}>Important</Text><Text style={s.muted}>VASUDHA subscription payment covers your professional marketplace access. Service pricing and payment with customers remain directly between you and the customer.</Text></View>
   <Pressable style={s.secondary} onPress={()=>router.back()}><Text>Back</Text></Pressable>
  </ScrollView></SafeAreaView>;
 }
-const s=StyleSheet.create({safe:{flex:1,backgroundColor:"#fff"},container:{padding:20,paddingBottom:50},title:{fontSize:28,fontWeight:"800",color:"#13201c"},sub:{marginTop:6,opacity:.65,lineHeight:20,marginBottom:18},card:{borderWidth:1,borderColor:"#e2e8e5",borderRadius:16,padding:16,marginBottom:12},name:{fontSize:19,fontWeight:"800"},price:{fontSize:21,fontWeight:"800",marginTop:12},muted:{opacity:.65,marginTop:5,lineHeight:19},primary:{marginTop:14,borderRadius:12,padding:13,alignItems:"center",backgroundColor:"#087D65"},disabled:{opacity:.55},primaryText:{color:"#fff",fontWeight:"800"},active:{borderWidth:1,borderColor:"#087D65",borderRadius:16,padding:16,marginBottom:16},activeTitle:{fontSize:18,fontWeight:"800",color:"#087D65",marginBottom:6},notice:{borderWidth:1,borderColor:"#e2e8e5",borderRadius:14,padding:14,marginTop:6},noticeTitle:{fontWeight:"800"},secondary:{borderWidth:1,borderColor:"#cfdad6",borderRadius:12,padding:13,alignItems:"center",marginTop:14},center:{alignItems:"center",paddingVertical:40}});
+const s=StyleSheet.create({safe:{flex:1,backgroundColor:"#fff"},container:{padding:20,paddingBottom:50},title:{fontSize:28,fontWeight:"800",color:"#13201c"},sub:{marginTop:6,opacity:.65,lineHeight:20,marginBottom:18},testBanner:{borderWidth:1,borderColor:"#087D65",borderRadius:14,padding:14,marginBottom:14},testTitle:{fontWeight:"900",color:"#087D65"},card:{borderWidth:1,borderColor:"#e2e8e5",borderRadius:16,padding:16,marginBottom:12},name:{fontSize:19,fontWeight:"800"},price:{fontSize:21,fontWeight:"800",marginTop:12},muted:{opacity:.65,marginTop:5,lineHeight:19},primary:{marginTop:14,borderRadius:12,padding:13,alignItems:"center",backgroundColor:"#087D65"},disabled:{opacity:.55},primaryText:{color:"#fff",fontWeight:"800"},active:{borderWidth:1,borderColor:"#087D65",borderRadius:16,padding:16,marginBottom:16},activeTitle:{fontSize:18,fontWeight:"800",color:"#087D65",marginBottom:6},notice:{borderWidth:1,borderColor:"#e2e8e5",borderRadius:14,padding:14,marginTop:6},noticeTitle:{fontWeight:"800"},secondary:{borderWidth:1,borderColor:"#cfdad6",borderRadius:12,padding:13,alignItems:"center",marginTop:14},center:{alignItems:"center",paddingVertical:40}});
