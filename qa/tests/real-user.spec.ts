@@ -51,6 +51,8 @@ async function chooseService(page: Page, serviceName: string) {
   throw new Error(`Service ${serviceName} was rendered but no visible option was clickable`);
 }
 
+test.describe.configure({ mode: "serial" });
+
 test.describe("VASUDHA real-user free QA", () => {
   test.beforeEach(async ({ page }) => {
     page.on("dialog", async dialog => {
@@ -81,7 +83,8 @@ test.describe("VASUDHA real-user free QA", () => {
     await expect(page.getByText("+919000000003")).toBeVisible();
     await page.screenshot({ path: "test-results/customer-unlocked.png", fullPage: true });
 
-    await page.getByRole("button", { name: "Message", exact: true }).click();
+    await page.getByText("Message", { exact: true }).click();
+    await expect(page).toHaveURL(/\/chat\?/, { timeout: 15_000 });
     await expect(page.getByPlaceholder("Write a message...")).toBeVisible({ timeout: 15_000 });
 
     await page.getByPlaceholder("Write a message...").fill("Hello, I need AC service.");
