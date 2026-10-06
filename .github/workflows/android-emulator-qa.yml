@@ -1,0 +1,70 @@
+name: Vasudha Android Emulator UI QA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  android-emulator-ui-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://bbweclhmbzwmflijppoi.supabase.co
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_fE2u4A3S9YNOR_-imSZKJg_MQuxzPVX
+      EXPO_PUBLIC_PAYMENT_PROVIDER: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package.json
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: npm install
+
+      - name: Generate Android project
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --no-install --non-interactive
+
+      - name: Build debug APK
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Start Android emulator and run Maestro UI QA
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: |
+            adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            curl -fsSL "https://get.maestro.mobile.dev" | bash
+            echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.maestro/bin:$PATH"
+            maestro --version
+            mkdir -p android-maestro-results
+            maestro test --format junit --output android-maestro-results/report.xml --test-output-dir android-maestro-results .maestro
+
+      - name: Upload Android UI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vasudha-android-ui-qa-evidence
+          path: |
+            android-maestro-results
+            apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
