@@ -168,11 +168,10 @@ export default function ConnectionPackages() {
         </View>
 
         <View style={s.notice}>
-          <Text style={s.testBadge}>TEST MODE · FREE PAYMENT</Text>
-          <Text style={s.noticeTitle}>Secure payment</Text>
+          {((process.env.EXPO_PUBLIC_PAYMENT_PROVIDER || "test") === "test") && <Text style={s.testBadge}>TEST MODE · FREE PAYMENT</Text>}
+          <Text style={s.noticeTitle}>{(process.env.EXPO_PUBLIC_PAYMENT_PROVIDER || "test") === "test" ? "Free QA payment" : "Secure payment"}</Text>
           <Text style={s.muted}>
-            Payments are processed through the secure gateway. Connection
-            credits are added only after verified payment confirmation.
+            {(process.env.EXPO_PUBLIC_PAYMENT_PROVIDER || "test") === "test" ? "No money is charged in QA mode. Connection credits are added through the protected test-payment flow." : "Payments are processed through the secure gateway. Connection credits are added only after verified payment confirmation."}
           </Text>
         </View>
 
