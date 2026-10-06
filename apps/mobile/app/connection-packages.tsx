@@ -167,7 +167,8 @@ export default function ConnectionPackages() {
           </Text>
         </View>
 
-        <View style={s.notice}>\n          <Text style={s.testBadge}>TEST MODE · FREE PAYMENT</Text>
+        <View style={s.notice}>
+          <Text style={s.testBadge}>TEST MODE · FREE PAYMENT</Text>
           <Text style={s.noticeTitle}>Secure payment</Text>
           <Text style={s.muted}>
             Payments are processed through the secure gateway. Connection
@@ -228,7 +229,8 @@ const s = StyleSheet.create({
   balanceValue: { fontSize: 30, fontWeight: "800", marginTop: 4 },
   balanceHint: { fontSize: 12, opacity: 0.6, marginTop: 4 },
   notice: { borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 16 },
-  testBadge: { fontSize: 11, fontWeight: "900", color: "#087D65", marginBottom: 6 },\n  noticeTitle: { fontWeight: "800", marginBottom: 4 },
+  testBadge: { fontSize: 11, fontWeight: "900", color: "#087D65", marginBottom: 6 },
+  noticeTitle: { fontWeight: "800", marginBottom: 4 },
   card: { borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 12 },
   row: {
     flexDirection: "row",
