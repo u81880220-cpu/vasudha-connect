@@ -6,7 +6,7 @@ import { useAuth } from "../src/auth/AuthProvider";
 import { supabase } from "../src/lib/supabase";
 
 export default function JobDetails(){
- const {jobId}=useLocalSearchParams<{jobId:string}>();const{mode}=useAuth();const[job,setJob]=useState<any>(null);const[privateData,setPrivateData]=useState<any>({});const[loading,setLoading]=useState(true);
+ const {jobId}=useLocalSearchParams<{jobId:string}>();const{mode}=useAuth();const"job,setJob]=useState<any>(null);const"privateData,setPrivateData]=useState<any>({});const[loading,setLoading]=useState(true);
  useEffect(()=>{if(jobId)load()},[jobId]);
  async function load(){
   setLoading(true);
