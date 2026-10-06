@@ -7,22 +7,23 @@ import { AppBottomNav } from "../src/components/AppBottomNav";
 import { useAuth } from "../src/auth/AuthProvider";
 
 export default function CustomerDashboard(){
- const{user}=useAuth();const[balance,setBalance]=useState(0);const[connections,setConnections]=useState<any[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState("");
+ const{user}=useAuth();const[activeJob,setActiveJob]=useState<any>(null);const[balance,setBalance]=useState(0);const[connections,setConnections]=useState<any[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState("");
  useEffect(()=>{load()},[user?.id]);
  async function load(){
   if(!user)return;setLoading(true);setError("");
   const[{data:cs,error:ce},{data:wallet,error:we}]=await Promise.all([
    supabase.from("professional_connections").select("id,professional_id,expires_at,last_accessed_at").eq("customer_id",user.id).gt("expires_at",new Date().toISOString()).order("last_accessed_at",{ascending:false}).limit(20),
-   supabase.rpc("get_connection_balance")
+   supabase.rpc("get_connection_balance"),
+   supabase.from("jobs").select("id,title,status").eq("customer_id",user.id).in("status",["worker_accepted","on_the_way","arrived","work_started"]).order("updated_at",{ascending:false}).limit(1)
   ]);
   const firstError=ce||we;if(firstError){setError(firstError.message);Alert.alert("Unable to load connections",firstError.message);}
-  setConnections(cs||[]);setBalance(Number(wallet||0));setLoading(false);
+  setConnections(cs||[]);setBalance(Number(wallet||0));setActiveJob(results[2].data?.[0]||null);setLoading(false);
  }
  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container}><VasudhaLogo/><Text style={s.title}>My Connections</Text><Text style={s.subtitle}>Your unlocked professionals and communication access</Text>
   {loading?<View style={s.state}><ActivityIndicator/><Text style={s.muted}>Loading…</Text></View>:error?<View style={s.state}><Text style={s.errorTitle}>Couldn't load your connections</Text><Text style={s.muted}>{error}</Text><Pressable onPress={load} style={s.secondary}><Text>Try again</Text></Pressable></View>:<>
    <View style={s.stats}><View style={s.stat}><Text style={s.num}>{connections.length}</Text><Text>Active connections</Text></View><View style={s.stat}><Text style={s.num}>{balance}</Text><Text>Unlocks left</Text></View></View>
    <Pressable onPress={()=>router.push("/marketplace")} style={s.primary}><Text style={s.primaryText}>Find Professionals</Text></Pressable>
-   <Pressable onPress={()=>router.push("/connection-packages")} style={s.secondary}><Text>Buy Connection Package</Text></Pressable>
+   <Pressable onPress={()=>router.push("/connection-packages")} style={s.secondary}><Text>Buy Connection Package</Text></Pressable>{activeJob?<Pressable onPress={()=>router.push({pathname:"/job-tracking",params:{jobId:activeJob.id}})} style={s.primary}><Text style={s.primaryText}>Track Professional Live · {activeJob.status}</Text></Pressable>:null}
    <View style={s.info}><Text style={s.infoTitle}>What happens after you connect?</Text><Text style={s.muted}>Unlock a verified professional, then call or chat directly. Service scope, price, scheduling and payment are arranged directly between you and the professional.</Text></View>
    <Text style={s.section}>Connections</Text>
    {connections.length===0?<Text style={s.muted}>You have no active connections yet.</Text>:connections.map(x=><View key={x.id} style={s.card}><Text style={s.name}>Professional connection</Text><Text style={s.muted}>Access until {new Date(x.expires_at).toLocaleDateString()}</Text><Pressable onPress={()=>router.push("/connections")} style={s.secondary}><Text>Open My Connections & Chat</Text></Pressable></View>)}
