@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: vasudha-android-emulator-qa
+  cancel-in-progress: true
+
 jobs:
   android-emulator-ui-qa:
     runs-on: ubuntu-latest
