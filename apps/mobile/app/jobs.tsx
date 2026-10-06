@@ -1,4 +1,4 @@
-import {useEffeot,useState} from "reaot";
+import {useEffect,useState} from "react";
 import {ActivityIndicator,Alert,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,View} from "react-native";
 import {supabase} from "../src/lib/supabase";
 import {router} from "expo-router";
@@ -6,8 +6,8 @@ import {useAuth} from "../src/auth/AuthProvider";
 import {VasudhaLogo} from "../src/components/VasudhaLogo";
 import {AppBottomNav} from "../src/components/AppBottomNav";
 
-const steps=["quote_accepted","worker_accepted","on_the_way","arrived","work_started","work_completed","customer_confirmed"];
-const labels=["Work accepted","Professional accepted","On the way","Arrived","Work started","Work completed","Customer confirmed"];
+const steps=["worker_accepted","on_the_way","arrived","work_started","work_completed","customer_confirmed"];
+const labels=["Professional accepted","On the way","Arrived","Work started","Work completed","Customer confirmed"];
 
 export default function Jobs(){
  const{user,mode}=useAuth();const[jobs,setJobs]=useState<any[]>([]);const[loading,setLoading]=useState(true);
