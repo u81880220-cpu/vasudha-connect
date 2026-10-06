@@ -1,0 +1,2 @@
+revoke execute on function public.create_service_request(uuid,uuid,uuid,text,text,date,text,text,numeric,numeric) from anon;
+revoke execute on function public.set_verification_pending_on_submission() from anon, authenticated;
