@@ -213,11 +213,19 @@ test.describe("VASUDHA real-user free QA", () => {
     await page.getByText("Sign in to Admin", { exact: true }).click();
     await expect(page.getByText("Admin Console")).toBeVisible();
     await expect(page.getByText("Dashboard", { exact: true })).toBeVisible({ timeout: 20_000 });
-    for (const tab of ["Professionals", "Customers", "Connections", "Operations", "Subscriptions", "Payments", "Analytics", "Complaints", "Audit", "Configuration"]) {
+    for (const tab of ["Dashboard", "Professionals", "Verification", "Customers", "Service Catalogue", "Jobs", "Payments", "Notifications", "Complaints", "Portfolio", "Audit Logs"]) {
       await page.getByText(tab, { exact: true }).click();
       await expect(page.getByText(tab, { exact: true }).first()).toBeVisible();
     }
     await page.screenshot({ path: "test-results/admin-console.png", fullPage: true });
+
+    // Admin security: a bad password must not expose the operational console.
+    await page.goto("/admin");
+    await page.getByPlaceholder("Admin email").fill("demo.admin@vasudha.test");
+    await page.getByPlaceholder("Password").fill("WrongPassword@123");
+    await page.getByText("Sign in", { exact: true }).click();
+    await expect(page.getByText("Marketplace control centre")).toBeVisible();
+    await expect(page.getByText("Dashboard", { exact: true })).not.toBeVisible();
   });
 
   test("Customer B and Professional B: account isolation and independent login", async ({ browser }) => {
