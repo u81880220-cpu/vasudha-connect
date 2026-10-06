@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { supabase } from "../src/lib/supabase";
 
 type Tab="dashboard"|"professionals"|"verification"|"customers"|"services"|"connections"|"subscriptions"|"operations"|"payments"|"notifications"|"complaints"|"portfolio"|"audit"|"configuration";
-const tabs:Tab[]=["dashboard","professionals","verification","customers","services","connections","subscriptions","payments","notifications","complaints","portfolio","audit","configuration"];
+const tabs:Tab[]=["dashboard","professionals","verification","customers","services","connections","subscriptions","operations","payments","notifications","complaints","portfolio","audit","configuration"];
 
 export default function AdminScreen(){
  const[session,setSession]=useState<any>(null),[admin,setAdmin]=useState(false),[loading,setLoading]=useState(true);
