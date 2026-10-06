@@ -42,6 +42,11 @@ jobs:
         working-directory: apps/mobile
         run: npx expo prebuild --platform android --no-install --non-interactive
 
+      - name: Install Android NDK 27.1
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "ndk;27.1.12297006"
+
       - name: Build debug APK
         working-directory: apps/mobile/android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
