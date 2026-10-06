@@ -4,7 +4,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 
-const steps=[["quote_accepted","Assigned"],["worker_accepted","Worker accepted"],["on_the_way","On the Way"],["arrived","Arrived"],["work_started","Work Started"],["work_completed","Work Completed"],["customer_confirmed","Customer Confirmed"]];
+const steps=[["quote_accepted","Work accepted"],["worker_accepted","Professional accepted"],["on_the_way","On the Way"],["arrived","Arrived"],["work_started","Work Started"],["work_completed","Work Completed"],["customer_confirmed","Customer Confirmed"]];
 
 export default function JobTracking(){
  const {jobId}=useLocalSearchParams<{jobId:string}>(); const [job,setJob]=useState<any>(null); const [privateData,setPrivateData]=useState<any>({}); const [loading,setLoading]=useState(true);
