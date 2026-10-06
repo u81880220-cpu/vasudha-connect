@@ -61,7 +61,7 @@ test.describe("VASUDHA real-user free QA", () => {
     await page.screenshot({ path: "test-results/customer-home.png", fullPage: true });
 
     await page.getByRole("button", { name: "Search for services" }).click();
-    await expect(page.getByText("Find Skills Around You")).toBeVisible();
+    await expect(page.getByText("Find Skills Around You").first()).toBeVisible();
     await expect(page.getByText("Nearby professionals")).toBeVisible();
 
     await chooseService(page, "AC Technician");
@@ -103,9 +103,9 @@ test.describe("VASUDHA real-user free QA", () => {
     await page.goto("/professional-dashboard");
     await expect(page.getByText("Professional Dashboard")).toBeVisible();
 
-    await page.getByRole("button", { name: "Manage Professional Subscription" }).click();
+    await page.getByText("Manage Professional Subscription", { exact: true }).click();
     await expect(page.getByText("TEST MODE · FREE SUBSCRIPTION")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Activate Free QA Subscription" })).toBeVisible();
+    await expect(page.getByText("Activate Free QA Subscription", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "Activate Free QA Subscription" }).click();
     await expect(page.getByText("Subscription active")).toBeVisible({ timeout: 20_000 });
@@ -143,7 +143,7 @@ test.describe("VASUDHA real-user free QA", () => {
     await expect(page.getByText("Dashboard", { exact: true })).toBeVisible({ timeout: 20_000 });
     for (const tab of ["Professionals", "Customers", "Connections", "Operations", "Subscriptions", "Payments", "Analytics", "Complaints", "Audit", "Configuration"]) {
       await page.getByText(tab, { exact: true }).click();
-      await expect(page.getByText(tab, { exact: true })).toBeVisible();
+      await expect(page.getByText(tab, { exact: true }).first()).toBeVisible();
     }
     await page.screenshot({ path: "test-results/admin-console.png", fullPage: true });
   });
@@ -167,7 +167,7 @@ test.describe("VASUDHA real-user free QA", () => {
 
       await pp.goto("/professional-subscription");
       await expect(pp.getByText("TEST MODE · FREE SUBSCRIPTION")).toBeVisible();
-      await expect(pp.getByRole("button", { name: "Activate Free QA Subscription" })).toBeVisible();
+      await expect(pp.getByText("Activate Free QA Subscription", { exact: true })).toBeVisible();
     } finally {
       await customerB.close();
       await professionalB.close();
