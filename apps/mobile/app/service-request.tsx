@@ -13,10 +13,9 @@ export default function ServiceRequest(){
  async function submit(){
   if(!professionalId||!selection.serviceId||title.trim().length<3||description.trim().length<3||location.trim().length<3){Alert.alert("Complete request","Choose a service, then optionally refine it with a sub-service. Add the work requirement and service location.");return;}
   setBusy(true);
-  const {data:{user}}=await supabase.auth.getUser(); if(!user){setBusy(false);return;}
   let latitude:null|number=null, longitude:null|number=null;
   try{if(await Location.hasServicesEnabledAsync()){const perm=await Location.requestForegroundPermissionsAsync();if(perm.status==="granted"){const places=await Location.geocodeAsync(location.trim());if(places[0]){latitude=places[0].latitude;longitude=places[0].longitude;}}}}catch{}
-  const {error}=await supabase.from("service_requests").insert({customer_id:user.id,professional_id:professionalId,title:title.trim(),description:description.trim(),preferred_date:date||null,preferred_time:time||null,location_text:location.trim(),location_latitude:latitude,location_longitude:longitude,service_id:selection.serviceId,sub_service_id:selection.subServiceId});
+  const {error}=await supabase.rpc("create_service_request",{p_professional_id:professionalId,p_service_id:selection.serviceId,p_sub_service_id:selection.subServiceId||null,p_title:title.trim(),p_description:description.trim(),p_preferred_date:date||null,p_preferred_time:time||null,p_location_text:location.trim(),p_location_latitude:latitude,p_location_longitude:longitude});
   setBusy(false);
   if(error)Alert.alert("Request failed",error.message);
   else{Alert.alert("Request sent","The professional can discuss the work with you and accept the job when you agree.");router.back();}
