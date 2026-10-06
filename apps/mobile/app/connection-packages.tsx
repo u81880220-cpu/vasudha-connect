@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Alert, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Link } from "expo-router";
 import { supabase } from "../src/lib/supabase";
+import { createConnectionPayment } from "../src/services/payment";
 
 type P = {
   code: string;
@@ -115,28 +116,39 @@ export default function ConnectionPackages() {
 
   async function startPayment(code: string, packageName: string) {
     setCreating(code);
+    const provider = (process.env.EXPO_PUBLIC_PAYMENT_PROVIDER || "test") as "test" | "razorpay";
 
-    const { data, error } = await supabase.functions.invoke(
-      "create-razorpay-order",
-      { body: { package_code: code } }
-    );
+    try {
+      if (provider === "test") {
+        const result = await createConnectionPayment(code, "test");
+        setCreating(null);
+        if (result.status === "paid") {
+          Alert.alert("Test payment successful", "Connection credits were added. This is a free QA payment and does not charge money.");
+          await load();
+        } else {
+          Alert.alert("Test payment pending", "The test order was created but was not settled.");
+        }
+        return;
+      }
 
-    setCreating(null);
-
-    if (error) {
-      Alert.alert("Unable to start payment", error.message);
-      return;
+      const { data, error } = await supabase.functions.invoke(
+        "create-razorpay-order",
+        { body: { package_code: code } }
+      );
+      setCreating(null);
+      if (error) throw error;
+      if (Platform.OS === "web") {
+        await openRazorpayWeb(data, packageName);
+        return;
+      }
+      Alert.alert(
+        "Payment gateway ready",
+        "The secure payment order was created. Native Razorpay checkout will be connected in the mobile build."
+      );
+    } catch (e) {
+      setCreating(null);
+      Alert.alert("Unable to start payment", e instanceof Error ? e.message : "Please try again.");
     }
-
-    if (Platform.OS === "web") {
-      await openRazorpayWeb(data, packageName);
-      return;
-    }
-
-    Alert.alert(
-      "Payment gateway ready",
-      "The secure payment order was created. Native Razorpay checkout will be connected in the mobile build."
-    );
   }
 
   return (
@@ -155,7 +167,7 @@ export default function ConnectionPackages() {
           </Text>
         </View>
 
-        <View style={s.notice}>
+        <View style={s.notice}>\n          <Text style={s.testBadge}>TEST MODE · FREE PAYMENT</Text>
           <Text style={s.noticeTitle}>Secure payment</Text>
           <Text style={s.muted}>
             Payments are processed through the secure gateway. Connection
@@ -216,7 +228,7 @@ const s = StyleSheet.create({
   balanceValue: { fontSize: 30, fontWeight: "800", marginTop: 4 },
   balanceHint: { fontSize: 12, opacity: 0.6, marginTop: 4 },
   notice: { borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 16 },
-  noticeTitle: { fontWeight: "800", marginBottom: 4 },
+  testBadge: { fontSize: 11, fontWeight: "900", color: "#087D65", marginBottom: 6 },\n  noticeTitle: { fontWeight: "800", marginBottom: 4 },
   card: { borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 12 },
   row: {
     flexDirection: "row",
