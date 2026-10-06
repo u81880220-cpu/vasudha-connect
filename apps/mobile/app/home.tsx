@@ -69,14 +69,35 @@ function CustomerHome(){
  </View>
 }
 function ProfessionalHome(){
+ const{session}=useAuth();
+ const[stats,setStats]=useState({trust:0,verified:false,available:false,requests:0,jobs:0});
+ useEffect(()=>{
+  if(!session?.user.id)return;
+  let active=true;
+  (async()=>{
+   const[{data:profile},{data:requests},{data:jobs}]=await Promise.all([
+    supabase.from("professional_profiles").select("trust_score,verification_status,is_available").eq("user_id",session.user.id).maybeSingle(),
+    supabase.rpc("get_professional_requests"),
+    supabase.from("jobs").select("id,status").eq("professional_id",session.user.id).in("status",["quote_accepted","worker_accepted","on_the_way","arrived","work_started"]).limit(50)
+   ]);
+   if(active)setStats({
+    trust:Number(profile?.trust_score||0),
+    verified:profile?.verification_status==="verified",
+    available:!!profile?.is_available,
+    requests:(requests||[]).filter((x:any)=>x.status==="requested").length,
+    jobs:(jobs||[]).length
+   });
+  })();
+  return()=>{active=false};
+ },[session?.user.id]);
  return <View>
   <Text style={s.greeting}>Welcome back 👋</Text>
   <Text style={s.heading}>Grow your business.</Text><Text style={s.heading}>Get more customers.</Text>
-  <View style={s.statHero}><Text style={s.statLabel}>Professional Trust</Text><Text style={s.statValue}>4.8 <Text style={s.statSmall}>/ 5.0</Text></Text><Text style={s.meta}>Verified profile • Available for jobs</Text></View>
-  <View style={s.grid}><Link href="/professional-dashboard" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>0</Text><Text>New requests</Text></Pressable></Link><Link href="/jobs" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>0</Text><Text>Active jobs</Text></Pressable></Link></View>
-  <Link href="/professional-profile" asChild><Pressable style={s.primary}><Text style={s.primaryText}>Complete professional profile</Text></Pressable></Link>
+  <View style={s.statHero}><Text style={s.statLabel}>Professional Trust</Text><Text style={s.statValue}>{Math.round(stats.trust)} <Text style={s.statSmall}>/ 100</Text></Text><Text style={s.meta}>{stats.verified?"✓ Verified":"Verification pending"} • {stats.available?"Available for jobs":"Unavailable for jobs"}</Text></View>
+  <View style={s.grid}><Link href="/professional-dashboard" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>{stats.requests}</Text><Text>New requests</Text></Pressable></Link><Link href="/jobs" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>{stats.jobs}</Text><Text>Active jobs</Text></Pressable></Link></View>
+  <Link href="/professional-profile" asChild><Pressable style={s.primary}><Text style={s.primaryText}>Manage professional profile</Text></Pressable></Link>
   <Text style={s.section}>Quick actions</Text>
-  <View style={s.grid}><Link href="/professional-verification" asChild><Pressable style={s.action}><Text style={s.actionIcon}>✓</Text><Text>Verification</Text></Pressable></Link><Link href="/professional-profile" asChild><Pressable style={s.action}><Text style={s.actionIcon}>⌂</Text><Text>My skills</Text></Pressable></Link></View>
+  <View style={s.grid}><Link href="/professional-verification" asChild><Pressable style={s.action}><Text style={s.actionIcon}>✓</Text><Text>Verification</Text></Pressable></Link><Link href="/professional-profile" asChild><Pressable style={s.action}><Text style={s.actionIcon}>⌂</Text><Text>Services & area</Text></Pressable></Link></View>
  </View>
 }
 const s=StyleSheet.create({safe:{flex:1,backgroundColor:"#fff"},loading:{flex:1,alignItems:"center",justifyContent:"center"},container:{padding:18,paddingBottom:110},top:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},bell:{width:40,height:40,borderRadius:20,backgroundColor:"#f2f7f5",alignItems:"center",justifyContent:"center"},bellText:{fontSize:18,color:"#087D65"},greeting:{fontSize:14,color:"#66736e",marginTop:22},heading:{fontSize:25,fontWeight:"900",color:"#13201c",lineHeight:31,marginTop:4},search:{height:50,borderWidth:1,borderColor:"#dce6e2",borderRadius:14,flexDirection:"row",alignItems:"center",paddingHorizontal:14,marginTop:18},searchIcon:{fontSize:23,color:"#087D65"},searchText:{marginLeft:8,color:"#8a9691"},section:{fontSize:17,fontWeight:"900",marginTop:22,color:"#13201c"},services:{flexDirection:"row",gap:10,marginTop:10},service:{width:70,alignItems:"center"},serviceText:{fontSize:10,textAlign:"center",marginTop:5,fontWeight:"700"},hero:{marginTop:18,borderRadius:18,backgroundColor:"#087D65",padding:18,minHeight:125,justifyContent:"center"},heroTitle:{color:"#fff",fontSize:20,fontWeight:"900"},heroSub:{color:"#dff8f1",marginTop:5},heroAction:{color:"#fff",fontWeight:"900",marginTop:12},nearby:{marginTop:10,borderWidth:1,borderColor:"#e1e8e5",borderRadius:16,padding:14,flexDirection:"row",alignItems:"center",gap:12},avatar:{width:48,height:48,borderRadius:24,backgroundColor:"#E7F7F2",alignItems:"center",justifyContent:"center"},name:{fontWeight:"900"},meta:{color:"#66736e",fontSize:12,marginTop:3},view:{color:"#087D65",fontWeight:"900"},switch:{marginTop:22,height:50,borderWidth:1,borderColor:"#087D65",borderRadius:12,flexDirection:"row",alignItems:"center",justifyContent:"space-between",paddingHorizontal:16},disabled:{opacity:.6},switchText:{color:"#087D65",fontWeight:"900"},arrow:{fontSize:24,color:"#087D65"},signout:{alignItems:"center",padding:18},statHero:{backgroundColor:"#E7F7F2",borderRadius:18,padding:18,marginTop:18},statLabel:{fontWeight:"800",color:"#087D65"},statValue:{fontSize:38,fontWeight:"900",color:"#087D65",marginTop:5},statSmall:{fontSize:16},grid:{flexDirection:"row",gap:10,marginTop:12},metric:{flex:1,borderWidth:1,borderColor:"#e1e8e5",borderRadius:16,padding:16},metricNumber:{fontSize:26,fontWeight:"900",color:"#087D65"},primary:{height:52,borderRadius:12,backgroundColor:"#087D65",alignItems:"center",justifyContent:"center",marginTop:16},primaryText:{color:"#fff",fontWeight:"900"},action:{flex:1,borderWidth:1,borderColor:"#e1e8e5",borderRadius:16,padding:16,alignItems:"center"},actionIcon:{fontSize:22,color:"#087D65",fontWeight:"900",marginBottom:5},muted:{color:"#66736e",marginTop:8}});
