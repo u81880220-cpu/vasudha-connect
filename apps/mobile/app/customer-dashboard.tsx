@@ -11,13 +11,13 @@ export default function CustomerDashboard(){
  useEffect(()=>{load()},[user?.id]);
  async function load(){
   if(!user)return;setLoading(true);setError("");
-  const[{data:cs,error:ce},{data:wallet,error:we}]=await Promise.all([
+  const results=await Promise.all([
    supabase.from("professional_connections").select("id,professional_id,expires_at,last_accessed_at").eq("customer_id",user.id).gt("expires_at",new Date().toISOString()).order("last_accessed_at",{ascending:false}).limit(20),
    supabase.rpc("get_connection_balance"),
    supabase.from("jobs").select("id,title,status").eq("customer_id",user.id).in("status",["worker_accepted","on_the_way","arrived","work_started"]).order("updated_at",{ascending:false}).limit(1)
   ]);
-  const firstError=ce||we;if(firstError){setError(firstError.message);Alert.alert("Unable to load connections",firstError.message);}
-  setConnections(cs||[]);setBalance(Number(wallet||0));setActiveJob(results[2].data?.[0]||null);setLoading(false);
+  const firstError=results.find(x=>x.error)?.error;if(firstError){setError(firstError.message);Alert.alert("Unable to load connections",firstError.message);}
+  setConnections(results[0].data||[]);setBalance(Number(results[1].data||0));setActiveJob(results[2].data?.[0]||null);setLoading(false);
  }
  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container}><VasudhaLogo/><Text style={s.title}>My Connections</Text><Text style={s.subtitle}>Your unlocked professionals and communication access</Text>
   {loading?<View style={s.state}><ActivityIndicator/><Text style={s.muted}>Loading…</Text></View>:error?<View style={s.state}><Text style={s.errorTitle}>Couldn't load your connections</Text><Text style={s.muted}>{error}</Text><Pressable onPress={load} style={s.secondary}><Text>Try again</Text></Pressable></View>:<>
