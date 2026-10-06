@@ -1,6 +1,7 @@
 import { Session } from "@supabase/supabase-js";
 import { createContext, PropsWithChildren, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { registerForPushNotifications } from "../services/pushNotifications";
 
 type AppMode="customer"|"professional";
 type AuthContextValue={session:Session|null;user:Session["user"]|null;loading:boolean;mode:AppMode;setMode:(mode:AppMode)=>Promise<void>;signOut:()=>Promise<void>};
@@ -18,7 +19,7 @@ export function AuthProvider({children}:PropsWithChildren){
      if(!mounted)return;
      setSession(data.session);
      setLoading(false);
-     if(data.session) void loadMode(data.session.user.id);
+     if(data.session){ void loadMode(data.session.user.id); void registerForPushNotifications(data.session.user.id).catch(()=>{}); }
    }).catch(()=>{
      if(mounted)setLoading(false);
    });
@@ -26,7 +27,7 @@ export function AuthProvider({children}:PropsWithChildren){
    const{data:listener}=supabase.auth.onAuthStateChange((_event,next)=>{
      if(!mounted)return;
      setSession(next);
-     if(next) void loadMode(next.user.id);
+     if(next){ void loadMode(next.user.id); void registerForPushNotifications(next.user.id).catch(()=>{}); }
      else setModeState("customer");
      setLoading(false);
    });
