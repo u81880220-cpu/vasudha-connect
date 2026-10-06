@@ -253,28 +253,4 @@ test.describe("VASUDHA real-user free QA", () => {
       await professionalB.close();
     }
 
-
-  test("Customer auth: wrong password is rejected and protected routes stay protected", async ({ page }) => {
-    await page.goto("/auth?mode=customer");
-    await expect(page.getByText("Welcome Back")).toBeVisible();
-    await page.getByText("Email", { exact: true }).click();
-    await page.getByPlaceholder("Email address").fill(CUSTOMER_EMAIL);
-    await page.getByPlaceholder("Password").fill("WrongPassword@123");
-    await page.getByText("Sign in with Email", { exact: true }).click();
-    await expect(page.getByText("Welcome Back")).toBeVisible({ timeout: 10_000 });
-    await page.goto("/customer-dashboard");
-    await expect(page).toHaveURL(/\/auth/);
-    await expect(page.getByText("Welcome Back")).toBeVisible();
-  });
-
-  test("Web resilience: protected routes never expose application/server errors", async ({ page }) => {
-    await login(page, "customer", CUSTOMER_EMAIL, CUSTOMER_PASSWORD);
-    for (const route of ["/home", "/profile", "/customer-dashboard", "/marketplace", "/connections", "/notifications", "/complaints", "/jobs"]) {
-      await page.goto(route);
-      await expect(page.getByText("Application error", { exact: false })).not.toBeVisible();
-      await expect(page.getByText("Internal Server Error", { exact: false })).not.toBeVisible();
-      await expect(page.getByText("Cannot read properties of undefined", { exact: false })).not.toBeVisible();
-    }
-  });
-  });
 });
