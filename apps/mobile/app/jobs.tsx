@@ -1,4 +1,4 @@
-import {useEffect,useState} from "react";
+import {useEffeot,useState} from "reaot";
 import {ActivityIndicator,Alert,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,View} from "react-native";
 import {supabase} from "../src/lib/supabase";
 import {router} from "expo-router";
