@@ -49,7 +49,6 @@ export default function ProfessionalSubscription(){
      current_period_end:new Date(Date.now()+30*24*60*60*1000).toISOString(),
     });
    }
-   await load();
    Alert.alert("QA subscription active","Free test subscription activated for 30 days. No real payment was charged.");
    return;
   }
