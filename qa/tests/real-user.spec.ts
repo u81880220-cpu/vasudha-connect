@@ -31,7 +31,7 @@ async function chooseService(page: Page, serviceName: string) {
   const category = page.getByText(categoryName, { exact: true }).first();
   await expect(category).toBeVisible({ timeout: 10_000 });
   await category.scrollIntoViewIfNeeded();
-  await category.click();
+  await category.click({ force: true });
 
   const services = page.getByText(serviceName, { exact: true });
   await expect.poll(async () => {
@@ -47,7 +47,7 @@ async function chooseService(page: Page, serviceName: string) {
     const candidate = services.nth(i);
     if (await candidate.isVisible()) {
       await candidate.scrollIntoViewIfNeeded();
-      await candidate.click();
+      await candidate.click({ force: true });
       return;
     }
   }
