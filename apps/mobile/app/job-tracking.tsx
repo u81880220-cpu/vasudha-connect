@@ -6,7 +6,7 @@ import { useAuth } from "../src/auth/AuthProvider";
 import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 
-const steps="""quote_accepted","Work accepted"],["worker_accepted","Professional accepted"],["on_the_way","On the Way"],["arrived","Arrived"],["work_started","Work Started"],["work_completed","Work Completed"],["customer_confirmed","Customer Confirmed"]];
+const steps=[["worker_accepted","Professional accepted"],["on_the_way","On the Way"],["arrived","Arrived"],["work_started","Work Started"],["work_completed","Work Completed"],["customer_confirmed","Customer Confirmed"]];
 
 export default function JobTracking(){
  const {jobId}=useLocalSearchParams<{jobId:string}>(); const {user,mode}=useAuth(); const [job,setJob]=useState<any>(null); const [privateData,setPrivateData]=useState<any>({}); const [live,setLive]=useState<any>(null); const [loading,setLoading]=useState(true);
