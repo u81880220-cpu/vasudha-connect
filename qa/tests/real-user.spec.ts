@@ -28,10 +28,24 @@ const QA_SERVICE_CATEGORIES: Record<string, string> = {
 async function chooseService(page: Page, serviceName: string) {
   const categoryName = QA_SERVICE_CATEGORIES[serviceName];
   if (!categoryName) throw new Error(`Unknown QA service: ${serviceName}`);
-  const category = page.getByText(categoryName, { exact: true }).first();
-  await expect(category).toBeVisible({ timeout: 10_000 });
-  await category.scrollIntoViewIfNeeded();
-  await category.click({ force: true });
+  const categories = page.getByText(categoryName, { exact: true });
+  await expect.poll(async () => {
+    const count = await categories.count();
+    for (let i = 0; i < count; i += 1) {
+      if (await categories.nth(i).isVisible()) return true;
+    }
+    return false;
+  }, { timeout: 10_000 }).toBe(true);
+
+  const categoryCount = await categories.count();
+  for (let i = 0; i < categoryCount; i += 1) {
+    const candidate = categories.nth(i);
+    if (await candidate.isVisible()) {
+      await candidate.scrollIntoViewIfNeeded();
+      await candidate.click({ force: true });
+      break;
+    }
+  }
 
   const services = page.getByText(serviceName, { exact: true });
   await expect.poll(async () => {
