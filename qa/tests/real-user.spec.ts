@@ -21,7 +21,7 @@ async function login(page: Page, mode: "customer" | "professional", email: strin
   await page.getByPlaceholder("Email address").fill(email);
   await page.getByPlaceholder("Password").fill(password);
   await page.getByRole("button", { name: "Sign in with Email" }).click();
-  await page.waitForURL(/\\/(home|basic-profile|professional-onboarding)/, { timeout: 20_000 });
+  await page.waitForURL(/\/(home|basic-profile|professional-onboarding)/, { timeout: 20_000 });
 }
 
 async function serviceInfo(serviceName: string) {
@@ -117,7 +117,7 @@ test.describe("VASUDHA real-user free QA", () => {
     await expect(page.getByText("AC service at home")).toBeVisible({ timeout: 20_000 });
 
     await page.getByRole("button", { name: "Accept Job" }).click();
-    await page.waitForURL(/\\/job-tracking\\?jobId=/);
+    await page.waitForURL(/\/job-tracking\?jobId=/);
     await expect(page.getByText("Professional accepted")).toBeVisible();
     await expect(page.getByText("Service location")).toBeVisible();
     await expect(page.getByText(/Customer:/)).toBeVisible();
