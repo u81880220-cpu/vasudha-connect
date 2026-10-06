@@ -7,7 +7,7 @@ import {VasudhaLogo} from "../src/components/VasudhaLogo";
 import {AppBottomNav} from "../src/components/AppBottomNav";
 
 const steps=["quote_accepted","worker_accepted","on_the_way","arrived","work_started","work_completed","customer_confirmed"];
-const labels=["Quote accepted","Worker accepted","On the way","Arrived","Work started","Work completed","Customer confirmed"];
+const labels=["Work accepted","Professional accepted","On the way","Arrived","Work started","Work completed","Customer confirmed"];
 
 export default function Jobs(){
  const{user,mode}=useAuth();const[jobs,setJobs]=useState<any[]>([]);const[loading,setLoading]=useState(true);
@@ -20,7 +20,7 @@ export default function Jobs(){
  return <SafeAreaView style={s.safe}>
   <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
    <View style={s.top}><VasudhaLogo compact/><Pressable style={s.refresh} onPress={load}><Text style={s.refreshText}>↻</Text></Pressable></View>
-   <Text style={s.title}>My Jobs</Text><Text style={s.subtitle}>{mode==="customer"?"Track work and confirm completion":"Manage assigned work"}</Text>
+   <Text style={s.title}>My Jobs</Text><Text style={s.subtitle}>{mode==="customer"?"Track accepted work and confirm completion":"Manage accepted work"}</Text>
    {loading?<View style={s.state}><ActivityIndicator size="small" color="#087D65"/><Text style={s.muted}>Loading jobs…</Text></View>:
     jobs.length===0?<View style={s.empty}><View style={s.emptyIcon}><Text>✓</Text></View><Text style={s.emptyTitle}>No jobs yet</Text><Text style={s.emptyText}>{mode==="customer"?"Your accepted services will appear here.":"Jobs assigned to you will appear here."}</Text></View>:
     jobs.map(j=>{const n=nextFor(j),idx=steps.indexOf(j.status);return <View key={j.id} style={s.card}>
