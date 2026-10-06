@@ -31,7 +31,7 @@ export default function Connections(){
   }else{
    const {data,error}=await supabase.from("conversations").select("id").eq("customer_id",item.customer_id).eq("professional_id",user?.id).maybeSingle();
    if(error||!data){Alert.alert("No chat yet","The customer has not started a chat.");return;}
-   router.push({pathname:"/chat",params:{conversationId:data.id,otherName:item.profile?.display_name||"Customer"}});
+   router.push({pathname:"/chat",params:{conversationId:data.id,otherName:item.profile?.display_name||"Customer",professionalId:item.professional_id}});
   }
  }
  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
