@@ -11,7 +11,8 @@ type DashboardProfile={verification_status?:string|null;is_available?:boolean|nu
 export default function ProfessionalDashboard(){
  const{user}=useAuth();const[requests,setRequests]=useState<any[]>([]);const[activeJob,setActiveJob]=useState<any>(null);const[profile,setProfile]=useState<DashboardProfile|null>(null);const[connections,setConnections]=useState<any[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState("");
  useEffect(()=>{load()},[user?.id]);
- async function acceptRequest(id:string){const{data,error}=await supabase.rpc("accept_service_request",{p_request_id:id});if(error){Alert.alert("Unable to accept job",error.message);return;}if(data)router.push({pathname:"/job-tracking",params:{jobId:data}});else await load()}\n async function load(){
+ async function acceptRequest(id:string){const{data,error}=await supabase.rpc("accept_service_request",{p_request_id:id});if(error){Alert.alert("Unable to accept job",error.message);return;}if(data)router.push({pathname:"/job-tracking",params:{jobId:data}});else await load()}
+ async function load(){
   if(!user)return;setLoading(true);setError("");
   const results=await Promise.all([
    supabase.from("professional_profiles").select("verification_status,is_available,trust_score,completion_rate").eq("user_id",user.id).maybeSingle(),
