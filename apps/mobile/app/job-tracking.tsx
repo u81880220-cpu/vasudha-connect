@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import * as Location from "expo-location";
 import { ActivityIndicator, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useAuth } from "../src/auth/AuthProvider";
@@ -8,8 +9,9 @@ import { VasudhaLogo } from "../src/components/VasudhaLogo";
 const steps=[["quote_accepted","Work accepted"],["worker_accepted","Professional accepted"],["on_the_way","On the Way"],["arrived","Arrived"],["work_started","Work Started"],["work_completed","Work Completed"],["customer_confirmed","Customer Confirmed"]];
 
 export default function JobTracking(){
- const {jobId}=useLocalSearchParams<{jobId:string}>(); const {user}=useAuth(); const [job,setJob]=useState<any>(null); const [privateData,setPrivateData]=useState<any>({}); const [live,setLive]=useState<any>(null); const [loading,setLoading]=useState(true);
+ const {jobId}=useLocalSearchParams<{jobId:string}>(); const {user,mode}=useAuth(); const [job,setJob]=useState<any>(null); const [privateData,setPrivateData]=useState<any>({}); const [live,setLive]=useState<any>(null); const [loading,setLoading]=useState(true);
  useEffect(()=>{load()},[jobId]);
+ useEffect(()=>{if(!jobId||mode!=="professional")return;let watcher:Location.LocationSubscription|undefined;let active=true;(async()=>{const perm=await Location.requestForegroundPermissionsAsync();if(perm.status!=="granted")return;watcher=await Location.watchPositionAsync({accuracy:Location.Accuracy.Balanced,timeInterval:10000,distanceInterval:20},async pos=>{if(!active)return;await supabase.rpc("update_professional_live_location",{p_job_id:jobId,p_latitude:pos.coords.latitude,p_longitude:pos.coords.longitude,p_accuracy_m:pos.coords.accuracy??null});});})();return()=>{active=false;watcher?.remove()}},[jobId,mode]);
  useEffect(()=>{if(!jobId)return; let active=true; const tick=async()=>{const{data}=await supabase.rpc("get_job_live_location",{p_job_id:jobId});if(active)setLive(data?.[0]||null)}; void tick(); const t=setInterval(tick,10000); return()=>{active=false;clearInterval(t)}},[jobId]);
  async function load(){if(!jobId){setLoading(false);return;}const{data}=await supabase.from("jobs").select("*").eq("id",jobId).maybeSingle();setJob(data);if(data){const{data:pd}=await supabase.rpc("get_job_contact_and_location",{p_job_id:jobId});setPrivateData(pd||{});}setLoading(false);}
  const idx=Math.max(0,steps.findIndex(x=>x[0]===job?.status));
