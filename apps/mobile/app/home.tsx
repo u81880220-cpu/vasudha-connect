@@ -65,7 +65,7 @@ function CustomerHome(){
   <View style={s.services}>{services.map(x=><Link key={x} href="/marketplace" asChild><Pressable style={s.service}><ServiceIcon name={x} size={52}/><Text style={s.serviceText}>{x}</Text></Pressable></Link>)}</View>
   <Link href="/marketplace" asChild><Pressable style={s.hero}><Text style={s.heroTitle}>Your Property. Our Care.</Text><Text style={s.heroSub}>Verified professionals at your doorstep.</Text><Text style={s.heroAction}>Find professionals →</Text></Pressable></Link>
   <Text style={s.section}>Your service activity</Text>
-  <Link href="/customer-dashboard" asChild><Pressable style={s.nearby}><View style={s.avatar}><Text>✓</Text></View><View style={{flex:1}}><Text style={s.name}>Requests, jobs & connections</Text><Text style={s.meta}>Track your active work and conversations</Text></View><Text style={s.view}>Open</Text></Pressable></Link>
+  <Link href="/customer-dashboard" asChild><Pressable style={s.nearby}><View style={s.avatar}><Text>✓</Text></View><View style={{flex:1}}><Text style={s.name}>Connections & conversations</Text><Text style={s.meta}>Open your professional connections and chats</Text></View><Text style={s.view}>Open</Text></Pressable></Link>
  </View>
 }
 function ProfessionalHome(){
@@ -78,7 +78,7 @@ function ProfessionalHome(){
    const[{data:profile},{data:requests},{data:jobs}]=await Promise.all([
     supabase.from("professional_profiles").select("trust_score,verification_status,is_available").eq("user_id",session.user.id).maybeSingle(),
     supabase.rpc("get_professional_requests"),
-    supabase.from("jobs").select("id,status").eq("professional_id",session.user.id).in("status",["quote_accepted","worker_accepted","on_the_way","arrived","work_started"]).limit(50)
+    supabase.from("professional_connections").select("id").eq("professional_id",session.user.id).gt("expires_at",new Date().toISOString()).limit(50)
    ]);
    if(active)setStats({
     trust:Number(profile?.trust_score||0),
@@ -93,8 +93,8 @@ function ProfessionalHome(){
  return <View>
   <Text style={s.greeting}>Welcome back 👋</Text>
   <Text style={s.heading}>Grow your business.</Text><Text style={s.heading}>Get more customers.</Text>
-  <View style={s.statHero}><Text style={s.statLabel}>Professional Trust</Text><Text style={s.statValue}>{Math.round(stats.trust)} <Text style={s.statSmall}>/ 100</Text></Text><Text style={s.meta}>{stats.verified?"✓ Verified":"Verification pending"} • {stats.available?"Available for work":"Unavailable for jobs"}</Text></View>
-  <View style={s.grid}><Link href="/professional-dashboard" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>{stats.requests}</Text><Text>New requests</Text></Pressable></Link><Link href="/jobs" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>{stats.jobs}</Text><Text>Active work</Text></Pressable></Link></View>
+  <View style={s.statHero}><Text style={s.statLabel}>Professional Trust</Text><Text style={s.statValue}>{Math.round(stats.trust)} <Text style={s.statSmall}>/ 100</Text></Text><Text style={s.meta}>{stats.verified?"✓ Verified":"Verification pending"} • {stats.available?"Available for customers":"Currently unavailable"}</Text></View>
+  <View style={s.grid}><Link href="/professional-dashboard" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>{stats.requests}</Text><Text>New requests</Text></Pressable></Link><Link href="/connections" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>{stats.jobs}</Text><Text>Connections</Text></Pressable></Link></View>
   <Link href="/professional-profile" asChild><Pressable style={s.primary}><Text style={s.primaryText}>Manage professional profile</Text></Pressable></Link>
   <Text style={s.section}>Quick actions</Text>
   <View style={s.grid}><Link href="/professional-verification" asChild><Pressable style={s.action}><Text style={s.actionIcon}>✓</Text><Text>Verification</Text></Pressable></Link><Link href="/professional-profile" asChild><Pressable style={s.action}><Text style={s.actionIcon}>⌂</Text><Text>Services & area</Text></Pressable></Link></View>
