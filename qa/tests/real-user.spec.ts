@@ -74,7 +74,8 @@ test.describe("VASUDHA real-user free QA", () => {
     await page.getByText("Demo AC Professional", { exact: true }).click();
     await expect(page.getByText("Unlock this professional")).toBeVisible();
 
-    const unlock = page.getByRole("button", { name: /Use 1 connection|Get connections/ });
+    const unlock = page.getByText(/^(Use 1 connection|Get connections)$/).last();
+    await expect(unlock).toBeVisible({ timeout: 15_000 });
     await unlock.click();
     await expect(page.getByText("Contact unlocked")).toBeVisible();
     await expect(page.getByText("+919000000003")).toBeVisible();
@@ -122,7 +123,7 @@ test.describe("VASUDHA real-user free QA", () => {
 
     await page.goto("/professional-dashboard");
     await expect(page.getByText("Professional Dashboard")).toBeVisible();
-    await expect(page.getByText("Job requests")).toBeVisible();
+    await expect(page.getByText("Job requests", { exact: true })).toBeVisible();
     await expect(page.getByText("AC service at home")).toBeVisible({ timeout: 20_000 });
 
     await page.getByRole("button", { name: "Accept Job" }).click();
