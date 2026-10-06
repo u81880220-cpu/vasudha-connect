@@ -126,8 +126,8 @@ export default function AdminScreen(){
       <Text style={s.rowTitle}>{p.name} • ₹{Number(p.price_inr||0).toLocaleString("en-IN")} / {p.billing_interval}</Text>
       <Text style={s.muted}>{p.code} • {p.subscriber_count||0} active subscribers • {p.status}</Text>
      </View>
-     <Pressable style={p.status==="active"?s.danger:s.primary} onPress={()=>act("admin_save_subscription_plan",{p_action:"update",p_plan_id:p.plan_id,p_code:p.code,p_name:p.name,p_description:p.description,p_price_inr:p.price_inr,p_billing_interval:p.billing_interval,p_active:p.status!=="active",p_sort_order:p.sort_order},"Subscription plan updated.")}>
-      <Text style={p.status==="active"?s.dangerText:s.primaryText}>{p.status==="active"?"Disable":"Enable"}</Text>
+     <View style={s.actions}><Pressable style={s.secondary} onPress={()=>{const name=window.prompt("Plan name",p.name)||p.name;const price=Number(window.prompt("Price in INR",String(p.price_inr))||p.price_inr);const interval=(window.prompt("Billing interval: monthly, quarterly or annual",p.billing_interval)||p.billing_interval).toLowerCase();act("admin_save_subscription_plan",{p_action:"update",p_plan_id:p.plan_id,p_code:p.code,p_name:name,p_description:p.description||null,p_price_inr:price,p_billing_interval:interval,p_active:p.status==="active",p_sort_order:p.sort_order},"Subscription plan updated.");}}><Text>Edit</Text></Pressable><Pressable style={p.status==="active"?s.danger:s.primary} onPress={()=>act("admin_save_subscription_plan",{p_action:"update",p_plan_id:p.plan_id,p_code:p.code,p_name:p.name,p_description:p.description,p_price_inr:p.price_inr,p_billing_interval:p.billing_interval,p_active:p.status!=="active",p_sort_order:p.sort_order},"Subscription plan updated.")}>
+      <Text style={p.status==="active"?s.dangerText:s.primaryText}>{p.status==="active"?"Disable":"Enable"}</Text></Pressable></View>
      </Pressable>
     </View>)}
     {!(data.configuration.subscriptionPlans||[]).length&&<Text style={s.muted}>No subscription plans configured.</Text>}
@@ -137,7 +137,11 @@ export default function AdminScreen(){
       <Text style={s.rowTitle}>{x.professional_name} • {x.plan_name}</Text>
       <Text style={s.muted}>₹{Number(x.price_inr||0).toLocaleString("en-IN")} / {x.billing_interval} • {x.status} • {x.current_period_end?new Date(x.current_period_end).toLocaleDateString():"No end date"}</Text>
      </View>
-     <Text style={s.badge}>{x.status}</Text>
+     <View style={s.actions}>
+      {x.status!=="active"&&<Pressable style={s.primary} onPress={()=>act("admin_set_professional_subscription_status",{p_subscription_id:x.subscription_id,p_status:"active"},"Subscription activated.")}><Text style={s.primaryText}>Activate</Text></Pressable>}
+      {x.status==="active"&&<Pressable style={s.danger} onPress={()=>act("admin_set_professional_subscription_status",{p_subscription_id:x.subscription_id,p_status:"cancelled"},"Subscription cancelled.")}><Text style={s.dangerText}>Cancel</Text></Pressable>}
+      <Pressable style={s.secondary} onPress={()=>{const days=Number(window.prompt("Extend subscription by days","30")||0);if(days>0)act("admin_extend_professional_subscription",{p_subscription_id:x.subscription_id,p_days:days},"Subscription extended.");}}><Text>Extend</Text></Pressable>
+     </View>
     </View>)}
     {!data.subscriptions.length&&<Text style={s.muted}>No professional subscriptions yet.</Text>}
    </Section>}
