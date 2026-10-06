@@ -64,8 +64,8 @@ function CustomerHome(){
   <Text style={s.section}>Popular services</Text>
   <View style={s.services}>{services.map(x=><Link key={x} href="/marketplace" asChild><Pressable style={s.service}><ServiceIcon name={x} size={52}/><Text style={s.serviceText}>{x}</Text></Pressable></Link>)}</View>
   <Link href="/marketplace" asChild><Pressable style={s.hero}><Text style={s.heroTitle}>Your Property. Our Care.</Text><Text style={s.heroSub}>Verified professionals at your doorstep.</Text><Text style={s.heroAction}>Find professionals →</Text></Pressable></Link>
-  <Text style={s.section}>Nearby professionals</Text>
-  <Link href="/marketplace" asChild><Pressable style={s.nearby}><View style={s.avatar}><Text>RK</Text></View><View style={{flex:1}}><Text style={s.name}>Verified Professional</Text><Text style={s.meta}>Electrician • Available now</Text><Text style={s.meta}>★ 4.8 • Nearby</Text></View><Text style={s.view}>View</Text></Pressable></Link>
+  <Text style={s.section}>Your service activity</Text>
+  <Link href="/customer-dashboard" asChild><Pressable style={s.nearby}><View style={s.avatar}><Text>✓</Text></View><View style={{flex:1}}><Text style={s.name}>Requests, jobs & connections</Text><Text style={s.meta}>Track your active work and conversations</Text></View><Text style={s.view}>Open</Text></Pressable></Link>
  </View>
 }
 function ProfessionalHome(){
