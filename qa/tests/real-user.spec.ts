@@ -92,6 +92,11 @@ test.describe("VASUDHA real-user free QA", () => {
     await page.getByRole("button", { name: "Send Job Request" }).click();
 
     await expect(page.getByText("Hello, I need AC service.")).toBeVisible({ timeout: 20_000 });
+
+    // Validate authenticated-session exit: a real user can sign out cleanly.
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page).toHaveURL(/\\/auth/);
+    await expect(page.getByText("Welcome Back")).toBeVisible();
   });
 
   test("Professional A: subscription is free in QA and job request is actionable", async ({ page }) => {
