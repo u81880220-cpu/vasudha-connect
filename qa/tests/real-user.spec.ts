@@ -32,12 +32,6 @@ async function chooseService(page: Page, serviceName: string) {
   await page.getByText(serviceName, { exact: true }).first().click();
 }
 
-async function chooseService(page: Page, serviceName: string) {
-  const svc = await serviceInfo(serviceName);
-  await page.getByText(svc.category.name, { exact: true }).first().click();
-  await page.getByText(serviceName, { exact: true }).first().click();
-}
-
 test.describe("VASUDHA real-user free QA", () => {
   test.beforeEach(async ({ page }) => {
     page.on("dialog", async dialog => {
