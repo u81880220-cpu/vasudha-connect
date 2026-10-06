@@ -176,6 +176,32 @@ test.describe("VASUDHA real-user free QA", () => {
       const statusText = page.getByText(label.replace("Mark ", ""), { exact: true });
       await expect(statusText.first()).toBeVisible({ timeout: 15_000 });
     }
+
+    // Complete the customer side of the same real job: confirm completion and reach review.
+    const customerContext = await page.context().browser()!.newContext({ ...devices["Pixel 7"] });
+    const customerPage = await customerContext.newPage();
+    try {
+      await login(customerPage, "customer", CUSTOMER_EMAIL, CUSTOMER_PASSWORD);
+      await customerPage.goto("/jobs");
+      await expect(customerPage.getByText("My Jobs")).toBeVisible();
+      await expect(customerPage.getByText("AC service at home")).toBeVisible({ timeout: 20_000 });
+      await customerPage.getByText("Confirm work completed", { exact: true }).click();
+      await expect(customerPage.getByText("Customer confirmed", { exact: true })).toBeVisible({ timeout: 15_000 });
+      await customerPage.getByText("Rate Professional", { exact: true }).click();
+      await expect(customerPage.getByText("Rate Your Experience")).toBeVisible();
+      await expect(customerPage.getByText("Submit Review", { exact: true })).toBeVisible();
+      await customerPage.screenshot({ path: "test-results/customer-review.png", fullPage: true });
+    } finally {
+      await customerContext.close();
+    }
+
+    // Professional-side post-completion review screen must also be reachable.
+    await page.goto("/jobs");
+    await expect(page.getByText("My Jobs")).toBeVisible();
+    await expect(page.getByText("Rate Customer", { exact: true })).toBeVisible({ timeout: 15_000 });
+    await page.getByText("Rate Customer", { exact: true }).click();
+    await expect(page.getByText("Rate Your Customer")).toBeVisible();
+    await expect(page.getByText("Submit Customer Review", { exact: true })).toBeVisible();
   });
 
 
