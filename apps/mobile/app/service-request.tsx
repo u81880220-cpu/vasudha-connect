@@ -22,14 +22,14 @@ export default function ServiceRequest(){
   else{Alert.alert("Request sent","The professional can discuss the work with you and accept the job when you agree.");router.back();}
  }
  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
-  <VasudhaLogo compact/><Text style={s.title}>Tell the Professional What You Need</Text><Text style={s.muted}>Choose the exact service, then tell the professional what you need. No quotation is required.</Text>
+  <VasudhaLogo compact/><Text style={s.title}>Create Job Request</Text><Text style={s.muted}>You have agreed to proceed. Send the work details and service location to the professional for acceptance. VASUDHA does not handle quotations or service payments.</Text>
   <ServicePicker value={selection} optionalSubService onChange={setSelection}/>
   <Text style={s.label}>What do you need?</Text><TextInput value={title} onChangeText={setTitle} placeholder="e.g. Fix kitchen plumbing" style={s.input}/>
   <Text style={s.label}>Work details</Text><TextInput value={description} onChangeText={setDescription} placeholder="Describe the work required..." multiline style={[s.input,s.large]}/>
   <Text style={s.label}>Preferred date (optional)</Text><TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" style={s.input}/>
   <Text style={s.label}>Preferred time (optional)</Text><TextInput value={time} onChangeText={setTime} placeholder="e.g. 11:00 AM" style={s.input}/>
   <Text style={s.label}>Service location</Text><TextInput value={location} onChangeText={setLocation} placeholder="Enter the property/service address" style={[s.input,s.large]}/>
-  <Text style={s.note}>Your exact service location is kept private until the professional accepts the job.</Text>
+  <Text style={s.note}>Your exact service location is shared with the professional only after they accept the job.</Text>
   <Pressable onPress={submit} disabled={busy} style={s.primary}><Text style={s.primaryText}>{busy?"Sending...":"Send Job Request"}</Text></Pressable>
  </ScrollView></SafeAreaView>;
 }
