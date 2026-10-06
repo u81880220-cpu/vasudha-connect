@@ -4,7 +4,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { useAuth } from "../src/auth/AuthProvider";
 import { supabase } from "../src/lib/supabase";
-import JobLocationMap from "./JobLocationMap";
+import JobLocationMap from "../src/components/JobLocationMap";
 
 export default function JobDetails(){
  const {jobId}=useLocalSearchParams<{jobId:string}>();const{mode}=useAuth();const[job,setJob]=useState<any>(null);const[privateData,setPrivateData]=useState<any>({});const[loading,setLoading]=useState(true);
