@@ -18,17 +18,19 @@ type Coords={latitude:number;longitude:number};
 const MAP_HEIGHT=Math.min(Math.max(Math.round(Dimensions.get("window").height*0.42),300),460);
 
 export default function Marketplace(){
+  const[marketplaceConfig,setMarketplaceConfig]=useState<any>(null);
   const[selection,setSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:null,serviceName:null,subServiceId:null,subServiceName:null});
   const[items,setItems]=useState<Professional[]>([]);
   const[loading,setLoading]=useState(true);
   const[userCoords,setUserCoords]=useState<Coords|null>(null);
-  const[radius,setRadius]=useState(10);
+  const[radius,setRadius]=useState(25);
   const[filtersOpen,setFiltersOpen]=useState(false);
   const[verifiedOnly,setVerifiedOnly]=useState(true);
   const[availableOnly,setAvailableOnly]=useState(true);
   const[minRating,setMinRating]=useState(0);
-  const visibleItems=items.filter(x=>(!verifiedOnly||x.verification_status==="verified")&&(!availableOnly||x.is_available)&&(Math.round(x.trust_score)/20)>=minRating);
+  const visibleItems=[...items].filter(x=>(!verifiedOnly||x.verification_status==="verified")&&(!availableOnly||x.is_available)&&(Math.round(x.trust_score)/20)>=minRating).sort((a,b)=>{const tw=Number(marketplaceConfig?.trust_weight??0.5),dw=Number(marketplaceConfig?.distance_weight??0.3),aw=Number(marketplaceConfig?.availability_weight??0.2);const score=(x:any)=>tw*(Number(x.trust_score||0)/100)+dw*(1/(1+Number(x.distance_km||0)))+aw*(x.is_available?1:0);return score(b)-score(a)});
 
+  useEffect(()=>{(async()=>{const{data}=await supabase.rpc("marketplace_configuration");const cfg=data||{};setMarketplaceConfig(cfg);setRadius(Math.min(Number(cfg.default_radius_km||25),Number(cfg.max_radius_km||50)));setVerifiedOnly(cfg.verified_only_default!==false);setAvailableOnly(cfg.available_only_default!==false);setMinRating(Number(cfg.min_rating||0));})();},[]);
   useEffect(()=>{requestLocation();},[]);
   useEffect(()=>{if(userCoords) searchProfessionals(userCoords);},[selection.serviceId,selection.subServiceId,radius]);
 
@@ -98,7 +100,7 @@ export default function Marketplace(){
 
       <View style={s.radiusRow}>
         <Text style={s.label}>Nearby</Text>
-        {[5,10,25,50].map(x=><Pressable key={x} onPress={()=>setRadius(x)} style={[s.radius,radius===x&&s.radiusSelected]}>
+        {[5,10,25,50].filter(x=>x<=Number(marketplaceConfig?.max_radius_km||50)).map(x=><Pressable key={x} onPress={()=>setRadius(x)} style={[s.radius,radius===x&&s.radiusSelected]}>
           <Text style={radius===x?s.radiusTextSelected:s.radiusText}>{x} km</Text>
         </Pressable>)}
       </View>
