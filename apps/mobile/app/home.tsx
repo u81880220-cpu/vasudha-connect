@@ -93,8 +93,8 @@ function ProfessionalHome(){
  return <View>
   <Text style={s.greeting}>Welcome back 👋</Text>
   <Text style={s.heading}>Grow your business.</Text><Text style={s.heading}>Get more customers.</Text>
-  <View style={s.statHero}><Text style={s.statLabel}>Professional Trust</Text><Text style={s.statValue}>{Math.round(stats.trust)} <Text style={s.statSmall}>/ 100</Text></Text><Text style={s.meta}>{stats.verified?"✓ Verified":"Verification pending"} • {stats.available?"Available for jobs":"Unavailable for jobs"}</Text></View>
-  <View style={s.grid}><Link href="/professional-dashboard" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>{stats.requests}</Text><Text>New requests</Text></Pressable></Link><Link href="/jobs" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>{stats.jobs}</Text><Text>Active jobs</Text></Pressable></Link></View>
+  <View style={s.statHero}><Text style={s.statLabel}>Professional Trust</Text><Text style={s.statValue}>{Math.round(stats.trust)} <Text style={s.statSmall}>/ 100</Text></Text><Text style={s.meta}>{stats.verified?"✓ Verified":"Verification pending"} • {stats.available?"Available for work":"Unavailable for jobs"}</Text></View>
+  <View style={s.grid}><Link href="/professional-dashboard" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>{stats.requests}</Text><Text>New requests</Text></Pressable></Link><Link href="/jobs" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>{stats.jobs}</Text><Text>Active work</Text></Pressable></Link></View>
   <Link href="/professional-profile" asChild><Pressable style={s.primary}><Text style={s.primaryText}>Manage professional profile</Text></Pressable></Link>
   <Text style={s.section}>Quick actions</Text>
   <View style={s.grid}><Link href="/professional-verification" asChild><Pressable style={s.action}><Text style={s.actionIcon}>✓</Text><Text>Verification</Text></Pressable></Link><Link href="/professional-profile" asChild><Pressable style={s.action}><Text style={s.actionIcon}>⌂</Text><Text>Services & area</Text></Pressable></Link></View>
