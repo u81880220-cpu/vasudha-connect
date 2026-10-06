@@ -20,7 +20,7 @@ async function login(page: Page, mode: "customer" | "professional", email: strin
   await page.getByText("Email", { exact: true }).click();
   await page.getByPlaceholder("Email address").fill(email);
   await page.getByPlaceholder("Password").fill(password);
-  await page.getByRole("button", { name: "Sign in with Email" }).click();
+  await page.getByText("Sign in with Email", { exact: true }).click();
   await page.waitForURL(/\/(home|basic-profile|professional-onboarding)/, { timeout: 20_000 });
 }
 
@@ -138,7 +138,7 @@ test.describe("VASUDHA real-user free QA", () => {
     await expect(page.getByText("Admin Console")).toBeVisible();
     await page.getByPlaceholder("Admin email").fill("demo.admin@vasudha.test");
     await page.getByPlaceholder("Password").fill("Demo@12345");
-    await page.getByRole("button", { name: "Sign in to Admin" }).click();
+    await page.getByText("Sign in to Admin", { exact: true }).click();
     await expect(page.getByText("Admin Console")).toBeVisible();
     await expect(page.getByText("Dashboard", { exact: true })).toBeVisible({ timeout: 20_000 });
     for (const tab of ["Professionals", "Customers", "Connections", "Operations", "Subscriptions", "Payments", "Analytics", "Complaints", "Audit", "Configuration"]) {
