@@ -9,22 +9,23 @@ import { useAuth } from "../src/auth/AuthProvider";
 type DashboardProfile={verification_status?:string|null;is_available?:boolean|null;trust_score?:number|null;completion_rate?:number|null};
 
 export default function ProfessionalDashboard(){
- const{user}=useAuth();const[profile,setProfile]=useState<DashboardProfile|null>(null);const[connections,setConnections]=useState<any[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState("");
+ const{user}=useAuth();const[activeJob,setActiveJob]=useState<any>(null);const[profile,setProfile]=useState<DashboardProfile|null>(null);const[connections,setConnections]=useState<any[]>([]);const[loading,setLoading]=useState(true);const[error,setError]=useState("");
  useEffect(()=>{load()},[user?.id]);
  async function load(){
   if(!user)return;setLoading(true);setError("");
   const results=await Promise.all([
    supabase.from("professional_profiles").select("verification_status,is_available,trust_score,completion_rate").eq("user_id",user.id).maybeSingle(),
-   supabase.from("professional_connections").select("id,customer_id,expires_at,last_accessed_at").eq("professional_id",user.id).gt("expires_at",new Date().toISOString()).order("last_accessed_at",{ascending:false}).limit(20)
+   supabase.from("professional_connections").select("id,customer_id,expires_at,last_accessed_at").eq("professional_id",user.id).gt("expires_at",new Date().toISOString()).order("last_accessed_at",{ascending:false}).limit(20),
+   supabase.from("jobs").select("id,title,status").eq("professional_id",user.id).in("status",["worker_accepted","on_the_way","arrived","work_started"]).order("updated_at",{ascending:false}).limit(1)
   ]);
   const firstError=results.find(x=>x.error)?.error;if(firstError){setError(firstError.message);Alert.alert("Unable to load dashboard",firstError.message);}
-  setProfile(results[0].data);setConnections(results[1].data||[]);setLoading(false);
+  setProfile(results[0].data);setConnections(results[1].data||[]);setActiveJob(results[2].data?.[0]||null);setLoading(false);
  }
  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
   <VasudhaLogo compact/><Text style={s.title}>Professional Dashboard</Text><Text style={s.subtitle}>Manage your VASUDHA CONNECT profile and customer connections</Text>
   <Pressable onPress={()=>router.push("/professional-onboarding")} style={s.profileBtn}><Text style={s.profileText}>Complete / Continue Registration</Text></Pressable>
   <Pressable onPress={()=>router.push("/professional-subscription")} style={s.primary}><Text style={s.primaryText}>Manage Professional Subscription</Text></Pressable>
-  <Pressable onPress={()=>router.push("/connections")} style={s.secondary}><Text>My Customer Connections</Text></Pressable>
+  <Pressable onPress={()=>router.push("/connections")} style={s.secondary}><Text>My Customer Connections</Text></Pressable>{activeJob?<Pressable onPress={()=>router.push({pathname:"/job-tracking",params:{jobId:activeJob.id}})} style={s.primary}><Text style={s.primaryText}>Open Current Job · {activeJob.status}</Text></Pressable>:null}
   {loading?<View style={s.state}><ActivityIndicator/><Text style={s.muted}>Loading your dashboard…</Text></View>:error?<View style={s.state}><Text style={s.errorTitle}>Couldn't load your dashboard</Text><Text style={s.muted}>{error}</Text><Pressable onPress={load} style={s.secondary}><Text>Try again</Text></Pressable></View>:<>
    <View style={s.stats}><View style={s.stat}><Text style={s.num}>{Math.round(profile?.trust_score||0)}</Text><Text>Trust</Text></View><View style={s.stat}><Text style={s.num}>{connections.length}</Text><Text>Connections</Text></View><View style={s.stat}><Text style={s.num}>{profile?.completion_rate||0}%</Text><Text>Completion</Text></View></View>
    <View style={s.card}><Text style={s.cardTitle}>Professional status</Text><Text>{profile?.verification_status==="verified"?"✓ Verified":"Verification: "+(profile?.verification_status||"unverified")}</Text><Text>{profile?.is_available?"Available for customers":"Currently unavailable"}</Text><Pressable onPress={()=>router.push("/professional-profile")} style={s.secondary}><Text>Edit Professional Profile</Text></Pressable></View>
