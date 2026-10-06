@@ -64,7 +64,7 @@ function CustomerHome(){
   <Text style={s.section}>Popular services</Text>
   <View style={s.services}>{services.map(x=><Link key={x} href="/marketplace" asChild><Pressable style={s.service}><ServiceIcon name={x} size={52}/><Text style={s.serviceText}>{x}</Text></Pressable></Link>)}</View>
   <Link href="/marketplace" asChild><Pressable style={s.hero}><Text style={s.heroTitle}>Your Property. Our Care.</Text><Text style={s.heroSub}>Verified professionals at your doorstep.</Text><Text style={s.heroAction}>Find professionals →</Text></Pressable></Link>
-  <Text style={s.section}>Your service activity</Text>
+  <Text style={s.section}>Your connections</Text>
   <Link href="/customer-dashboard" asChild><Pressable style={s.nearby}><View style={s.avatar}><Text>✓</Text></View><View style={{flex:1}}><Text style={s.name}>Connections & conversations</Text><Text style={s.meta}>Open your professional connections and chats</Text></View><Text style={s.view}>Open</Text></Pressable></Link>
  </View>
 }
