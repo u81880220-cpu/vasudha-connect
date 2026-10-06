@@ -173,7 +173,8 @@ test.describe("VASUDHA real-user free QA", () => {
           break;
         }
       }
-      await expect(page.getByText(label.replace("Mark ", ""), { exact: false })).toBeVisible({ timeout: 15_000 });
+      const statusText = page.getByText(label.replace("Mark ", ""), { exact: true });
+      await expect(statusText.first()).toBeVisible({ timeout: 15_000 });
     }
   });
 
