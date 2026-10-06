@@ -35,7 +35,7 @@ export default function ProfessionalProfile(){
  async function save(){
   let coords=baseLocation;
   if(!coords){try{const perm=await Location.requestForegroundPermissionsAsync();if(perm.status==="granted"){const pos=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});coords={latitude:pos.coords.latitude,longitude:pos.coords.longitude};setBaseLocation(coords);}}catch{}}
-  const{error}=await supabase.from("professional_profiles").update({headline:p.headline?.trim()||null,about:p.about?.trim()||null,years_experience:Number(p.years_experience)||0,service_radius_km:Number(p.service_radius_km)||10,is_available:p.is_available,base_latitude:coords?.latitude??null,base_longitude:coords?.longitude??null}).eq("user_id",uid);
+  const{error}=await supabase.rpc("update_professional_profile",{p_headline:p.headline?.trim()||null,p_about:p.about?.trim()||null,p_years_experience:Number(p.years_experience)||0,p_service_radius_km:Number(p.service_radius_km)||10,p_is_available:!!p.is_available,p_base_latitude:coords?.latitude??null,p_base_longitude:coords?.longitude??null});
   if(error)return Alert.alert("Save failed",error.message);
   const {error:phoneError}=await supabase.from("user_contact_details").upsert({user_id:uid,phone:pPhone(phone),updated_at:new Date().toISOString()});
   if(phoneError)return Alert.alert("Phone save failed",phoneError.message);
