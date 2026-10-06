@@ -1,5 +1,6 @@
 import {useEffect,useState} from "react";
 import {Alert,Pressable,SafeAreaView,ScrollView,StyleSheet,Switch,Text,TextInput,View} from "react-native";
+import * as Location from "expo-location";
 import {Link,router} from "expo-router";
 import {supabase} from "../src/lib/supabase";
 import {useAuth} from "../src/auth/AuthProvider";
@@ -15,17 +16,17 @@ export default function ProfessionalProfile(){
  const[selectedSubServices,setSelectedSubServices]=useState<any[]>([]);
  const[areas,setAreas]=useState<any[]>([]);
  const[phone,setPhone]=useState("");
- const[port,setPort]=useState({title:"",description:"",media_url:""}),[area,setArea]=useState({label:"",city:"",state:"",radius_km:"10"}),[loading,setLoading]=useState(true);
+ const[port,setPort]=useState({title:"",description:"",media_url:""}),[area,setArea]=useState({label:"",city:"",state:"",radius_km:"10"}),[baseLocation,setBaseLocation]=useState<{latitude:number;longitude:number}|null>(null),[loading,setLoading]=useState(true);
  useEffect(()=>{if(uid)load()},[uid]);
  async function load(){
   setLoading(true);
   const[q,a,ct,pss]=await Promise.all([
-   supabase.from("professional_profiles").select("headline,about,years_experience,service_radius_km,is_available,verification_status").eq("user_id",uid).maybeSingle(),
+   supabase.from("professional_profiles").select("headline,about,years_experience,service_radius_km,is_available,verification_status,base_latitude,base_longitude").eq("user_id",uid).maybeSingle(),
    supabase.from("service_areas").select("id,label,city,state,radius_km").eq("professional_id",uid).order("created_at"),
    supabase.from("user_contact_details").select("phone").eq("user_id",uid).maybeSingle(),
    supabase.from("professional_sub_services").select("sub_service_id").eq("professional_id",uid)
   ]);
-  if(q.data)setP({...q.data,years_experience:String(q.data.years_experience||0),service_radius_km:String(q.data.service_radius_km||10)});
+  if(q.data){setP({...q.data,years_experience:String(q.data.years_experience||0),service_radius_km:String(q.data.service_radius_km||10)});if(q.data.base_latitude!=null&&q.data.base_longitude!=null)setBaseLocation({latitude:Number(q.data.base_latitude),longitude:Number(q.data.base_longitude)});}
   setPhone(ct.data?.phone||"");setAreas(a.data||[]);
   const ids=(pss.data||[]).map((x:any)=>x.sub_service_id);
   if(ids.length){const{data:catalog}=await supabase.from("service_catalogue_sub_services").select("id,name,service_id,service_catalogue_services(name)").in("id",ids);setSelectedSubServices((catalog||[]).map((x:any)=>({id:x.id,name:x.name,serviceId:x.service_id,serviceName:x.service_catalogue_services?.name||"Service"})));}else setSelectedSubServices([]);
