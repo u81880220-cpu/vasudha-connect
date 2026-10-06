@@ -139,20 +139,31 @@ async function main() {
     );
     if (profileError) throw profileError;
 
-    const { error: areaError } = await admin.from('service_areas').upsert(
-      {
-        professional_id: id,
-        label: 'Varanasi',
-        city: 'Varanasi',
-        state: 'Uttar Pradesh',
-        latitude: 25.3176,
-        longitude: 82.9739,
-        radius_km: 25,
-        is_primary: true,
-      },
-      { onConflict: 'professional_id,label' }
-    );
-    if (areaError && !String(areaError.message).includes('duplicate')) throw areaError;
+    const areaPayload = {
+      professional_id: id,
+      label: 'Varanasi',
+      city: 'Varanasi',
+      state: 'Uttar Pradesh',
+      latitude: 25.3176,
+      longitude: 82.9739,
+      radius_km: 25,
+      is_primary: true,
+    };
+
+    // service_areas has no unique constraint on (professional_id, label),
+    // so make the seed idempotent using the professional-owned primary key.
+    const { data: existingArea, error: existingAreaError } = await admin
+      .from('service_areas')
+      .select('id')
+      .eq('professional_id', id)
+      .eq('label', 'Varanasi')
+      .maybeSingle();
+    if (existingAreaError) throw existingAreaError;
+
+    const { error: areaError } = existingArea
+      ? await admin.from('service_areas').update(areaPayload).eq('id', existingArea.id)
+      : await admin.from('service_areas').insert(areaPayload);
+    if (areaError) throw areaError;
   }
 
   const { data: acSkill, error: acError } = await admin.from('skills').select('id,name').ilike('name', 'AC Technician').maybeSingle();
