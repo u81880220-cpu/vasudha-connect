@@ -28,7 +28,10 @@ const QA_SERVICE_CATEGORIES: Record<string, string> = {
 async function chooseService(page: Page, serviceName: string) {
   const categoryName = QA_SERVICE_CATEGORIES[serviceName];
   if (!categoryName) throw new Error(`Unknown QA service: ${serviceName}`);
-  await page.getByText(categoryName, { exact: true }).first().click();
+  const category = page.getByText(categoryName, { exact: true }).first();
+  await expect(category).toBeVisible({ timeout: 10_000 });
+  await category.scrollIntoViewIfNeeded();
+  await category.click();
 
   const services = page.getByText(serviceName, { exact: true });
   await expect.poll(async () => {
@@ -101,12 +104,12 @@ test.describe("VASUDHA real-user free QA", () => {
     await page.getByPlaceholder("e.g. Fix kitchen plumbing").fill("AC service at home");
     await page.getByPlaceholder("Describe the work required...").fill("AC is not cooling. Please inspect and repair.");
     await page.getByPlaceholder("Enter the property/service address").fill("Varanasi, Uttar Pradesh");
-    await page.getByRole("button", { name: "Send Job Request" }).click();
+    await page.getByText("Send Job Request", { exact: true }).click();
 
     await expect(page.getByText("Hello, I need AC service.")).toBeVisible({ timeout: 20_000 });
 
     // Validate authenticated-session exit: a real user can sign out cleanly.
-    await page.getByRole("button", { name: "Sign out" }).click();
+    await page.getByText("Sign out", { exact: true }).click();
     await expect(page).toHaveURL(/\/auth/);
     await expect(page.getByText("Welcome Back")).toBeVisible();
   });
@@ -133,7 +136,7 @@ test.describe("VASUDHA real-user free QA", () => {
     await expect(page.getByText("Job requests", { exact: true })).toBeVisible();
     await expect(page.getByText("AC service at home")).toBeVisible({ timeout: 20_000 });
 
-    await page.getByRole("button", { name: "Accept Job" }).click();
+    await page.getByText("Accept Job", { exact: true }).click();
     await page.waitForURL(/\/job-tracking\?jobId=/);
     await expect(page.getByText("Professional accepted")).toBeVisible();
     await expect(page.getByText("Service location")).toBeVisible();
