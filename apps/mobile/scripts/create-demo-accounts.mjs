@@ -46,6 +46,12 @@ const demoUsers = [
     about: 'Demo carpenter for VASUDHA end-to-end testing.',
     years: 10,
   },
+  {
+    email: 'demo.admin@vasudha.test',
+    full_name: 'Demo Vasudha Admin',
+    phone: '+919000000005',
+    mode: 'customer',
+  },
 ];
 
 async function getOrCreateUser(spec) {
@@ -106,6 +112,11 @@ async function main() {
 
   await admin.from('user_contact_details').upsert(
     demoUsers.map((x) => ({ user_id: ids[x.email], phone: x.phone })),
+    { onConflict: 'user_id' }
+  );
+
+  await admin.from('admin_users').upsert(
+    [{ user_id: ids['demo.admin@vasudha.test'] }],
     { onConflict: 'user_id' }
   );
 
