@@ -5,7 +5,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { useAuth } from "../src/auth/AuthProvider";
 import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
-import JobTrackingLocationMap from "./JobTrackingLocationMap";
+import JobTrackingLocationMap from "../src/components/JobTrackingLocationMap";
 
 const steps=[["worker_accepted","Professional accepted"],["on_the_way","On the Way"],["arrived","Arrived"],["work_started","Work Started"],["work_completed","Work Completed"],["customer_confirmed","Customer Confirmed"]];
 
