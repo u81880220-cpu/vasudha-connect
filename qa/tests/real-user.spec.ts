@@ -1,6 +1,4 @@
 import { test, expect, Page, devices } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
-
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 const CUSTOMER_EMAIL = process.env.QA_CUSTOMER_EMAIL || "demo.customer1@vasudha.test";
@@ -12,8 +10,6 @@ if (!SUPABASE_URL || !SUPABASE_KEY) {
   throw new Error("EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY are required for real-user QA.");
 }
 
-const db = createClient(SUPABASE_URL, SUPABASE_KEY);
-
 async function login(page: Page, mode: "customer" | "professional", email: string, password: string) {
   await page.goto(`/auth?mode=${mode}`);
   await expect(page.getByText("Welcome Back")).toBeVisible();
@@ -24,21 +20,16 @@ async function login(page: Page, mode: "customer" | "professional", email: strin
   await page.waitForURL(/\/(home|basic-profile|professional-onboarding)/, { timeout: 20_000 });
 }
 
-async function serviceInfo(serviceName: string) {
-  const { data, error } = await db
-    .from("service_catalogue_services")
-    .select("id,name,category_id")
-    .eq("name", serviceName)
-    .eq("status", "active")
-    .maybeSingle();
-  if (error || !data) throw new Error(`Service not found: ${serviceName}`);
-  const { data: category, error: categoryError } = await db
-    .from("service_categories")
-    .select("id,name")
-    .eq("id", data.category_id)
-    .maybeSingle();
-  if (categoryError || !category) throw new Error(`Category not found for ${serviceName}`);
-  return { ...data, category };
+const QA_SERVICE_CATEGORIES: Record<string, string> = {
+  "AC Technician": "Property Services",
+  "Carpenter": "Property Services",
+};
+
+async function chooseService(page: Page, serviceName: string) {
+  const categoryName = QA_SERVICE_CATEGORIES[serviceName];
+  if (!categoryName) throw new Error(`Unknown QA service: ${serviceName}`);
+  await page.getByText(categoryName, { exact: true }).first().click();
+  await page.getByText(serviceName, { exact: true }).first().click();
 }
 
 async function chooseService(page: Page, serviceName: string) {
