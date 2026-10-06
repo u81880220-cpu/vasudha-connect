@@ -81,7 +81,7 @@ test.describe("VASUDHA real-user free QA", () => {
     await expect(page.getByText("+919000000003")).toBeVisible();
     await page.screenshot({ path: "test-results/customer-unlocked.png", fullPage: true });
 
-    await page.getByRole("button", { name: "Message" }).click();
+    await page.getByRole("button", { name: "Message", exact: true }).click();
     await expect(page.getByPlaceholder("Write a message...")).toBeVisible({ timeout: 15_000 });
 
     await page.getByPlaceholder("Write a message...").fill("Hello, I need AC service.");
