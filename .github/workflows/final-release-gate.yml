@@ -1,0 +1,195 @@
+name: Vasudha Final Release Gate
+
+on:
+  workflow_dispatch:
+
+jobs:
+  web-real-user-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://bbweclhmbzwmflijppoi.supabase.co
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_fE2u4A3S9YNOR_-imSZKJg_MQuxzPVX
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      EXPO_PUBLIC_PAYMENT_PROVIDER: test
+      QA_CUSTOMER_EMAIL: demo.customer1@vasudha.test
+      QA_CUSTOMER_PASSWORD: Demo@12345
+      QA_PROFESSIONAL_EMAIL: demo.pro1@vasudha.test
+      QA_PROFESSIONAL_PASSWORD: Demo@12345
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package.json
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: npm install
+
+      - name: Install Playwright QA dependencies
+        working-directory: qa
+        run: npm install
+
+      - name: Verify QA secret
+        run: test -n "$SUPABASE_SERVICE_ROLE_KEY"
+
+      - name: Seed QA demo accounts and data
+        run: npm --workspace apps/mobile run demo:seed
+
+      - name: Reset transactional QA data
+        run: node qa/e2e/reset-demo.mjs
+
+      - name: Export Expo web build
+        working-directory: apps/mobile
+        run: npx expo export --platform web
+
+      - name: Serve web build
+        run: npx --yes serve -s apps/mobile/dist -l 4173 > /tmp/vasudha-server.log 2>&1 &
+
+      - name: Wait for web server
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/vasudha-server.log || true
+          exit 1
+
+      - name: Install Chromium
+        working-directory: qa
+        run: npx playwright install --with-deps chromium
+
+      - name: Run real-user QA
+        working-directory: qa
+        run: npx playwright test
+
+      - name: Upload web QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vasudha-final-gate-web-qa
+          path: |
+            qa/test-results
+            qa/playwright-report
+
+  android-ui-qa:
+    needs: web-real-user-qa
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://bbweclhmbzwmflijppoi.supabase.co
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_fE2u4A3S9YNOR_-imSZKJg_MQuxzPVX
+      EXPO_PUBLIC_PAYMENT_PROVIDER: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package.json
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: npm install
+
+      - name: Generate Android project
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --no-install --non-interactive
+
+      - name: Validate Android configuration
+        working-directory: apps/mobile
+        run: |
+          test -f android/gradlew
+          test -f android/app/build.gradle
+          grep -q 'com.vasudha.connect' android/app/build.gradle
+          grep -q 'ACCESS_FINE_LOCATION' android/app/src/main/AndroidManifest.xml
+          grep -q 'ACCESS_COARSE_LOCATION' android/app/src/main/AndroidManifest.xml
+
+      - name: Build debug APK
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Start emulator and run Maestro UI QA
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: |
+            adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            curl -fsSL "https://get.maestro.mobile.dev" | bash
+            echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.maestro/bin:$PATH"
+            maestro --version
+            mkdir -p android-maestro-results
+            maestro test --format junit --output android-maestro-results/report.xml --test-output-dir android-maestro-results .maestro
+
+      - name: Upload Android QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vasudha-final-gate-android-qa
+          path: |
+            android-maestro-results
+            apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+
+  build-aab:
+    needs: android-ui-qa
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: https://bbweclhmbzwmflijppoi.supabase.co
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_fE2u4A3S9YNOR_-imSZKJg_MQuxzPVX
+      EXPO_PUBLIC_PAYMENT_PROVIDER: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package.json
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: npm install
+
+      - name: Generate Android project
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --no-install --non-interactive
+
+      - name: Build release AAB candidate
+        working-directory: apps/mobile/android
+        run: ./gradlew bundleRelease --no-daemon --stacktrace
+
+      - name: Upload AAB candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: vasudha-android-aab-candidate
+          path: apps/mobile/android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error
