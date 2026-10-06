@@ -62,7 +62,7 @@ test.describe("VASUDHA real-user free QA", () => {
 
     await page.getByRole("button", { name: "Search for services" }).click();
     await expect(page.getByText("Find Skills Around You").first()).toBeVisible();
-    await expect(page.getByText("Nearby professionals")).toBeVisible();
+    await expect(page.getByText("Nearby professionals", { exact: true })).toBeVisible();
 
     await chooseService(page, "AC Technician");
     await expect(page.getByText("Demo AC Professional")).toBeVisible();
@@ -107,7 +107,7 @@ test.describe("VASUDHA real-user free QA", () => {
     await expect(page.getByText("TEST MODE · FREE SUBSCRIPTION")).toBeVisible();
     await expect(page.getByText("Activate Free QA Subscription", { exact: true })).toBeVisible();
 
-    await page.getByRole("button", { name: "Activate Free QA Subscription" }).click();
+    await page.getByText("Activate Free QA Subscription", { exact: true }).click();
     await expect(page.getByText("Subscription active")).toBeVisible({ timeout: 20_000 });
     await page.screenshot({ path: "test-results/professional-subscription-free.png", fullPage: true });
 
