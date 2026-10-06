@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
-      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+      EXPO_PUBLIC_SUPABASE_URL: https://bbweclhmbzwmflijppoi.supabase.co
+      EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_fE2u4A3S9YNOR_-imSZKJg_MQuxzPVX
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       EXPO_PUBLIC_PAYMENT_PROVIDER: test
       QA_CUSTOMER_EMAIL: demo.customer1@vasudha.test
@@ -37,6 +37,9 @@ jobs:
       - name: Install QA dependencies
         working-directory: qa
         run: npm install
+
+      - name: Verify QA admin secret
+        run: test -n "$SUPABASE_SERVICE_ROLE_KEY" || (echo "Missing GitHub secret SUPABASE_SERVICE_ROLE_KEY" && exit 1)
 
       - name: Seed QA demo accounts
         run: npm --workspace apps/mobile run demo:seed
