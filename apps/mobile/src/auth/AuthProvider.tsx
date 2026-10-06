@@ -1,7 +1,7 @@
 import { Session } from "@supabase/supabase-js";
 import { createContext, PropsWithChildren, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { registerForPushNotifications } from "../services/pushNotifications";
+import { registerForPushNotifications } from "../lib/pushNotifications";
 
 type AppMode="customer"|"professional";
 type AuthContextValue={session:Session|null;user:Session["user"]|null;loading:boolean;mode:AppMode;setMode:(mode:AppMode)=>Promise<void>;signOut:()=>Promise<void>};
