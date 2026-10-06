@@ -91,7 +91,7 @@ test.describe("VASUDHA real-user free QA", () => {
     await page.getByPlaceholder("Enter the property/service address").fill("Varanasi, Uttar Pradesh");
     await page.getByRole("button", { name: "Send Job Request" }).click();
 
-    await expect(page.getByText("Start the conversation.")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Hello, I need AC service.")).toBeVisible({ timeout: 20_000 });
   });
 
   test("Professional A: subscription is free in QA and job request is actionable", async ({ page }) => {
