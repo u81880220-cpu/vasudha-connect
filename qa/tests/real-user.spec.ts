@@ -29,7 +29,26 @@ async function chooseService(page: Page, serviceName: string) {
   const categoryName = QA_SERVICE_CATEGORIES[serviceName];
   if (!categoryName) throw new Error(`Unknown QA service: ${serviceName}`);
   await page.getByText(categoryName, { exact: true }).first().click();
-  await page.getByText(serviceName, { exact: true }).first().click();
+
+  const services = page.getByText(serviceName, { exact: true });
+  await expect.poll(async () => {
+    const count = await services.count();
+    for (let i = 0; i < count; i += 1) {
+      if (await services.nth(i).isVisible()) return true;
+    }
+    return false;
+  }, { timeout: 10_000 }).toBe(true);
+
+  const count = await services.count();
+  for (let i = 0; i < count; i += 1) {
+    const candidate = services.nth(i);
+    if (await candidate.isVisible()) {
+      await candidate.scrollIntoViewIfNeeded();
+      await candidate.click();
+      return;
+    }
+  }
+  throw new Error(`Service ${serviceName} was rendered but no visible option was clickable`);
 }
 
 test.describe("VASUDHA real-user free QA", () => {
