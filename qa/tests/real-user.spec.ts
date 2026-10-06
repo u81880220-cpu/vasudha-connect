@@ -122,16 +122,11 @@ test.describe("VASUDHA real-user free QA", () => {
 
     await expect(page.getByText("Hello, I need AC service.")).toBeVisible({ timeout: 20_000 });
 
-    // Validate authenticated-session exit: a real user can sign out cleanly.
-    const signOutOptions = page.getByText("Sign out", { exact: true });
-    const signOutCount = await signOutOptions.count();
-    for (let i = 0; i < signOutCount; i += 1) {
-      const candidate = signOutOptions.nth(i);
-      if (await candidate.isVisible()) {
-        await candidate.click({ force: true });
-        break;
-      }
-    }
+    // Validate authenticated-session exit from the authenticated home screen.
+    await page.goto("/home");
+    const signOutButton = page.getByRole("button", { name: "Sign out", exact: true });
+    await expect(signOutButton).toBeVisible({ timeout: 10_000 });
+    await signOutButton.click({ force: true });
     await expect(page).toHaveURL(/\/auth/);
     await expect(page.getByText("Welcome Back")).toBeVisible();
   });
