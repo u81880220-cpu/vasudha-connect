@@ -132,6 +132,22 @@ test.describe("VASUDHA real-user free QA", () => {
     }
   });
 
+
+  test("Admin: authorized console opens and operational tabs render", async ({ page }) => {
+    await page.goto("/admin");
+    await expect(page.getByText("Admin Console")).toBeVisible();
+    await page.getByPlaceholder("Admin email").fill("demo.admin@vasudha.test");
+    await page.getByPlaceholder("Password").fill("Demo@12345");
+    await page.getByRole("button", { name: "Sign in to Admin" }).click();
+    await expect(page.getByText("Admin Console")).toBeVisible();
+    await expect(page.getByText("Dashboard", { exact: true })).toBeVisible({ timeout: 20_000 });
+    for (const tab of ["Professionals", "Customers", "Connections", "Operations", "Subscriptions", "Payments", "Analytics", "Complaints", "Audit", "Configuration"]) {
+      await page.getByText(tab, { exact: true }).click();
+      await expect(page.getByText(tab, { exact: true })).toBeVisible();
+    }
+    await page.screenshot({ path: "test-results/admin-console.png", fullPage: true });
+  });
+
   test("Customer B and Professional B: account isolation and independent login", async ({ browser }) => {
     const customerB = await browser.newContext({ ...devices["Pixel 7"] });
     const professionalB = await browser.newContext({ ...devices["Pixel 7"] });
