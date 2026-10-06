@@ -37,11 +37,11 @@ export default function ProfessionalVerification() {
 
   async function saveProfile() {
     if (!session) return;
-    const { error } = await supabase.from("professional_profiles").update({
-      headline: headline.trim() || null,
-      about: about.trim() || null,
-      years_experience: Number(years) || 0,
-    }).eq("user_id", session.user.id);
+    const { error } = await supabase.rpc("update_professional_profile", {
+      p_headline: headline.trim() || null,
+      p_about: about.trim() || null,
+      p_years_experience: Number(years) || 0,
+    });
     if (error) Alert.alert("Save failed", error.message);
     else Alert.alert("Saved", "Professional details updated.");
   }
@@ -79,8 +79,6 @@ export default function ProfessionalVerification() {
         await supabase.storage.from("verification-documents").remove([path]);
         throw insertError;
       }
-      const { error: profileError } = await supabase.from("professional_profiles").update({ verification_status: "pending" }).eq("user_id", session.user.id);
-      if (profileError) throw profileError;
       setStatus("pending");
       Alert.alert("Submitted", "Your document was uploaded securely and your verification request was sent for admin review.");
     } catch (e) {
