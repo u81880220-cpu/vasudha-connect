@@ -38,6 +38,9 @@ jobs:
         working-directory: qa
         run: npm install
 
+      - name: Seed QA demo accounts
+        run: npm --workspace apps/mobile run demo:seed
+
       - name: Reset QA demo data
         run: node qa/e2e/reset-demo.mjs
 
