@@ -22,6 +22,7 @@ export default function Marketplace(){
   const[selection,setSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:null,serviceName:null,subServiceId:null,subServiceName:null});
   const[items,setItems]=useState<Professional[]>([]);
   const[loading,setLoading]=useState(true);
+  const[searchError,setSearchError]=useState("");
   const[userCoords,setUserCoords]=useState<Coords|null>(null);
   const[radius,setRadius]=useState(25);
   const[filtersOpen,setFiltersOpen]=useState(false);
@@ -57,11 +58,13 @@ export default function Marketplace(){
 
   async function searchProfessionals(coords:Coords){
     setLoading(true);
+    setSearchError("");
     const{data,error}=await supabase.rpc("nearby_professionals_map",{
       p_latitude:coords.latitude,p_longitude:coords.longitude,p_radius_km:radius,p_skill_id:selection.legacySkillId||null,p_sub_service_id:selection.subServiceId||null
     });
     if(error){
       setItems([]);
+      setSearchError("We couldn't load professionals right now. Please try again.");
     } else {
       setItems((data??[]) as Professional[]);
     }
@@ -111,7 +114,7 @@ export default function Marketplace(){
         data={visibleItems}
         keyExtractor={x=>x.professional_id}
         contentContainerStyle={s.workerRow}
-        ListEmptyComponent={!loading?<Text style={s.empty}>No professionals found in this area.</Text>:null}
+        ListEmptyComponent={!loading?(searchError?<View style={s.empty}><Text style={s.empty}>{searchError}</Text><Pressable style={s.locationButton} onPress={requestLocation}><Text style={s.locationButtonText}>Try again</Text></Pressable></View>:<Text style={s.empty}>No professionals found in this area.</Text>):null}
         renderItem={({item})=><Pressable style={s.card} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:item.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}>
           <View style={s.cardTop}>
             <View style={s.avatar}><Text>{item.display_name.slice(0,1).toUpperCase()}</Text></View>
