@@ -94,7 +94,8 @@ test.describe("VASUDHA real-user free QA", () => {
     await page.getByText("Send", { exact: true }).click();
     await expect(page.getByText("Hello, I need AC service.", { exact: true })).toBeVisible({ timeout: 15_000 });
 
-    await page.getByRole("button", { name: "Request Job" }).click();
+    await expect(page.getByText("Request Job", { exact: true })).toBeVisible({ timeout: 5_000 });
+    await page.getByText("Request Job", { exact: true }).click();
     await expect(page.getByText("Create Job Request")).toBeVisible();
     await chooseService(page, "AC Technician");
     await page.getByPlaceholder("e.g. Fix kitchen plumbing").fill("AC service at home");
