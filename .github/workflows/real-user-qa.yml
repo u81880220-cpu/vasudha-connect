@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: vasudha-real-user-qa
+  cancel-in-progress: true
+
 jobs:
   real-user-web-qa:
     runs-on: ubuntu-latest
