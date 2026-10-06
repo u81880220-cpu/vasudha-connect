@@ -128,7 +128,6 @@ export default function AdminScreen(){
      </View>
      <View style={s.actions}><Pressable style={s.secondary} onPress={()=>{const name=window.prompt("Plan name",p.name)||p.name;const price=Number(window.prompt("Price in INR",String(p.price_inr))||p.price_inr);const interval=(window.prompt("Billing interval: monthly, quarterly or annual",p.billing_interval)||p.billing_interval).toLowerCase();act("admin_save_subscription_plan",{p_action:"update",p_plan_id:p.plan_id,p_code:p.code,p_name:name,p_description:p.description||null,p_price_inr:price,p_billing_interval:interval,p_active:p.status==="active",p_sort_order:p.sort_order},"Subscription plan updated.");}}><Text>Edit</Text></Pressable><Pressable style={p.status==="active"?s.danger:s.primary} onPress={()=>act("admin_save_subscription_plan",{p_action:"update",p_plan_id:p.plan_id,p_code:p.code,p_name:p.name,p_description:p.description,p_price_inr:p.price_inr,p_billing_interval:p.billing_interval,p_active:p.status!=="active",p_sort_order:p.sort_order},"Subscription plan updated.")}>
       <Text style={p.status==="active"?s.dangerText:s.primaryText}>{p.status==="active"?"Disable":"Enable"}</Text></Pressable></View>
-     </Pressable>
     </View>)}
     {!(data.configuration.subscriptionPlans||[]).length&&<Text style={s.muted}>No subscription plans configured.</Text>}
     <Text style={[s.sectionTitle,{marginTop:16}]}>Subscribers</Text>
