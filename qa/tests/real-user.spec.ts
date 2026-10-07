@@ -164,19 +164,24 @@ test.describe("VASUDHA real-user free QA", () => {
     await page.goto("/jobs");
     await expect(page.getByText("My Jobs")).toBeVisible();
 
-    for (const label of ["Mark On the way", "Mark Arrived", "Mark Work started", "Mark Work completed"]) {
-      const action = page.getByText(label, { exact: true });
-      const actionCount = await action.count();
-      for (let i = 0; i < actionCount; i += 1) {
-        const candidate = action.nth(i);
-        if (await candidate.isVisible()) {
-          await candidate.click({ force: true });
-          break;
-        }
-      }
-      const statusText = page.getByText(label.replace("Mark ", ""), { exact: true });
-      await expect(statusText.first()).toBeVisible({ timeout: 15_000 });
+    for (const [label, nextLabel] of [
+      ["Mark On the way", "Mark Arrived"],
+      ["Mark Arrived", "Mark Work started"],
+      ["Mark Work started", "Mark Work completed"],
+    ] as const) {
+      const action = page.getByRole("button", { name: label, exact: true });
+      await expect(action).toBeVisible({ timeout: 10_000 });
+      await action.click();
+      await expect(action).toHaveCount(0, { timeout: 15_000 });
+      await expect(page.getByRole("button", { name: nextLabel, exact: true })).toBeVisible({ timeout: 15_000 });
     }
+
+    const workCompletedAction = page.getByRole("button", { name: "Mark Work completed", exact: true });
+    await expect(workCompletedAction).toBeVisible({ timeout: 10_000 });
+    await workCompletedAction.click();
+    await expect(workCompletedAction).toHaveCount(0, { timeout: 15_000 });
+    await expect(page.getByText("Work completed", { exact: true }).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Mark Customer confirmed", exact: true })).toHaveCount(0);
 
     // Complete the customer side of the same real job: confirm completion and reach review.
     const customerContext = await page.context().browser()!.newContext({ ...devices["Pixel 7"] });
