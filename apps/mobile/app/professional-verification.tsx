@@ -6,7 +6,7 @@ import { useAuth } from "../src/auth/AuthProvider";
 import { router } from "expo-router";
 
 export default function ProfessionalVerification() {
-  const { session } = useAuth();
+  const { session, loading, mode } = useAuth();
   const [headline, setHeadline] = useState("");
   const [about, setAbout] = useState("");
   const [years, setYears] = useState("");
@@ -17,10 +17,10 @@ export default function ProfessionalVerification() {
   const [busy, setBusy] = useState(false);
   const [docs, setDocs] = useState<any[]>([]);
 
-  useEffect(() => { load(); }, [session]);
+  useEffect(() => {\n    if (!loading && session && mode !== "professional") router.replace("/home");\n    if (session && mode === "professional") load();\n  }, [session, loading, mode]);
 
   async function load() {
-    if (!session) return;
+    if (!session || mode !== "professional") return;
     const [{ data }, { data: documents }] = await Promise.all([
       supabase.from("professional_profiles").select("headline,about,years_experience,verification_status").eq("user_id", session.user.id).maybeSingle(),
       supabase.from("verification_documents").select("id,document_type,status,reviewer_note,submitted_at").eq("professional_id", session.user.id).order("submitted_at", { ascending: false }),
