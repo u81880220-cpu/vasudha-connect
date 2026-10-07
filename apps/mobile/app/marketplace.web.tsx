@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
@@ -15,8 +15,11 @@ export default function MarketplaceWeb(){
   const [items,setItems]=useState<Professional[]>([]);
   const [loading,setLoading]=useState(true);
   const [radius,setRadius]=useState(10);
+  const [query,setQuery]=useState("");
 
   useEffect(()=>{search();},[selection.serviceId,selection.subServiceId,radius]);
+
+  const filteredItems=items.filter((item)=>{const q=query.trim().toLowerCase();if(!q)return true;return [item.display_name,item.headline,item.city,item.state].filter(Boolean).some((v)=>String(v).toLowerCase().includes(q));});
 
   async function search(){
     setLoading(true);
@@ -38,12 +41,13 @@ export default function MarketplaceWeb(){
         <View style={{flex:1}}>
           <VasudhaLogo/>
           <Text style={s.title}>Find Skills Around You</Text>
-          <Text style={s.subtitle}>{items.length} professionals nearby</Text>
+          <Text style={s.subtitle}>{filteredItems.length} professionals nearby</Text>
         </View>
         <Pressable style={s.refresh} onPress={search}><Text style={s.refreshText}>↻</Text></Pressable>
       </View>
 
-      <View style={s.picker}><ServicePicker value={selection} optionalSubService onChange={setSelection} title="What service do you need?"/></View>
+      <View style={s.searchBox}><Text style={s.searchIcon}>⌕</Text><TextInput value={query} onChangeText={setQuery} placeholder="Search a Pro or skill" placeholderTextColor="#8B93A1" style={s.searchInput}/>{query?<Pressable onPress={()=>setQuery("")}><Text style={s.clear}>×</Text></Pressable>:null}</View>
+      <View style={s.picker}><ServicePicker value={selection} optionalSubService onChange={setSelection} title="Filter by service"/></View>
 
       <View style={s.radiusRow}>
         <Text style={s.label}>Nearby</Text>
@@ -59,8 +63,8 @@ export default function MarketplaceWeb(){
 
       {loading?<View style={s.loading}><ActivityIndicator/><Text style={s.muted}>Finding nearby professionals…</Text></View>:null}
 
-      <Text style={s.listTitle}>{selection.serviceName||"All professionals"}</Text>
-      <FlatList data={items} keyExtractor={x=>x.professional_id} contentContainerStyle={s.list}
+      <Text style={s.listTitle}>{query.trim()?`Results for "${query.trim()}"`:selection.serviceName||"All professionals"}</Text>
+      <FlatList data={filteredItems} keyExtractor={x=>x.professional_id} contentContainerStyle={s.list}
         ListEmptyComponent={!loading?<Text style={s.empty}>No professionals found in this area.</Text>:null}
         renderItem={({item})=><Pressable style={s.card} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:item.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}>
           <View style={s.cardTop}>
@@ -84,7 +88,7 @@ const s=StyleSheet.create({
   safe:{flex:1,backgroundColor:"#fff"},page:{flex:1,alignItems:"center",backgroundColor:"#F7F8FA"},container:{flex:1,width:"100%",maxWidth:1180,paddingHorizontal:24,paddingBottom:8},
   header:{paddingTop:18,paddingBottom:12,flexDirection:"row",alignItems:"center",gap:16},title:{fontSize:28,fontWeight:"900",color:"#10233F",marginTop:8},subtitle:{color:"#6B7280",marginTop:3},
   refresh:{width:40,height:40,borderRadius:20,backgroundColor:"#f1f5f4",alignItems:"center",justifyContent:"center"},refreshText:{fontSize:24},
-  picker:{paddingTop:10},radiusRow:{flexDirection:"row",alignItems:"center",gap:7,paddingVertical:10},label:{fontWeight:"800",marginRight:3},
+  searchBox:{marginTop:10,marginHorizontal:2,minHeight:52,borderWidth:1,borderColor:"#E7EAF0",borderRadius:16,backgroundColor:"#fff",flexDirection:"row",alignItems:"center",paddingHorizontal:14},searchIcon:{fontSize:22,color:"#FF4B1F"},searchInput:{flex:1,fontSize:15,color:"#172033",paddingHorizontal:9,paddingVertical:10},clear:{fontSize:24,color:"#6B7280",paddingHorizontal:4},picker:{paddingTop:10},radiusRow:{flexDirection:"row",alignItems:"center",gap:7,paddingVertical:10},label:{fontWeight:"800",marginRight:3},
   radius:{paddingHorizontal:11,paddingVertical:6,borderRadius:14,backgroundColor:"#f3f5f5"},radiusSelected:{backgroundColor:"#d8f4eb"},radiusText:{fontSize:12},radiusTextSelected:{fontSize:12,fontWeight:"800"},
   info:{borderWidth:1,borderColor:"#dfe8e4",borderRadius:16,padding:16,backgroundColor:"#f4faf8"},infoTitle:{fontSize:18,fontWeight:"800"},infoText:{marginTop:5,lineHeight:19,opacity:.68},
   loading:{padding:16,alignItems:"center"},muted:{opacity:.6,marginTop:6},listTitle:{fontSize:18,fontWeight:"800",marginTop:14},list:{paddingTop:8,paddingBottom:80,gap:10},empty:{padding:20,opacity:.6},
