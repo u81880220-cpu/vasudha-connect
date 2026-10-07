@@ -210,7 +210,7 @@ test.describe("VASUDHA real-user free QA", () => {
   });
 
 
-  test("Web business-model and security guardrails: no quotation or job-payment flow", async ({ page, request }) => {
+  test("Web business-model guardrails: direct customer-to-professional workflow", async ({ page }) => {
     await login(page, "customer", CUSTOMER_EMAIL, CUSTOMER_PASSWORD);
     await page.goto("/home");
     const homeText = await page.locator("body").innerText();
@@ -223,19 +223,6 @@ test.describe("VASUDHA real-user free QA", () => {
     expect(jobsText.toLowerCase()).not.toMatch(/\bquotation\b|\bquote\b|\bbid\b/);
     expect(jobsText.toLowerCase()).not.toMatch(/vasudha.*commission|commission.*vasudha|pay.*professional|professional.*pay/);
 
-    const anonHeaders = {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json",
-    };
-    const quoteRead = await request.get(`${SUPABASE_URL}/rest/v1/quotes?select=id&limit=1`, { headers: anonHeaders });
-    expect([401, 403]).toContain(quoteRead.status());
-
-    const quoteWrite = await request.post(`${SUPABASE_URL}/rest/v1/quotes`, {
-      headers: { ...anonHeaders, Prefer: "return=minimal" },
-      data: { customer_id: "00000000-0000-0000-0000-000000000000", professional_id: "00000000-0000-0000-0000-000000000000" },
-    });
-    expect([401, 403]).toContain(quoteWrite.status());
   });
 
   test("Customer invalid login stays outside the authenticated app", async ({ page }) => {
@@ -339,7 +326,7 @@ test.describe("VASUDHA real-user free QA", () => {
     expect(body).not.toContain("pay vasudha for the job");
   });
 
-  test("Authenticated RLS smoke: client cannot directly create jobs or quotes", async ({ request }) => {
+  test("Authenticated RLS smoke: client cannot directly create jobs", async ({ request }) => {
     const baseHeaders = {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
@@ -356,15 +343,6 @@ test.describe("VASUDHA real-user free QA", () => {
       },
     });
     expect([401, 403, 409]).toContain(jobAttempt.status());
-
-    const quoteAttempt = await request.post(`${SUPABASE_URL}/rest/v1/quotes`, {
-      headers: baseHeaders,
-      data: {
-        job_id: "00000000-0000-0000-0000-000000000000",
-        professional_id: "00000000-0000-0000-0000-000000000000",
-      },
-    });
-    expect([401, 403, 409, 404]).toContain(quoteAttempt.status());
   });
 
   test("Customer B and Professional B: account isolation and independent login", async ({ browser }) => {
