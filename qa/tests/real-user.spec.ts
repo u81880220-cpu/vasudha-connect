@@ -181,8 +181,7 @@ test.describe("VASUDHA real-user free QA", () => {
     // Complete the customer side of the same real job: confirm completion and reach review.
     const customerContext = await page.context().browser()!.newContext({ ...devices["Pixel 7"] });
     const customerPage = await customerContext.newPage();
-    try {
-      await login(customerPage, "customer", CUSTOMER_EMAIL, CUSTOMER_PASSWORD);
+    await login(customerPage, "customer", CUSTOMER_EMAIL, CUSTOMER_PASSWORD);
       await customerPage.goto("/jobs");
       await expect(customerPage.getByText("My Jobs")).toBeVisible();
       await expect(customerPage.getByText("AC service at home")).toBeVisible({ timeout: 20_000 });
@@ -191,9 +190,7 @@ test.describe("VASUDHA real-user free QA", () => {
       await customerPage.getByText("Rate Professional", { exact: true }).click();
       await expect(customerPage.getByText("Rate Your Experience")).toBeVisible();
       await expect(customerPage.getByText("Submit Review", { exact: true })).toBeVisible();
-      await customerPage.screenshot({ path: "test-results/customer-review.png", fullPage: true });
-    // Do not explicitly close this secondary context here. Playwright will clean it up with the
-    // browser fixture; explicit close can stall while the trace/video is being finalized on CI.
+    await customerPage.screenshot({ path: "test-results/customer-review.png", fullPage: true);
 
     // Professional-side post-completion review screen must also be reachable.
     await page.goto("/jobs");
