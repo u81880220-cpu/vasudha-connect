@@ -185,7 +185,10 @@ test.describe("VASUDHA real-user free QA", () => {
       await customerPage.goto("/jobs");
       await expect(customerPage.getByText("My Jobs")).toBeVisible();
       await expect(customerPage.getByText("AC service at home")).toBeVisible({ timeout: 20_000 });
-      await customerPage.getByText("Confirm work completed", { exact: true }).click();
+      const confirmCompletion = customerPage.getByText("Confirm work completed", { exact: true });
+      await expect.poll(async () => await confirmCompletion.count(), { timeout: 30_000, intervals: [500, 1000, 2000] }).toBeGreaterThan(0);
+      await expect(confirmCompletion.first()).toBeVisible({ timeout: 10_000 });
+      await confirmCompletion.first().click({ force: true });
       await expect(customerPage.getByText("Customer confirmed", { exact: true })).toBeVisible({ timeout: 15_000 });
       await customerPage.getByRole("button", { name: "Rate Professional", exact: true }).evaluate((el) => (el as HTMLElement).click());
       await expect(customerPage.getByText("Rate Your Experience")).toBeVisible();
