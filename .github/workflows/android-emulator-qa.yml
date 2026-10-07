@@ -42,6 +42,18 @@ jobs:
         working-directory: apps/mobile
         run: npx expo prebuild --platform android --no-install --non-interactive
 
+      - name: Configure Android SDK tools
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          if [ -x "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
+            echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          elif [ -x "$SDK_ROOT/cmdline-tools/bin/sdkmanager" ]; then
+            echo "$SDK_ROOT/cmdline-tools/bin" >> "$GITHUB_PATH"
+          fi
+          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --version || "$SDK_ROOT/cmdline-tools/bin/sdkmanager" --version || command -v sdkmanager
+
       - name: Install Android NDK 27.1
         run: |
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
