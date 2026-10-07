@@ -195,7 +195,7 @@ test.describe("VASUDHA real-user free QA", () => {
       await expect(confirmCompletion.first()).toBeVisible({ timeout: 10_000 });
       await confirmCompletion.first().click({ force: true });
       await expect(customerPage.getByText("Customer confirmed", { exact: true })).toBeVisible({ timeout: 15_000 });
-      await customerPage.getByRole("button", { name: "Rate Professional", exact: true }).evaluate((el) => (el as HTMLElement).click());
+      await customerPage.getByText("Rate Professional", { exact: true }).click({ force: true });
       await expect(customerPage.getByText("Rate Your Experience")).toBeVisible();
       await expect(customerPage.getByText("Submit Review", { exact: true })).toBeVisible();
     await customerPage.screenshot({ path: "test-results/customer-review.png", fullPage: true });
