@@ -1,5 +1,6 @@
 import { router,usePathname } from "expo-router";
 import { Pressable,StyleSheet,Text,View } from "react-native";
+import { KAMPRO } from "./kamproTheme";
 
 const tabs=[
   ["/home","⌂","Home"],
@@ -22,7 +23,9 @@ export function AppBottomNav(){
             onPress={()=>router.replace(href)}
             style={({pressed})=>[s.item,pressed&&s.pressed]}
           >
-            <Text style={[s.icon,active&&s.active]}>{icon}</Text>
+            <View style={[s.iconPill,active&&s.iconPillActive]}>
+              <Text style={[s.icon,active&&s.active]}>{icon}</Text>
+            </View>
             <Text style={[s.label,active&&s.active]}>{label}</Text>
           </Pressable>
         );
@@ -31,10 +34,25 @@ export function AppBottomNav(){
   );
 }
 const s=StyleSheet.create({
-  bar:{height:70,flexDirection:"row",borderTopWidth:1,borderTopColor:"#e5ece9",backgroundColor:"#fff",paddingBottom:8,paddingTop:7},
+  bar:{
+    height:76,
+    flexDirection:"row",
+    borderTopWidth:1,
+    borderTopColor:KAMPRO.border,
+    backgroundColor:KAMPRO.surface,
+    paddingBottom:8,
+    paddingTop:8,
+    shadowColor:"#000",
+    shadowOpacity:.06,
+    shadowRadius:10,
+    shadowOffset:{width:0,height:-3},
+    elevation:8
+  },
   item:{flex:1,alignItems:"center",justifyContent:"center",minWidth:52},
   pressed:{opacity:.65},
-  icon:{fontSize:20,color:"#68736f",lineHeight:25},
-  label:{fontSize:11,fontWeight:"700",color:"#68736f",marginTop:2},
-  active:{color:"#087D65"},
+  iconPill:{width:38,height:30,borderRadius:15,alignItems:"center",justifyContent:"center"},
+  iconPillActive:{backgroundColor:"#FFF0EA"},
+  icon:{fontSize:20,color:KAMPRO.muted,lineHeight:25},
+  label:{fontSize:11,fontWeight:"800",color:KAMPRO.muted,marginTop:3},
+  active:{color:KAMPRO.brand},
 });
