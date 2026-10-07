@@ -21,6 +21,7 @@ export default function Marketplace(){
   const[marketplaceConfig,setMarketplaceConfig]=useState<any>(null);
   const[selection,setSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:null,serviceName:null,subServiceId:null,subServiceName:null});
   const[query,setQuery]=useState("");
+  const[selectedMapPro,setSelectedMapPro]=useState<Professional|null>(null);
   const[items,setItems]=useState<Professional[]>([]);
   const[loading,setLoading]=useState(true);
   const[searchError,setSearchError]=useState("");
@@ -157,11 +158,12 @@ function WebMap({userCoords,items,selection}:{userCoords:Coords;items:Profession
     <View style={s.youMarker}><Text style={s.youMarkerText}>●</Text></View>
     {items.slice(0,8).map((worker,i)=>
       <Pressable key={worker.professional_id}
-        onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:worker.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}
+        onPress={()=>setSelectedMapPro(worker)}
         style={[s.webMarker,{left:`${15+(i*17)%72}%`,top:`${22+(i*29)%58}%`}]}>
         <Text style={s.webMarkerText}>{worker.display_name.slice(0,1).toUpperCase()}</Text>
       </Pressable>
     )}
+    {selectedMapPro?<View style={s.mapPreview}><View style={{flex:1}}><Text style={s.mapPreviewName}>{selectedMapPro.display_name}</Text><Text style={s.mapPreviewMeta}>{selectedMapPro.headline||"Verified professional"} • {selectedMapPro.distance_km} km</Text><Text style={s.mapPreviewTrust}>Trust {Math.round(selectedMapPro.trust_score)}/100</Text></View><View style={s.mapPreviewActions}><Pressable style={s.mapPreviewSecondary} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:selectedMapPro.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}><Text style={s.mapPreviewSecondaryText}>View Profile</Text></Pressable><Pressable style={s.mapPreviewPrimary} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:selectedMapPro.professional_id}})}><Text style={s.mapPreviewPrimaryText}>Connect</Text></Pressable></View></View>:null}
     <View style={s.mapLegend}>
       <Text style={s.mapLegendTitle}>Nearby professionals</Text>
       <Text style={s.mapLegendText}>{items.length} verified professionals found</Text>
