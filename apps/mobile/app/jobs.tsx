@@ -19,8 +19,7 @@ export default function Jobs(){
  async function cancel(job:any){Alert.alert("Cancel this job?","Cancellation is allowed before work starts. If work has already started, use Report a Problem instead.",[{text:"Keep Job",style:"cancel"},{text:"Cancel Job",style:"destructive",onPress:async()=>{const{error}=await supabase.rpc("cancel_job",{p_job_id:job.id,p_reason:"Cancelled by participant"});if(error)Alert.alert("Unable to cancel",error.message);else{Alert.alert("Job cancelled","The other participant has been notified.");load()}}}])}
  function nextFor(j:any){const i=steps.indexOf(j.status);return i>=0&&i<steps.length-1?steps[i+1]:null}
  return <KamproPage>
-  <View style={s.top}><VasudhaLogo/><Pressable style={s.refresh} onPress={load}><Text style={s.refreshText}>↻</Text></Pressable></View>
-  <KamproHeader title="My Jobs" subtitle={mode==="customer"?"Track accepted work and confirm completion":"Manage accepted work"}/>
+  <KamproHeader title="My Jobs" subtitle={mode==="customer"?"Track accepted work and confirm completion":"Manage accepted work"} action={<Pressable style={s.refresh} onPress={load}><Text style={s.refreshText}>↻</Text></Pressable>}/>
    {loading?<View style={s.state}><ActivityIndicator size="small" color="#FF4B1F"/><Text style={s.muted}>Loading jobs…</Text></View>:
     jobs.length===0?<View style={s.empty}><View style={s.emptyIcon}><Text>✓</Text></View><Text style={s.emptyTitle}>No jobs yet</Text><Text style={s.emptyText}>{mode==="customer"?"Your accepted services will appear here.":"Jobs assigned to you will appear here."}</Text></View>:
     jobs.map(j=>{const n=nextFor(j),idx=steps.indexOf(j.status);const isProfessional=j.professional_id===user?.id;const isCustomer=j.customer_id===user?.id;return <View key={j.id} style={s.card}>
