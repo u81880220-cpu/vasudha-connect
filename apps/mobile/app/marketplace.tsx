@@ -99,7 +99,7 @@ export default function Marketplace(){
 
       <View style={[s.mapWrap,{height:MAP_HEIGHT}]}>
         {userCoords && (Platform.OS==="web"
-          ? <WebMap userCoords={userCoords} items={visibleItems} selection={selection}/>
+          ? <WebMap userCoords={userCoords} items={visibleItems} selection={selection} onSelect={setSelectedMapPro}/>
           : <NativeMap userCoords={userCoords} items={visibleItems}/>
         )}
         {!userCoords&&!loading&&<View style={s.locationEmpty}><Text style={s.locationTitle}>Location required</Text><Text>Allow location to see nearby professionals on the map.</Text><Pressable style={s.locationButton} onPress={requestLocation}><Text style={s.locationButtonText}>Enable location</Text></Pressable></View>}
@@ -151,14 +151,14 @@ export default function Marketplace(){
   </SafeAreaView>;
 }
 
-function WebMap({userCoords,items,selection}:{userCoords:Coords;items:Professional[];selection:ServiceSelection}) {
+function WebMap({userCoords,items,selection,onSelect}:{userCoords:Coords;items:Professional[];selection:ServiceSelection;onSelect:(worker:Professional)=>void}) {
   return <View style={s.webMap}>
     <View style={s.mapRoadA}/><View style={s.mapRoadB}/><View style={s.mapRoadC}/>
     <View style={s.mapArea}><Text style={s.mapAreaText}>NEARBY AREA</Text></View>
     <View style={s.youMarker}><Text style={s.youMarkerText}>●</Text></View>
     {items.slice(0,8).map((worker,i)=>
       <Pressable key={worker.professional_id}
-        onPress={()=>setSelectedMapPro(worker)}
+        onPress={()=>onSelect(worker)}
         style={[s.webMarker,{left:`${15+(i*17)%72}%`,top:`${22+(i*29)%58}%`}]}>
         <Text style={s.webMarkerText}>{worker.display_name.slice(0,1).toUpperCase()}</Text>
       </Pressable>
