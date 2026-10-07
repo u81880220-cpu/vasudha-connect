@@ -251,10 +251,10 @@ test.describe("VASUDHA real-user free QA", () => {
     // Customer 360: open a real customer record and verify the detail surface renders.
     await page.getByText("Customers", { exact: true }).click();
     await expect(page.getByText("Customers", { exact: true }).first()).toBeVisible();
-    const customerRows = page.locator("text=Trust").locator("..");
     await page.getByText(/Trust \d+\/100/).first().click({ force: true });
     await expect(page.getByText("Customer 360°", { exact: true })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("Trust score", { exact: true })).toBeVisible();
+    await expect(page.getByText(/Account ID:/)).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Trust score", { exact: true })).toBeVisible({ timeout: 20_000 });
 
     // Operations Details: open the seeded AC job and verify Work 360° renders.
     await page.getByText("Operations", { exact: true }).click();
