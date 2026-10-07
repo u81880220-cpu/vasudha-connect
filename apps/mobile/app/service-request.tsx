@@ -21,7 +21,7 @@ export default function ServiceRequest(){
   else{Alert.alert("Request sent","The professional can discuss the work with you and accept the job when you agree.");router.back();}
  }
  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
-  <VasudhaLogo compact/><Text style={s.title}>Create Job Request</Text><Text style={s.muted}>You have agreed to proceed. Send the work details and service location to the professional for acceptance. VASUDHA does not handle quotations or service payments.</Text>
+  <VasudhaLogo compact/><Text style={s.title}>Create Job Request</Text><Text style={s.muted}>You have agreed to proceed. Send the work details and service location to the professional for acceptance. KAMPRO does not handle quotations or service payments.</Text>
   <ServicePicker value={selection} optionalSubService onChange={setSelection}/>
   <Text style={s.label}>What do you need?</Text><TextInput value={title} onChangeText={setTitle} placeholder="e.g. Fix kitchen plumbing" style={s.input}/>
   <Text style={s.label}>Work details</Text><TextInput value={description} onChangeText={setDescription} placeholder="Describe the work required..." multiline style={[s.input,s.large]}/>
@@ -32,4 +32,4 @@ export default function ServiceRequest(){
   <Pressable onPress={submit} disabled={busy} style={s.primary}><Text style={s.primaryText}>{busy?"Sending...":"Send Job Request"}</Text></Pressable>
  </ScrollView></SafeAreaView>;
 }
-const s=StyleSheet.create({safe:{flex:1,backgroundColor:"#fff"},container:{padding:20,paddingBottom:40},title:{fontSize:28,fontWeight:"800",color:"#13201c"},muted:{opacity:.65,marginTop:6,lineHeight:20},label:{fontWeight:"800",marginTop:20,marginBottom:7},input:{borderWidth:1,borderColor:"#cfdad6",borderRadius:12,padding:12,minHeight:48,backgroundColor:"#fff",color:"#13201c"},large:{height:120,textAlignVertical:"top"},note:{fontSize:12,color:"#66736e",marginTop:10,lineHeight:18},primary:{marginTop:24,borderRadius:12,padding:14,alignItems:"center",backgroundColor:"#087D65",minHeight:50,justifyContent:"center"},primaryText:{color:"#fff",fontWeight:"900"}});
+const s=StyleSheet.create({safe:{flex:1,backgroundColor:"#fff"},container:{padding:20,paddingBottom:40},title:{fontSize:28,fontWeight:"800",color:"#10233F"},muted:{opacity:.65,marginTop:6,lineHeight:20},label:{fontWeight:"800",marginTop:20,marginBottom:7},input:{borderWidth:1,borderColor:"#CBD0D8",borderRadius:12,padding:12,minHeight:48,backgroundColor:"#fff",color:"#10233F"},large:{height:120,textAlignVertical:"top"},note:{fontSize:12,color:"#6B7280",marginTop:10,lineHeight:18},primary:{marginTop:24,borderRadius:12,padding:14,alignItems:"center",backgroundColor:"#FF4B1F",minHeight:50,justifyContent:"center"},primaryText:{color:"#fff",fontWeight:"900"}});
