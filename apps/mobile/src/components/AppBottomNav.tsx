@@ -4,8 +4,8 @@ import { KAMPRO } from "./kamproTheme";
 
 const tabs=[
   ["/home","⌂","Home"],
-  ["/marketplace","⌖","Map"],
-  ["/connections","◌","Messages"],
+  ["/marketplace","⌖","Find a Pro"],
+  ["/connections","◌","Chat"],
   ["/profile","◉","Profile"],
 ] as const;
 
