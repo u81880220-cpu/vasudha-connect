@@ -9,22 +9,23 @@ const tabs=[
   ["/profile","◉","Profile"],
 ] as const;
 
-export function AppBottomNav(){
+type NavKey = "home" | "map" | "chat" | "connections" | "profile";
+export function AppBottomNav({active}: {active?: NavKey}){
   const path=usePathname();
   return (
     <View style={s.bar}>
       {tabs.map(([href,icon,label])=>{
-        const active=path===href;
+        const isActive=path===href || (active==="map" && href==="/marketplace") || ((active==="chat" || active==="connections") && href==="/connections") || (active==="home" && href==="/home") || (active==="profile" && href==="/profile");
         return (
           <Pressable
             key={href}
             accessibilityRole="button"
-            accessibilityState={{selected:active}}
+            accessibilityState={{selected:isActive}}
             onPress={()=>router.replace(href)}
             style={({pressed})=>[s.item,pressed&&s.pressed]}
           >
-            <View style={[s.iconPill,active&&s.iconPillActive]}>
-              <Text style={[s.icon,active&&s.active]}>{icon}</Text>
+            <View style={[s.iconPill,isActive&&s.iconPillActive]}>
+              <Text style={[s.icon,isActive&&s.active]}>{icon}</Text>
             </View>
             <Text style={[s.label,active&&s.active]}>{label}</Text>
           </Pressable>
