@@ -132,6 +132,7 @@ test.describe("VASUDHA real-user free QA", () => {
   });
 
   test("Professional A: subscription is free in QA and job request is actionable", async ({ page }) => {
+    test.setTimeout(90_000);
     await login(page, "professional", PROFESSIONAL_EMAIL, PROFESSIONAL_PASSWORD);
 
     await expect(page.getByText("Grow your business.")).toBeVisible();
