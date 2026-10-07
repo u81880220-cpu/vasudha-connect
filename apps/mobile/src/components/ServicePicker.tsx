@@ -72,7 +72,7 @@ export function ServicePicker({value,onChange,title="Choose a service",optionalS
   onChange({categoryId:cat?.id||null,categoryName:cat?.name||null,serviceId:svc.id,serviceName:svc.name,legacySkillId:svc.legacy_skill_id||null,subServiceId:general.id,subServiceName:"General service"});
  }
 
- if(loading)return <View style={s.loading}><ActivityIndicator color="#087D65"/><Text style={s.muted}>Loading services…</Text></View>;
+ if(loading)return <View style={s.loading}><ActivityIndicator color="#FF4B1F"/><Text style={s.muted}>Loading services…</Text></View>;
 
  return <View style={s.wrap}>
   <Text style={s.title}>{title}</Text>
@@ -84,4 +84,4 @@ export function ServicePicker({value,onChange,title="Choose a service",optionalS
  </View>;
 }
 
-const s=StyleSheet.create({wrap:{borderWidth:1,borderColor:"#e0e8e5",borderRadius:16,padding:14,backgroundColor:"#fff"},loading:{padding:18,alignItems:"center"},muted:{color:"#66736e",marginTop:6},title:{fontSize:17,fontWeight:"900",color:"#13201c"},step:{fontSize:12,fontWeight:"900",color:"#66736e",marginTop:14,marginBottom:7,textTransform:"uppercase",letterSpacing:.5},row:{gap:7,paddingBottom:2},chip:{borderWidth:1,borderColor:"#cfdad6",borderRadius:18,paddingHorizontal:12,paddingVertical:9,backgroundColor:"#fff"},on:{backgroundColor:"#e7f7f2",borderColor:"#087D65",borderWidth:2},chipText:{fontSize:12,fontWeight:"700",color:"#46534f"},onText:{color:"#087D65"},subGrid:{flexDirection:"row",flexWrap:"wrap",gap:7},subChip:{borderWidth:1,borderColor:"#cfdad6",borderRadius:14,paddingHorizontal:11,paddingVertical:9},selected:{marginTop:12,padding:11,borderRadius:12,backgroundColor:"#f2f8f6"},selectedLabel:{fontSize:10,fontWeight:"900",color:"#087D65",textTransform:"uppercase"},selectedText:{fontWeight:"800",color:"#13201c",marginTop:3}});
+const s=StyleSheet.create({wrap:{borderWidth:1,borderColor:"#e0e8e5",borderRadius:16,padding:14,backgroundColor:"#fff"},loading:{padding:18,alignItems:"center"},muted:{color:"#6B7280",marginTop:6},title:{fontSize:17,fontWeight:"900",color:"#10233F"},step:{fontSize:12,fontWeight:"900",color:"#6B7280",marginTop:14,marginBottom:7,textTransform:"uppercase",letterSpacing:.5},row:{gap:7,paddingBottom:2},chip:{borderWidth:1,borderColor:"#cfdad6",borderRadius:18,paddingHorizontal:12,paddingVertical:9,backgroundColor:"#fff"},on:{backgroundColor:"#FFF0EA",borderColor:"#FF4B1F",borderWidth:2},chipText:{fontSize:12,fontWeight:"700",color:"#46534f"},onText:{color:"#FF4B1F"},subGrid:{flexDirection:"row",flexWrap:"wrap",gap:7},subChip:{borderWidth:1,borderColor:"#cfdad6",borderRadius:14,paddingHorizontal:11,paddingVertical:9},selected:{marginTop:12,padding:11,borderRadius:12,backgroundColor:"#f2f8f6"},selectedLabel:{fontSize:10,fontWeight:"900",color:"#FF4B1F",textTransform:"uppercase"},selectedText:{fontWeight:"800",color:"#10233F",marginTop:3}});
