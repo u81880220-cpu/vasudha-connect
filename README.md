@@ -1,18 +1,16 @@
-# VASUDHA CONNECT
+# KAMPRO
 
-**Find Skills Around You**
+**Find the right person around you**
 
-VASUDHA CONNECT is a single mobile marketplace app connecting customers with trusted professionals nearby.
+KAMPRO is a single mobile marketplace app connecting customers with trusted professionals nearby.
 
 ## Product
 - One app with Customer and Professional modes
-- Nearby skill discovery
+- Nearby professional discovery
 - Professional verification and profiles
-- Connection packages
-- Direct connections, chat and hiring (no quotation/bidding flow)
+- Direct connections, chat and hiring
 - Job tracking
-- Reviews and VASUDHA Trust
-- Professional subscriptions
+- Reviews and trust/reputation
 - Separate Admin web dashboard
 
 ## Backend
@@ -20,9 +18,9 @@ Supabase project: `vasudha-connect`
 Region: Mumbai (ap-south-1)
 
 ## Repository
-This repository is the fresh VASUDHA CONNECT codebase. VASUDHA CARE is intentionally excluded and will be developed separately later.
+This repository contains the KAMPRO mobile marketplace and its Admin dashboard.
 
-## Planned apps
+## Apps
 - `apps/mobile` — Expo/React Native mobile app
 - `apps/admin` — Next.js admin dashboard
 
@@ -32,11 +30,11 @@ This repository is the fresh VASUDHA CONNECT codebase. VASUDHA CARE is intention
 - Secure server-side privileged operations
 - Role-based access
 - Customer and Professional modes in one mobile app
+- No quotation/bidding flow
 
-## Deployment
-- Vercel production deployment trigger verified for the main branch.
-
-## Current QA baseline
+## Release / QA baseline
 - Production web deployment is verified on Vercel.
-- Real-user Playwright QA covers customer discovery, connection unlock, chat, direct job request, professional acceptance/tracking, customer completion, reviews, admin access controls, RLS guardrails and account isolation.
+- Latest verified production deployment is built from the `main` branch.
+- QA covers customer discovery, connection unlock, chat, direct job request, professional acceptance/tracking, customer completion, reviews, admin access controls, RLS guardrails and account isolation.
 - Job-value quotation/bidding is intentionally disabled at the database boundary.
+- Android release uses Expo/EAS configuration in `apps/mobile/eas.json`.
