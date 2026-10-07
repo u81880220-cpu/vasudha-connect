@@ -70,9 +70,9 @@ test.describe("VASUDHA surface smoke", () => {
     await expect(page.getByText("Dashboard", { exact: true })).toBeVisible({ timeout: 20_000 });
 
     for (const tab of [
-      "Dashboard", "Professionals", "Verification", "Customers", "Service Catalogue",
+      "Dashboard", "Professionals", "Verification", "Customers", "Services",
       "Connections", "Subscriptions", "Operations", "Payments", "Notifications",
-      "Communication", "Analytics", "Complaints", "Portfolio", "Audit Logs", "Configuration",
+      "Communication", "Analytics", "Complaints", "Portfolio", "Audit", "Configuration",
     ]) {
       await page.getByText(tab, { exact: true }).click();
       await expect(page.getByText(tab, { exact: true }).first()).toBeVisible();
