@@ -42,7 +42,7 @@ begin
     ),
     'complaints',jsonb_build_object(
       'total',(select count(*) from public.complaints c where c.reporter_id=p_user_id or c.against_user_id=p_user_id),
-      'open',(select count(*) from public.complaints c where (c.reporter_id=p_user_id or c.against_user_id=p_user_id) and c.status not in ('resolved','closed'))
+      'open',(select count(*) from public.complaints c where (c.reporter_id=p_user_id or c.against_user_id=p_user_id) and c.status not in ('resolved'))
     ),
     'notifications',jsonb_build_object(
       'total',(select count(*) from public.notifications n where n.user_id=p_user_id),
