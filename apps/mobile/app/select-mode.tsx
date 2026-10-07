@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
+import { KAMPRO } from "../src/components/kamproTheme";
 
 export default function SelectMode(){
  return <SafeAreaView style={s.safe}>
@@ -38,12 +39,12 @@ export default function SelectMode(){
 
 const s=StyleSheet.create({
  safe:{flex:1,backgroundColor:"#F7FAF8"},
- container:{flex:1,padding:22,alignItems:"center"},
+ container:{width:"100%",maxWidth:760,alignSelf:"center",flex:1,padding:28,alignItems:"center"},
  backButton:{alignSelf:"flex-start",width:42,height:42,justifyContent:"center"},
  back:{fontSize:34,lineHeight:38,color:"#13201C"},
  title:{fontSize:23,fontWeight:"900",textAlign:"center",color:"#13201C",marginTop:22,lineHeight:29},
  sub:{fontSize:13,color:"#71807A",marginTop:7,marginBottom:25},
- card:{width:"100%",minHeight:116,borderWidth:1,borderColor:"#DCE8E3",borderRadius:18,backgroundColor:"#FFFFFF",padding:16,marginBottom:14,flexDirection:"row",alignItems:"center",shadowColor:"#FF4B1F",shadowOpacity:.04,shadowRadius:8,shadowOffset:{width:0,height:3},elevation:2},
+ card:{width:"100%",minHeight:132,borderWidth:1,borderColor:KAMPRO.border,borderRadius:20,backgroundColor:KAMPRO.surface,padding:18,marginBottom:16,flexDirection:"row",alignItems:"center",shadowColor:KAMPRO.navy,shadowOpacity:.05,shadowRadius:12,shadowOffset:{width:0,height:4},elevation:2},
  iconBox:{width:70,height:70,borderRadius:18,alignItems:"center",justifyContent:"center"},
  customerBox:{backgroundColor:"#FFF0EA"},proBox:{backgroundColor:"#FFF1E2"},
  icon:{fontSize:34,fontWeight:"900",color:"#FF4B1F"},
