@@ -93,7 +93,7 @@ export default function ProfessionalVerification() {
   }
 
   return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
-    <View style={s.top}><Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={()=>router.back()} style={s.back}><Text style={s.backText}>‹</Text></Pressable><Text style={s.topTitle}>VASUDHA CONNECT</Text><View style={s.topSpacer}/></View>
+    <View style={s.top}><Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={()=>router.back()} style={s.back}><Text style={s.backText}>‹</Text></Pressable><Text style={s.topTitle}>KAMPRO</Text><View style={s.topSpacer}/></View>
     <Text style={s.title}>Professional Verification</Text>
     <Text style={s.sub}>Build trust before customers connect with you.</Text>
     <View style={s.score}><Text style={s.scoreTitle}>Profile completeness</Text><Text style={s.scoreValue}>{completeness}%</Text><Text style={s.muted}>Complete your professional details and submit verification.</Text></View>
@@ -116,8 +116,8 @@ const s = StyleSheet.create({
   container: { padding: 20, paddingBottom: 40 },
   top: { height: 42, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   back: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  backText: { fontSize: 32, lineHeight: 32, color: "#13201c" },
-  topTitle: { fontSize: 12, fontWeight: "800", color: "#087D65", letterSpacing: 1 },
+  backText: { fontSize: 32, lineHeight: 32, color: "#10233F" },
+  topTitle: { fontSize: 12, fontWeight: "800", color: "#FF4B1F", letterSpacing: 1 },
   topSpacer: { width: 36 },
   title: { fontSize: 27, fontWeight: "800" },
   sub: { marginTop: 5, opacity: 0.65, marginBottom: 18 },
@@ -130,7 +130,7 @@ const s = StyleSheet.create({
   multi: { minHeight: 90, textAlignVertical: "top" },
   status: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   badge: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6, fontWeight: "800" },
-  save: { marginTop: 16, borderRadius: 12, padding: 14, alignItems: "center", backgroundColor: "#087D65" },
+  save: { marginTop: 16, borderRadius: 12, padding: 14, alignItems: "center", backgroundColor: "#FF4B1F" },
   saveText: { color: "#fff", fontWeight: "800" },
   primary: { marginTop: 18, borderWidth: 1, borderRadius: 12, padding: 15, alignItems: "center" },
   button: { fontWeight: "800" },
