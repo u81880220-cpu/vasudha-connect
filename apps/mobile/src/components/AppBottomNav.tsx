@@ -36,6 +36,7 @@ export function AppBottomNav({active}: {active?: NavKey}){
 }
 const s=StyleSheet.create({
   bar:{
+    width:"100%",
     height:76,
     flexDirection:"row",
     borderTopWidth:1,
