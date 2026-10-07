@@ -66,10 +66,10 @@ export default function ConnectionPackages() {
         key: data.key_id,
         amount: data.amount,
         currency: data.currency,
-        name: "VASUDHA CONNECT",
+        name: "KAMPRO",
         description: packageName,
         order_id: data.razorpay_order_id,
-        theme: { color: "#087D65" },
+        theme: { color: "#FF4B1F" },
         handler: () => {
           Alert.alert(
             "Payment submitted",
@@ -228,7 +228,7 @@ const s = StyleSheet.create({
   balanceValue: { fontSize: 30, fontWeight: "800", marginTop: 4 },
   balanceHint: { fontSize: 12, opacity: 0.6, marginTop: 4 },
   notice: { borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 16 },
-  testBadge: { fontSize: 11, fontWeight: "900", color: "#087D65", marginBottom: 6 },
+  testBadge: { fontSize: 11, fontWeight: "900", color: "#FF4B1F", marginBottom: 6 },
   noticeTitle: { fontWeight: "800", marginBottom: 4 },
   card: { borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 12 },
   row: {
@@ -245,7 +245,7 @@ const s = StyleSheet.create({
     borderRadius: 10,
     padding: 13,
     alignItems: "center",
-    backgroundColor: "#087D65",
+    backgroundColor: "#FF4B1F",
   },
   buyDisabled: { opacity: 0.55 },
   buyText: { color: "#fff", fontWeight: "800" },
