@@ -264,7 +264,7 @@ test.describe("VASUDHA real-user free QA", () => {
     await page.getByPlaceholder("Admin email").fill("demo.admin@vasudha.test");
     await page.getByPlaceholder("Password").fill("WrongPassword@123");
     await page.getByText("Sign in", { exact: true }).click();
-    await expect(page.getByText("Admin control centre")).toBeVisible();
+    await expect(page.getByText("Marketplace control centre")).toBeVisible();
     await expect(page.getByText("Dashboard", { exact: true })).not.toBeVisible();
   });
 
