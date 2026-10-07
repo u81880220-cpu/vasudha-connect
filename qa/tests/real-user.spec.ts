@@ -308,7 +308,7 @@ test.describe("VASUDHA real-user free QA", () => {
     await expect(page.getByText("Notifications", { exact: true })).toBeVisible();
     await expect(page.getByText("All", { exact: true })).toBeVisible();
     await expect(page.getByText("Unread", { exact: true })).toBeVisible();
-    await expect(page.getByText("Messages", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Messages/ })).toBeVisible();
     await expect(page.getByText("Jobs", { exact: true })).toBeVisible();
   });
 
