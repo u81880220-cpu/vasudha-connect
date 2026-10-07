@@ -190,7 +190,7 @@ test.describe("VASUDHA real-user free QA", () => {
       await customerPage.getByText("Rate Professional", { exact: true }).click();
       await expect(customerPage.getByText("Rate Your Experience")).toBeVisible();
       await expect(customerPage.getByText("Submit Review", { exact: true })).toBeVisible();
-    await customerPage.screenshot({ path: "test-results/customer-review.png", fullPage: true);
+    await customerPage.screenshot({ path: "test-results/customer-review.png", fullPage: true });
 
     // Professional-side post-completion review screen must also be reachable.
     await page.goto("/jobs");
