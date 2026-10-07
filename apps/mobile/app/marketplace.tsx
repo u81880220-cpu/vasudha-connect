@@ -1,5 +1,5 @@
 import * as Location from "expo-location";
-import { useEffect, useState } from "react";
+import React,{ useEffect, useState } from "react";
 import { ActivityIndicator, Dimensions, FlatList, Modal, Platform, Pressable, SafeAreaView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
@@ -17,7 +17,15 @@ type Coords={latitude:number;longitude:number};
 
 const MAP_HEIGHT=Math.min(Math.max(Math.round(Dimensions.get("window").height*0.42),300),460);
 
-export default function Marketplace(){
+export default function Marketplace(){ return <MarketplaceErrorBoundary><MarketplaceScreen/></MarketplaceErrorBoundary>; }
+
+class MarketplaceErrorBoundary extends React.Component<any,{error:Error|null}>{
+ state={error:null};
+ static getDerivedStateFromError(error:Error){ return {error}; }
+ render(){ if(this.state.error) return <SafeAreaView style={s.safe}><View style={s.errorBox}><Text style={s.errorTitle}>Find a Pro could not open</Text><Text style={s.errorText}>{this.state.error.message}</Text><Pressable style={s.locationButton} onPress={()=>this.setState({error:null})}><Text style={s.locationButtonText}>Try again</Text></Pressable></View><AppBottomNav active="map"/></SafeAreaView>; return this.props.children; }
+}
+
+function MarketplaceScreen(){
   const[marketplaceConfig,setMarketplaceConfig]=useState<any>(null);
   const[selection,setSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:null,serviceName:null,subServiceId:null,subServiceName:null});
   const[query,setQuery]=useState("");
