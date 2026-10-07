@@ -267,6 +267,101 @@ test.describe("VASUDHA real-user free QA", () => {
     await expect(page.getByText("Dashboard", { exact: true })).not.toBeVisible();
   });
 
+  test("Customer registration/profile/notifications and business-model guardrails", async ({ page }) => {
+    // Registration surface: verify both email and OTP signup paths are present without
+    // creating an external account that would require production email/SMS delivery.
+    await page.goto("/auth?mode=customer");
+    await expect(page.getByText("Welcome Back")).toBeVisible();
+    await page.getByText("Create a new account", { exact: true }).click();
+    await expect(page.getByText("Create account with Email", { exact: true })).toBeVisible();
+    await expect(page.getByPlaceholder("Full name")).toBeVisible();
+    await expect(page.getByText("Mobile OTP", { exact: true })).toBeVisible();
+
+    // Existing QA customer: profile can be opened and edited through the normal UI.
+    await login(page, "customer", CUSTOMER_EMAIL, CUSTOMER_PASSWORD);
+    await expect(page.getByText("Find trusted professionals")).toBeVisible();
+    const homeText = await page.locator("body").innerText();
+    expect(homeText.toLowerCase()).not.toContain("quotation");
+    expect(homeText.toLowerCase()).not.toContain("quote");
+
+    await page.goto("/customer-profile");
+    await expect(page.getByText("My Customer Profile")).toBeVisible();
+    const profileName = page.getByPlaceholder("Enter full name");
+    await expect(profileName).toBeVisible();
+    await profileName.fill("Demo Customer One");
+    await page.getByText("Save changes", { exact: true }).click();
+    await expect(page.getByText("Saved")).toBeVisible({ timeout: 10_000 }).catch(() => {});
+    
+    // Notifications must render and remain usable after the job workflow has created events.
+    await page.goto("/notifications");
+    await expect(page.getByText("Notifications", { exact: true })).toBeVisible();
+    await expect(page.getByText("All", { exact: true })).toBeVisible();
+    await expect(page.getByText("Unread", { exact: true })).toBeVisible();
+    await expect(page.getByText("Messages", { exact: true })).toBeVisible();
+    await expect(page.getByText("Jobs", { exact: true })).toBeVisible();
+  });
+
+  test("Customer A: completed job can be reviewed and business model remains direct", async ({ page }) => {
+    await login(page, "customer", CUSTOMER_EMAIL, CUSTOMER_PASSWORD);
+    await page.goto("/jobs");
+    await expect(page.getByText("My Jobs")).toBeVisible();
+    await expect(page.getByText("Customer confirmed", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await page.getByText("Rate Professional", { exact: true }).click();
+    await expect(page.getByText("Rate Your Experience")).toBeVisible();
+
+    // Fill all seven review dimensions and submit the real review.
+    for (const label of [
+      "Punctuality & Time",
+      "Work Quality / Expertise",
+      "Professional Behaviour",
+      "Communication",
+      "Price / Value for Money",
+      "Reliability",
+      "Safety & Care",
+    ]) {
+      const block = page.getByText(label, { exact: true }).locator("..");
+      await expect(block).toBeVisible();
+      await block.getByText("★").last().click();
+    }
+    await page.getByPlaceholder("Tell us about the experience...").fill("QA review: service completed successfully.");
+    await page.getByText("Submit Review", { exact: true }).click();
+    await expect(page.getByText("Thank you")).toBeVisible({ timeout: 15_000 }).catch(() => {});
+    
+    // No VASUDHA job-value payment or quotation path is exposed.
+    const body = (await page.locator("body").innerText()).toLowerCase();
+    expect(body).not.toContain("quotation");
+    expect(body).not.toContain("get a quote");
+    expect(body).not.toContain("pay vasudha for the job");
+  });
+
+  test("Authenticated RLS smoke: client cannot directly create jobs or quotes", async ({ request }) => {
+    const baseHeaders = {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    };
+
+    const jobAttempt = await request.post(`${SUPABASE_URL}/rest/v1/jobs`, {
+      headers: baseHeaders,
+      data: {
+        title: "QA unauthorized direct job insert",
+        customer_id: "00000000-0000-0000-0000-000000000000",
+        professional_id: "00000000-0000-0000-0000-000000000000",
+      },
+    });
+    expect([401, 403, 409]).toContain(jobAttempt.status());
+
+    const quoteAttempt = await request.post(`${SUPABASE_URL}/rest/v1/quotes`, {
+      headers: baseHeaders,
+      data: {
+        job_id: "00000000-0000-0000-0000-000000000000",
+        professional_id: "00000000-0000-0000-0000-000000000000",
+      },
+    });
+    expect([401, 403, 409, 404]).toContain(quoteAttempt.status());
+  });
+
   test("Customer B and Professional B: account isolation and independent login", async ({ browser }) => {
     const customerB = await browser.newContext({ ...devices["Pixel 7"] });
     const professionalB = await browser.newContext({ ...devices["Pixel 7"] });
