@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { ServiceIcon } from "../src/components/ServiceIcon";
+import { KAMPRO } from "../src/components/kamproTheme";
 
 const services=["Electrician","Plumber","Carpenter","Painter"];
 
@@ -52,11 +53,11 @@ function Trust({text}:{text:string}){
 
 const s=StyleSheet.create({
  safe:{flex:1,backgroundColor:"#F7FAF8"},
- container:{flex:1,paddingHorizontal:24,paddingTop:28,paddingBottom:18,alignItems:"center",justifyContent:"center"},
+ container:{width:"100%",maxWidth:760,alignSelf:"center",paddingHorizontal:28,paddingTop:28,paddingBottom:24,alignItems:"center",justifyContent:"center"},
  title:{fontSize:28,fontWeight:"900",color:"#13201C",textAlign:"center",marginTop:24,letterSpacing:-.5},
  subtitle:{fontSize:15,fontWeight:"800",color:"#FF4B1F",marginTop:7},
  description:{fontSize:13,color:"#71807A",marginTop:4,textAlign:"center"},
- card:{width:"100%",backgroundColor:"#EAF8F4",borderRadius:22,padding:20,marginTop:24,borderWidth:1,borderColor:"#D7EEE7"},
+ card:{width:"100%",backgroundColor:"#FFF8F5",borderRadius:24,padding:22,marginTop:26,borderWidth:1,borderColor:"#FFD9CE",shadowColor:KAMPRO.navy,shadowOpacity:.05,shadowRadius:14,shadowOffset:{width:0,height:6},elevation:2},
  cardTitle:{fontSize:18,fontWeight:"900",color:"#13201C"},
  cardSub:{fontSize:12,color:"#687771",marginTop:4},
  serviceRow:{flexDirection:"row",justifyContent:"space-between",marginTop:18},
