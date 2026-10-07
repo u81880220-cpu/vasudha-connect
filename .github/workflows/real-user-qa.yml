@@ -2,8 +2,6 @@ name: Vasudha Free Real User QA
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
 concurrency:
   group: vasudha-real-user-qa
