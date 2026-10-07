@@ -39,13 +39,15 @@ jobs:
         working-directory: apps/mobile
         run: npx expo prebuild --platform android --non-interactive
 
-      - name: Assemble release APK
+      - name: Assemble release APK and AAB
         working-directory: apps/mobile/android
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease bundleRelease --no-daemon
 
-      - name: Upload release APK
+      - name: Upload Android release artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: kampro-release-apk
-          path: apps/mobile/android/app/build/outputs/apk/release/*.apk
+          name: kampro-android-release
+          path: |
+            apps/mobile/android/app/build/outputs/apk/release/*.apk
+            apps/mobile/android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
