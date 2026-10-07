@@ -205,6 +205,45 @@ test.describe("VASUDHA real-user free QA", () => {
   });
 
 
+  test("Web business-model and security guardrails: no quotation or job-payment flow", async ({ page, request }) => {
+    await login(page, "customer", CUSTOMER_EMAIL, CUSTOMER_PASSWORD);
+    await page.goto("/home");
+    const homeText = await page.locator("body").innerText();
+    expect(homeText.toLowerCase()).not.toMatch(/\\bquotation\\b|\\bquote\\b|\\bbid\\b/);
+    expect(homeText.toLowerCase()).not.toMatch(/pay.*professional|professional.*pay/);
+
+    await page.goto("/jobs");
+    await expect(page.getByText("My Jobs")).toBeVisible();
+    const jobsText = await page.locator("body").innerText();
+    expect(jobsText.toLowerCase()).not.toMatch(/\\bquotation\\b|\\bquote\\b|\\bbid\\b/);
+    expect(jobsText.toLowerCase()).not.toMatch(/vasudha.*commission|commission.*vasudha|pay.*professional|professional.*pay/);
+
+    const anonHeaders = {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+    };
+    const quoteRead = await request.get(`${SUPABASE_URL}/rest/v1/quotes?select=id&limit=1`, { headers: anonHeaders });
+    expect([401, 403]).toContain(quoteRead.status());
+
+    const quoteWrite = await request.post(`${SUPABASE_URL}/rest/v1/quotes`, {
+      headers: { ...anonHeaders, Prefer: "return=minimal" },
+      data: { customer_id: "00000000-0000-0000-0000-000000000000", professional_id: "00000000-0000-0000-0000-000000000000" },
+    });
+    expect([401, 403]).toContain(quoteWrite.status());
+  });
+
+  test("Customer invalid login stays outside the authenticated app", async ({ page }) => {
+    await page.goto("/auth?mode=customer");
+    await expect(page.getByText("Welcome Back")).toBeVisible();
+    await page.getByText("Email", { exact: true }).click();
+    await page.getByPlaceholder("Email address").fill("demo.customer1@vasudha.test");
+    await page.getByPlaceholder("Password").fill("DefinitelyWrong@123");
+    await page.getByText("Sign in with Email", { exact: true }).click();
+    await expect(page.getByText("Welcome Back")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Find trusted professionals")).not.toBeVisible();
+  });
+
   test("Admin: authorized console opens and operational tabs render", async ({ page }) => {
     await page.goto("/admin");
     await expect(page.getByText("VASUDHA CONNECT ADMIN")).toBeVisible();
