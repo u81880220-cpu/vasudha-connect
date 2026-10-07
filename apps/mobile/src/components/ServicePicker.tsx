@@ -40,15 +40,12 @@ export function ServicePicker({value,onChange,title="Choose a service",optionalS
   setServiceId(id);
   const svc=services.find(x=>x.id===id);
   const cat=categories.find(x=>x.id===svc?.category_id);
-  const general=currentSubsFor(id).find(x=>x.name.toLowerCase()==="general / any");
   if(svc){
-   if(optionalSubService && general){
-    setSubId(general.id);
-    onChange({categoryId:cat?.id||null,categoryName:cat?.name||null,serviceId:svc.id,serviceName:svc.name,legacySkillId:svc.legacy_skill_id||null,subServiceId:general.id,subServiceName:"General service"});
-   }else{
-    setSubId(null);
-    onChange({categoryId:cat?.id||null,categoryName:cat?.name||null,serviceId:svc.id,serviceName:svc.name,legacySkillId:svc.legacy_skill_id||null,subServiceId:null,subServiceName:null});
-   }
+   // A sub-service is optional on job requests. Do not silently select
+   // "General / Any" because the professional may not offer that sub-service.
+   // The selected service alone is sufficient to submit the request.
+   setSubId(null);
+   onChange({categoryId:cat?.id||null,categoryName:cat?.name||null,serviceId:svc.id,serviceName:svc.name,legacySkillId:svc.legacy_skill_id||null,subServiceId:null,subServiceName:null});
   }
  }
 
