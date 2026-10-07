@@ -60,7 +60,7 @@ function SplashView(){
 }
 
 const s=StyleSheet.create({
- safe:{flex:1,backgroundColor:"#F8FBF9"},
+ safe:{flex:1,backgroundColor:"#F7F8FA"},
  center:{flex:1,alignItems:"center",justifyContent:"center",paddingHorizontal:28},
  backgroundGlow:{position:"absolute",width:330,height:330,borderRadius:165,backgroundColor:"#FFF0EA",opacity:.72,top:"28%",alignSelf:"center"},
  logoCard:{minWidth:250,minHeight:105,paddingHorizontal:28,paddingVertical:18,borderRadius:28,backgroundColor:"#FFFFFF",alignItems:"center",justifyContent:"center",shadowColor:"#FF4B1F",shadowOpacity:.10,shadowRadius:22,shadowOffset:{width:0,height:10},elevation:6},
@@ -68,11 +68,11 @@ const s=StyleSheet.create({
  personLeft:{width:9,height:9,borderRadius:5,backgroundColor:"#FF4B1F"},
  skillLine:{width:82,height:2,backgroundColor:"#E18A2D",marginHorizontal:8},
  personRight:{width:9,height:9,borderRadius:5,backgroundColor:"#E18A2D"},
- tagline:{fontSize:20,fontWeight:"800",letterSpacing:.2,color:"#13201C",marginTop:22},
- progressTrack:{width:150,height:4,borderRadius:2,backgroundColor:"#DCE8E3",overflow:"hidden",marginTop:28},
+ tagline:{fontSize:20,fontWeight:"800",letterSpacing:.2,color:"#10233F",marginTop:22},
+ progressTrack:{width:150,height:4,borderRadius:2,backgroundColor:"#E7EAF0",overflow:"hidden",marginTop:28},
  progress:{height:"100%",borderRadius:2,backgroundColor:"#FF4B1F"},
  footer:{alignItems:"center",paddingBottom:34},
- footerText:{fontSize:12,fontWeight:"700",letterSpacing:1.2,color:"#71807A"},
+ footerText:{fontSize:12,fontWeight:"700",letterSpacing:1.2,color:"#6B7280"},
  centerLoader:{flex:1,alignItems:"center",justifyContent:"center"},
  loaderDot:{width:12,height:12,borderRadius:6,backgroundColor:"#FF4B1F"}
 });
