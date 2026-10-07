@@ -5,6 +5,7 @@ import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { useLocalSearchParams, router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { ServicePicker, ServiceSelection } from "../src/components/ServicePicker";
+import { KAMPRO } from "../src/components/kamproTheme";
 
 export default function ServiceRequest(){
  const {professionalId,serviceId,subServiceId,serviceName,subServiceName}=useLocalSearchParams<{professionalId:string;serviceId?:string;subServiceId?:string;serviceName?:string;subServiceName?:string}>();
@@ -32,4 +33,4 @@ export default function ServiceRequest(){
   <Pressable onPress={submit} disabled={busy} style={s.primary}><Text style={s.primaryText}>{busy?"Sending...":"Send Job Request"}</Text></Pressable>
  </ScrollView></SafeAreaView>;
 }
-const s=StyleSheet.create({safe:{flex:1,backgroundColor:"#fff"},container:{padding:20,paddingBottom:40},title:{fontSize:28,fontWeight:"800",color:"#10233F"},muted:{opacity:.65,marginTop:6,lineHeight:20},label:{fontWeight:"800",marginTop:20,marginBottom:7},input:{borderWidth:1,borderColor:"#CBD0D8",borderRadius:12,padding:12,minHeight:48,backgroundColor:"#fff",color:"#10233F"},large:{height:120,textAlignVertical:"top"},note:{fontSize:12,color:"#6B7280",marginTop:10,lineHeight:18},primary:{marginTop:24,borderRadius:12,padding:14,alignItems:"center",backgroundColor:"#FF4B1F",minHeight:50,justifyContent:"center"},primaryText:{color:"#fff",fontWeight:"900"}});
+const s=StyleSheet.create({safe:{flex:1,backgroundColor:KAMPRO.background},container:{width:"100%",maxWidth:900,alignSelf:"center",padding:28,paddingBottom:60},title:{fontSize:30,fontWeight:"900",color:KAMPRO.navy,letterSpacing:-.4},muted:{opacity:.65,marginTop:6,lineHeight:20},label:{fontWeight:"800",marginTop:20,marginBottom:7},input:{borderWidth:1,borderColor:KAMPRO.border,borderRadius:14,padding:12,minHeight:48,backgroundColor:"#fff",color:"#10233F"},large:{height:120,textAlignVertical:"top"},note:{fontSize:12,color:"#6B7280",marginTop:10,lineHeight:18},primary:{marginTop:24,borderRadius:12,padding:14,alignItems:"center",backgroundColor:"#FF4B1F",minHeight:50,justifyContent:"center"},primaryText:{color:"#fff",fontWeight:"900"}});
