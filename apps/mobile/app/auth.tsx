@@ -58,7 +58,7 @@ export default function AuthScreen(){
  return <SafeAreaView style={s.safe}><KeyboardAvoidingView style={s.flex} behavior={Platform.OS==="ios"?"padding":"height"}><View style={s.container}>
   <VasudhaLogo/>
   <Text style={s.heading}>Welcome Back</Text>
-  <Text style={s.sub}>{accountMode==="signup"?"Create your VASUDHA CONNECT account":"Sign in to continue"}</Text>
+  <Text style={s.sub}>{accountMode==="signup"?"Create your KAMPRO account":"Sign in to continue"}</Text>
   <View style={s.tabs}>
    <Pressable onPress={()=>setMethod("otp")} style={[s.tab,method==="otp"&&s.tabOn]}><Text style={[s.tabText,method==="otp"&&s.tabTextOn]}>Mobile OTP</Text></Pressable>
    <Pressable onPress={()=>setMethod("email")} style={[s.tab,method==="email"&&s.tabOn]}><Text style={[s.tabText,method==="email"&&s.tabTextOn]}>Email</Text></Pressable>
@@ -75,17 +75,17 @@ export default function AuthScreen(){
   <View style={s.or}><View style={s.line}/><Text style={s.orText}>or</Text><View style={s.line}/></View>
   <Pressable disabled={busy} onPress={google} style={s.google}><Text style={s.googleG}>G</Text><Text style={s.googleText}>Continue with Google</Text></Pressable>
   <Text style={s.terms}>By continuing, you agree to our{"\n"}Terms & Conditions and Privacy Policy</Text>
-  <Pressable onPress={()=>router.replace({pathname:"/select-mode",params:{mode}})}><Text style={s.switch}>{mode==="customer"?"Use VASUDHA as a Professional":"Use VASUDHA as a Customer"}</Text></Pressable>
+  <Pressable onPress={()=>router.replace({pathname:"/select-mode",params:{mode}})}><Text style={s.switch}>{mode==="customer"?"Use KAMPRO as a Professional":"Use KAMPRO as a Customer"}</Text></Pressable>
  </View></KeyboardAvoidingView></SafeAreaView>
 }
 
 const s=StyleSheet.create({
  safe:{flex:1,backgroundColor:"#fff"},flex:{flex:1},container:{flex:1,padding:22,justifyContent:"center"},
- heading:{fontSize:26,fontWeight:"900",textAlign:"center",marginTop:28,color:"#13201c"},sub:{textAlign:"center",color:"#66736e",marginTop:5,marginBottom:16},
- tabs:{flexDirection:"row",backgroundColor:"#f2f7f5",borderRadius:12,padding:3,marginBottom:14},tab:{flex:1,height:40,alignItems:"center",justifyContent:"center",borderRadius:9},tabOn:{backgroundColor:"#fff"},tabText:{fontWeight:"800",color:"#66736e"},tabTextOn:{color:"#087D65"},
- phoneRow:{flexDirection:"row",borderWidth:1,borderColor:"#cfdad6",borderRadius:12,height:52,overflow:"hidden"},code:{paddingHorizontal:12,justifyContent:"center",backgroundColor:"#f7faf9",borderRightWidth:1,borderRightColor:"#cfdad6"},phone:{flex:1,paddingHorizontal:12,fontSize:16},
- input:{height:52,borderWidth:1,borderColor:"#cfdad6",borderRadius:12,paddingHorizontal:14,fontSize:16,marginBottom:10},primary:{height:52,borderRadius:12,backgroundColor:"#087D65",alignItems:"center",justifyContent:"center",marginTop:12},primaryText:{color:"#fff",fontWeight:"900",fontSize:16},
- otpLabel:{fontSize:13,color:"#66736e",marginBottom:7},otp:{height:54,borderWidth:1,borderColor:"#cfdad6",borderRadius:12,textAlign:"center",fontSize:22,letterSpacing:8},change:{textAlign:"center",color:"#087D65",fontWeight:"800",marginTop:12},create:{textAlign:"center",color:"#087D65",fontWeight:"800",marginTop:14},
- or:{flexDirection:"row",alignItems:"center",gap:10,marginVertical:18},line:{height:1,backgroundColor:"#e2e8e5",flex:1},orText:{color:"#8a9691"},google:{height:50,borderWidth:1,borderColor:"#cfdad6",borderRadius:12,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:12},googleG:{fontSize:20,fontWeight:"900"},googleText:{fontWeight:"700"},
- terms:{textAlign:"center",fontSize:11,color:"#7b8782",lineHeight:17,marginTop:22},switch:{textAlign:"center",color:"#087D65",fontWeight:"800",marginTop:14}
+ heading:{fontSize:26,fontWeight:"900",textAlign:"center",marginTop:28,color:"#10233F"},sub:{textAlign:"center",color:"#6B7280",marginTop:5,marginBottom:16},
+ tabs:{flexDirection:"row",backgroundColor:"#F7F8FA",borderRadius:12,padding:3,marginBottom:14},tab:{flex:1,height:40,alignItems:"center",justifyContent:"center",borderRadius:9},tabOn:{backgroundColor:"#fff"},tabText:{fontWeight:"800",color:"#6B7280"},tabTextOn:{color:"#FF4B1F"},
+ phoneRow:{flexDirection:"row",borderWidth:1,borderColor:"#CBD0D8",borderRadius:12,height:52,overflow:"hidden"},code:{paddingHorizontal:12,justifyContent:"center",backgroundColor:"#f7faf9",borderRightWidth:1,borderRightColor:"#CBD0D8"},phone:{flex:1,paddingHorizontal:12,fontSize:16},
+ input:{height:52,borderWidth:1,borderColor:"#CBD0D8",borderRadius:12,paddingHorizontal:14,fontSize:16,marginBottom:10},primary:{height:52,borderRadius:12,backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",marginTop:12},primaryText:{color:"#fff",fontWeight:"900",fontSize:16},
+ otpLabel:{fontSize:13,color:"#6B7280",marginBottom:7},otp:{height:54,borderWidth:1,borderColor:"#CBD0D8",borderRadius:12,textAlign:"center",fontSize:22,letterSpacing:8},change:{textAlign:"center",color:"#FF4B1F",fontWeight:"800",marginTop:12},create:{textAlign:"center",color:"#FF4B1F",fontWeight:"800",marginTop:14},
+ or:{flexDirection:"row",alignItems:"center",gap:10,marginVertical:18},line:{height:1,backgroundColor:"#E7EAF0",flex:1},orText:{color:"#8a9691"},google:{height:50,borderWidth:1,borderColor:"#CBD0D8",borderRadius:12,flexDirection:"row",alignItems:"center",justifyContent:"center",gap:12},googleG:{fontSize:20,fontWeight:"900"},googleText:{fontWeight:"700"},
+ terms:{textAlign:"center",fontSize:11,color:"#7b8782",lineHeight:17,marginTop:22},switch:{textAlign:"center",color:"#FF4B1F",fontWeight:"800",marginTop:14}
 });
