@@ -63,6 +63,18 @@ jobs:
         working-directory: apps/mobile/android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
+      - name: Install Maestro CLI
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+          if [ -x "$HOME/.maestro/bin/maestro" ]; then
+            "$HOME/.maestro/bin/maestro" --version
+          else
+            echo "Maestro binary was not installed at $HOME/.maestro/bin/maestro"
+            find "$HOME/.maestro" -maxdepth 4 -type f -name "maestro" -print || true
+            exit 1
+          fi
+
       - name: Start Android emulator and run Maestro UI QA
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -74,9 +86,6 @@ jobs:
           disable-animations: true
           script: |
             adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
-            curl -fsSL "https://get.maestro.mobile.dev" | bash
-            echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-            export PATH="$HOME/.maestro/bin:$PATH"
             maestro --version
             mkdir -p android-maestro-results
             maestro test --format junit --output android-maestro-results/report.xml --test-output-dir android-maestro-results .maestro
