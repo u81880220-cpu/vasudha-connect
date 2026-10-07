@@ -10,7 +10,7 @@ export default function SelectMode(){
    </Pressable>
 
    <VasudhaLogo/>
-   <Text style={s.title}>How do you want to use{"\n"}VASUDHA CONNECT?</Text>
+   <Text style={s.title}>How do you want to use{"\n"}KAMPRO?</Text>
    <Text style={s.sub}>Choose your role to get started.</Text>
 
    <Pressable style={s.card} onPress={()=>router.replace({pathname:"/auth",params:{mode:"customer"}})}>
@@ -43,14 +43,14 @@ const s=StyleSheet.create({
  back:{fontSize:34,lineHeight:38,color:"#13201C"},
  title:{fontSize:23,fontWeight:"900",textAlign:"center",color:"#13201C",marginTop:22,lineHeight:29},
  sub:{fontSize:13,color:"#71807A",marginTop:7,marginBottom:25},
- card:{width:"100%",minHeight:116,borderWidth:1,borderColor:"#DCE8E3",borderRadius:18,backgroundColor:"#FFFFFF",padding:16,marginBottom:14,flexDirection:"row",alignItems:"center",shadowColor:"#087D65",shadowOpacity:.04,shadowRadius:8,shadowOffset:{width:0,height:3},elevation:2},
+ card:{width:"100%",minHeight:116,borderWidth:1,borderColor:"#DCE8E3",borderRadius:18,backgroundColor:"#FFFFFF",padding:16,marginBottom:14,flexDirection:"row",alignItems:"center",shadowColor:"#FF4B1F",shadowOpacity:.04,shadowRadius:8,shadowOffset:{width:0,height:3},elevation:2},
  iconBox:{width:70,height:70,borderRadius:18,alignItems:"center",justifyContent:"center"},
- customerBox:{backgroundColor:"#E7F7F2"},proBox:{backgroundColor:"#FFF1E2"},
- icon:{fontSize:34,fontWeight:"900",color:"#087D65"},
+ customerBox:{backgroundColor:"#FFF0EA"},proBox:{backgroundColor:"#FFF1E2"},
+ icon:{fontSize:34,fontWeight:"900",color:"#FF4B1F"},
  copy:{flex:1,marginLeft:15,paddingRight:8},
  cardTitle:{fontSize:17,fontWeight:"900",color:"#13201C"},
  cardSub:{fontSize:12,color:"#71807A",lineHeight:18,marginTop:5},
- arrow:{fontSize:30,color:"#087D65",fontWeight:"400"},
+ arrow:{fontSize:30,color:"#FF4B1F",fontWeight:"400"},
  footer:{flex:1,justifyContent:"flex-end",paddingBottom:18},
  footerText:{fontSize:11,color:"#8A9691"}
 });
