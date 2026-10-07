@@ -3,6 +3,7 @@ import { Alert, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text,
 import { Link } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { createConnectionPayment } from "../src/services/payment";
+import { KAMPRO } from "../src/components/kamproTheme";
 
 type P = {
   code: string;
@@ -220,9 +221,9 @@ export default function ConnectionPackages() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1 },
-  container: { padding: 20, paddingBottom: 50 },
-  title: { fontSize: 28, fontWeight: "800" },
+  safe: { flex: 1, backgroundColor: KAMPRO.background },
+  container: { width: "100%", maxWidth: 900, alignSelf: "center", padding: 28, paddingBottom: 60 },
+  title: { fontSize: 30, fontWeight: "900", color: KAMPRO.navy },
   sub: { marginTop: 5, opacity: 0.65, marginBottom: 18 },
   balance: { borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 12 },
   balanceValue: { fontSize: 30, fontWeight: "800", marginTop: 4 },
@@ -230,7 +231,7 @@ const s = StyleSheet.create({
   notice: { borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 16 },
   testBadge: { fontSize: 11, fontWeight: "900", color: "#FF4B1F", marginBottom: 6 },
   noticeTitle: { fontWeight: "800", marginBottom: 4 },
-  card: { borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 12 },
+  card: { borderWidth: 1, borderColor: KAMPRO.border, borderRadius: 20, padding: 20, marginBottom: 14, backgroundColor: KAMPRO.surface, shadowColor: KAMPRO.navy, shadowOpacity: .04, shadowRadius: 10, shadowOffset: {width:0,height:4}, elevation:1 },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
