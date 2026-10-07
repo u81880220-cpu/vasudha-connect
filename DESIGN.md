@@ -31,6 +31,19 @@ Do NOT add:
 ## Core user journey
 Find → Connect → Chat/Call → Request Work → Accept → Navigate → Work → Complete → Review
 
+## Frozen primary navigation
+The existing KAMPRO primary navigation is **exactly four options** and must not be redesigned into a different information architecture.
+
+### Customer / Professional primary navigation
+1. **Home** — `/home`
+2. **Find a Pro / Marketplace** — `/marketplace`
+3. **Connections / Chat** — `/connections`
+4. **Profile** — `/profile`
+
+Chat/Connections is intentionally one of the four primary navigation destinations. **Do not create a separate Jobs tab or replace Chat/Connections with Jobs.** Jobs remain accessible through the existing screens and workflow.
+
+Desktop and mobile may present these four destinations differently (for example, bottom navigation on mobile and header/sidebar navigation on desktop), but the information architecture and routes remain unchanged.
+
 ## Design direction
 Create a consistent, professional Indian service marketplace experience for desktop and mobile.
 
@@ -66,27 +79,26 @@ Create a consistent, professional Indian service marketplace experience for desk
 4. Home
 5. Marketplace / Find a Pro
 6. Professional public profile
-7. Connections
-8. Chat
-9. Service request
-10. Jobs
-11. Job details
-12. Job tracking
-13. Customer dashboard
-14. Professional dashboard
-15. Customer profile
-16. Professional profile
-17. Notifications
-18. Review
-19. Professional verification
-20. Professional subscription
-21. Connection packages
-22. Earnings
-23. Complaints
-24. Admin console
-25. Terms
-26. Privacy
-27. Delete account
+7. Connections / Chat
+8. Service request
+9. Jobs
+10. Job details
+11. Job tracking
+12. Customer dashboard
+13. Professional dashboard
+14. Customer profile
+15. Professional profile
+16. Notifications
+17. Review
+18. Professional verification
+19. Professional subscription
+20. Connection packages
+21. Earnings
+22. Complaints
+23. Admin console
+24. Terms
+25. Privacy
+26. Delete account
 
 ## Responsive requirement
 Every design should have:
@@ -95,6 +107,7 @@ Every design should have:
 - Clear touch targets
 - Consistent header/navigation
 - Consistent cards, buttons, forms and status indicators
+- The same four primary navigation destinations
 
 ## Implementation rule
 Stitch designs are references for the existing React/Expo implementation. The production application remains the GitHub codebase. Implement the visual system without replacing working business logic.
