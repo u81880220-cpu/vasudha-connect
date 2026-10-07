@@ -68,7 +68,7 @@ export default function CustomerProfile() {
           <View style={s.trustHead}>
             <View>
               <Text style={s.trustTitle}>Customer Trust</Text>
-              <Text style={s.trustCaption}>Your reputation on VASUDHA CONNECT</Text>
+              <Text style={s.trustCaption}>Your reputation on KAMPRO</Text>
             </View>
             <Text style={s.score}>{Math.round(score)}</Text>
           </View>
@@ -107,24 +107,24 @@ const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: "#fff" },
   c: { padding: 18, paddingBottom: 96 },
   top: { height: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  back: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#f2f7f5", alignItems: "center", justifyContent: "center" },
-  backText: { fontSize: 30, color: "#13201c", marginTop: -3 },
-  more: { fontSize: 26, color: "#087D65" },
-  t: { fontSize: 28, fontWeight: "900", color: "#13201c", marginTop: 18 },
-  sub: { color: "#66736e", lineHeight: 20, marginTop: 6 },
-  muted: { color: "#66736e", marginTop: 10 },
-  trust: { marginTop: 18, borderWidth: 1, borderColor: "#bcd9d0", borderRadius: 16, padding: 16, backgroundColor: "#f2f8f6" },
+  back: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#F7F8FA", alignItems: "center", justifyContent: "center" },
+  backText: { fontSize: 30, color: "#10233F", marginTop: -3 },
+  more: { fontSize: 26, color: "#FF4B1F" },
+  t: { fontSize: 28, fontWeight: "900", color: "#10233F", marginTop: 18 },
+  sub: { color: "#6B7280", lineHeight: 20, marginTop: 6 },
+  muted: { color: "#6B7280", marginTop: 10 },
+  trust: { marginTop: 18, borderWidth: 1, borderColor: "#FFD2C6", borderRadius: 16, padding: 16, backgroundColor: "#FFF8F5" },
   trustHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  trustTitle: { fontWeight: "900", fontSize: 17, color: "#13201c" },
-  trustCaption: { fontSize: 12, color: "#66736e", marginTop: 3 },
-  score: { fontSize: 30, fontWeight: "900", color: "#087D65" },
-  trustBar: { height: 7, borderRadius: 4, backgroundColor: "#dce9e5", overflow: "hidden", marginTop: 14 },
-  trustFill: { height: 7, borderRadius: 4, backgroundColor: "#087D65" },
-  trustMeta: { fontSize: 12, color: "#66736e", marginTop: 10 },
-  section: { fontSize: 18, fontWeight: "900", color: "#13201c", marginTop: 24, marginBottom: 2 },
+  trustTitle: { fontWeight: "900", fontSize: 17, color: "#10233F" },
+  trustCaption: { fontSize: 12, color: "#6B7280", marginTop: 3 },
+  score: { fontSize: 30, fontWeight: "900", color: "#FF4B1F" },
+  trustBar: { height: 7, borderRadius: 4, backgroundColor: "#E7EAF0", overflow: "hidden", marginTop: 14 },
+  trustFill: { height: 7, borderRadius: 4, backgroundColor: "#FF4B1F" },
+  trustMeta: { fontSize: 12, color: "#6B7280", marginTop: 10 },
+  section: { fontSize: 18, fontWeight: "900", color: "#10233F", marginTop: 24, marginBottom: 2 },
   l: { fontWeight: "800", color: "#46534f", marginTop: 14, textTransform: "capitalize" },
-  i: { borderWidth: 1, borderColor: "#cfdad6", borderRadius: 12, padding: 12, marginTop: 6, minHeight: 48, backgroundColor: "#fff", color: "#13201c" },
+  i: { borderWidth: 1, borderColor: "#E7EAF0", borderRadius: 12, padding: 12, marginTop: 6, minHeight: 48, backgroundColor: "#fff", color: "#10233F" },
   bio: { minHeight: 100, textAlignVertical: "top" },
-  p: { marginTop: 24, backgroundColor: "#087D65", padding: 15, borderRadius: 12, alignItems: "center", justifyContent: "center", minHeight: 50 },
+  p: { marginTop: 24, backgroundColor: "#FF4B1F", padding: 15, borderRadius: 12, alignItems: "center", justifyContent: "center", minHeight: 50 },
   pt: { color: "#fff", fontWeight: "900" }
 });
