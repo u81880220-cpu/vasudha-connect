@@ -209,13 +209,13 @@ test.describe("VASUDHA real-user free QA", () => {
     await login(page, "customer", CUSTOMER_EMAIL, CUSTOMER_PASSWORD);
     await page.goto("/home");
     const homeText = await page.locator("body").innerText();
-    expect(homeText.toLowerCase()).not.toMatch(/\\bquotation\\b|\\bquote\\b|\\bbid\\b/);
+    expect(homeText.toLowerCase()).not.toMatch(/\bquotation\b|\bquote\b|\bbid\b/);
     expect(homeText.toLowerCase()).not.toMatch(/pay.*professional|professional.*pay/);
 
     await page.goto("/jobs");
     await expect(page.getByText("My Jobs")).toBeVisible();
     const jobsText = await page.locator("body").innerText();
-    expect(jobsText.toLowerCase()).not.toMatch(/\\bquotation\\b|\\bquote\\b|\\bbid\\b/);
+    expect(jobsText.toLowerCase()).not.toMatch(/\bquotation\b|\bquote\b|\bbid\b/);
     expect(jobsText.toLowerCase()).not.toMatch(/vasudha.*commission|commission.*vasudha|pay.*professional|professional.*pay/);
 
     const anonHeaders = {
