@@ -9,7 +9,7 @@ VASUDHA CONNECT is a single mobile marketplace app connecting customers with tru
 - Nearby skill discovery
 - Professional verification and profiles
 - Connection packages
-- Quotes, chat and hiring
+- Direct connections, chat and hiring (no quotation/bidding flow)
 - Job tracking
 - Reviews and VASUDHA Trust
 - Professional subscriptions
@@ -35,3 +35,8 @@ This repository is the fresh VASUDHA CONNECT codebase. VASUDHA CARE is intention
 
 ## Deployment
 - Vercel production deployment trigger verified for the main branch.
+
+## Current QA baseline
+- Production web deployment is verified on Vercel.
+- Real-user Playwright QA covers customer discovery, connection unlock, chat, direct job request, professional acceptance/tracking, customer completion, reviews, admin access controls, RLS guardrails and account isolation.
+- Job-value quotation/bidding is intentionally disabled at the database boundary.
