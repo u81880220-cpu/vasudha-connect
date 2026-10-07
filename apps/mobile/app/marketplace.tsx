@@ -108,7 +108,7 @@ function MarketplaceScreen(){
       <View style={[s.mapWrap,{height:MAP_HEIGHT}]}>
         {userCoords && (Platform.OS==="web"
           ? <WebMap userCoords={userCoords} items={visibleItems} selection={selection} selectedMapPro={selectedMapPro} onSelect={setSelectedMapPro}/>
-          : <NativeMap userCoords={userCoords} items={visibleItems}/>
+          : <NativeMap userCoords={userCoords} items={visibleItems} selection={selection}/>
         )}
         {!userCoords&&!loading&&<View style={s.locationEmpty}><Text style={s.locationTitle}>Location required</Text><Text>Allow location to see nearby professionals on the map.</Text><Pressable style={s.locationButton} onPress={requestLocation}><Text style={s.locationButtonText}>Enable location</Text></Pressable></View>}
         {loading&&<View style={s.loadingOverlay}><ActivityIndicator size="large"/><Text style={s.loadingText}>Finding nearby professionals…</Text></View>}
@@ -179,7 +179,7 @@ function WebMap({userCoords,items,selection,selectedMapPro,onSelect}:{userCoords
   </View>;
 }
 
-function NativeMap({userCoords,items}:{userCoords:Coords;items:Professional[]}) {
+function NativeMap({userCoords,items,selection}:{userCoords:Coords;items:Professional[];selection:ServiceSelection}) {
   // react-native-maps is intentionally required only on native; importing it at module scope crashes Expo Web.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const Maps=require("react-native-maps");
@@ -189,7 +189,7 @@ function NativeMap({userCoords,items}:{userCoords:Coords;items:Professional[]}) 
   return <MapView style={s.map} initialRegion={{...userCoords,latitudeDelta:0.12,longitudeDelta:0.12}} showsUserLocation showsMyLocationButton>
     {items.map(worker=><Marker key={worker.professional_id} coordinate={{latitude:worker.latitude,longitude:worker.longitude}} title={worker.display_name} description={`${worker.headline||"Verified professional"} • ${worker.distance_km} km away`}>
       <View style={s.marker}><Text style={s.markerText}>{worker.display_name.slice(0,1).toUpperCase()}</Text></View>
-      <Callout onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:worker.professional_id,subServiceId:"",serviceId:"",serviceName:"",subServiceName:""}})}>
+      <Callout onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:worker.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}>
         <View style={s.callout}><Text style={s.calloutName}>{worker.display_name}</Text><Text>{worker.headline||"Verified professional"}</Text><Text>{worker.distance_km} km • Trust {Math.round(worker.trust_score)}/100</Text><Text style={s.calloutLink}>View profile</Text></View>
       </Callout>
     </Marker>)}
