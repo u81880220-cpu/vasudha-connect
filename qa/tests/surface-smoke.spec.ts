@@ -78,14 +78,13 @@ test.describe("VASUDHA surface smoke", () => {
       await expect(page.getByText(tab, { exact: true }).first()).toBeVisible();
     }
 
-    await page.getByText("Sign out", { exact: true }).click();
-    await expect(page.getByText("Admin Console", { exact: true })).toBeVisible();
-    await page.goto("/admin");
-    await expect(page.getByPlaceholder("Admin email")).toBeVisible();
-    await page.getByPlaceholder("Admin email").fill(ADMIN_EMAIL);
-    await page.getByPlaceholder("Password").fill("WrongPassword@123");
-    await page.getByText("Sign in", { exact: true }).click();
-    await expect(page.getByText("Marketplace control centre")).toBeVisible();
-    await expect(page.getByText("Dashboard", { exact: true })).not.toBeVisible();
+    const badLoginPage = await page.context().browser()!.newPage();
+    await badLoginPage.goto("/admin");
+    await expect(badLoginPage.getByText("Admin Console", { exact: true })).toBeVisible();
+    await badLoginPage.getByPlaceholder("Admin email").fill(ADMIN_EMAIL);
+    await badLoginPage.getByPlaceholder("Password").fill("WrongPassword@123");
+    await badLoginPage.getByText("Sign in to Admin", { exact: true }).click();
+    await expect(badLoginPage.getByText("Authorized administrators only.")).toBeVisible();
+    await expect(badLoginPage.getByText("Dashboard", { exact: true })).not.toBeVisible();
   });
 });
