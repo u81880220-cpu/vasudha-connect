@@ -84,7 +84,7 @@ test.describe("VASUDHA real-user free QA", () => {
     await page.screenshot({ path: "test-results/customer-home.png", fullPage: true });
 
     await page.getByRole("button", { name: "Search for services" }).click();
-    await expect(page.getByText("Find Skills Around You").first()).toBeVisible();
+    await expect(page.getByPlaceholder("Search a Pro or skill")).toBeVisible();
     await expect(page.getByText("Nearby professionals", { exact: true })).toBeVisible();
 
     await chooseService(page, "AC Technician");
