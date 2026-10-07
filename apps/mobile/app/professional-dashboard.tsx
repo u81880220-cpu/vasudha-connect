@@ -5,6 +5,7 @@ import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { AppBottomNav } from "../src/components/AppBottomNav";
 import { supabase } from "../src/lib/supabase";
 import { useAuth } from "../src/auth/AuthProvider";
+import { KamproPage, KamproHeader, KamproCard, KamproPrimary, KamproSecondary, KamproSection } from "../src/components/KamproUI";
 
 type DashboardProfile={verification_status?:string|null;is_available?:boolean|null;trust_score?:number|null;completion_rate?:number|null};
 
@@ -23,8 +24,7 @@ export default function ProfessionalDashboard(){
   const firstError=results.find(x=>x.error)?.error;if(firstError){setError(firstError.message);Alert.alert("Unable to load dashboard",firstError.message);}
   setProfile(results[0].data);setConnections(results[1].data||[]);setActiveJob(results[2].data?.[0]||null);setRequests((results[3].data||[]).filter((x:any)=>x.status==="requested"));setLoading(false);
  }
- return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
-  <VasudhaLogo compact/><Text style={s.title}>Professional Dashboard</Text><Text style={s.subtitle}>Manage your KAMPRO profile and customer connections</Text>
+ return <KamproPage><KamproHeader title="Professional Dashboard" subtitle="Manage your KAMPRO profile and customer connections"/>
   <Pressable onPress={()=>router.push("/professional-onboarding")} style={s.profileBtn}><Text style={s.profileText}>Complete / Continue Registration</Text></Pressable>
   <Pressable onPress={()=>router.push("/professional-subscription")} style={s.primary}><Text style={s.primaryText}>Manage Professional Subscription</Text></Pressable>
   <Pressable onPress={()=>router.push("/connections")} style={s.secondary}><Text>My Customer Connections</Text></Pressable>{activeJob?<Pressable onPress={()=>router.push({pathname:"/job-tracking",params:{jobId:activeJob.id}})} style={s.primary}><Text style={s.primaryText}>Open Current Job · {activeJob.status}</Text></Pressable>:null}
@@ -36,6 +36,6 @@ export default function ProfessionalDashboard(){
    <Text style={s.section}>Quick actions</Text>
    <View style={s.grid}><Pressable onPress={()=>router.push("/professional-verification")} style={s.action}><Text style={s.actionIcon}>✓</Text><Text>Verification</Text></Pressable><Pressable onPress={()=>router.push("/professional-profile")} style={s.action}><Text style={s.actionIcon}>⌂</Text><Text>Services & area</Text></Pressable></View>
   </>}
- </ScrollView><AppBottomNav/></SafeAreaView>;
+ </KamproPage><AppBottomNav/>;
 }
 const s=StyleSheet.create({safe:{flex:1,backgroundColor:"#fff"},container:{padding:20,paddingBottom:104},title:{fontSize:28,fontWeight:"800",color:"#10233F"},subtitle:{opacity:.6,marginTop:5,lineHeight:19},stats:{flexDirection:"row",gap:10,marginTop:20},stat:{flex:1,borderWidth:1,borderColor:"#E7EAF0",borderRadius:14,padding:14,alignItems:"center",minHeight:78},num:{fontSize:22,fontWeight:"800",color:"#FF4B1F"},card:{borderWidth:1,borderColor:"#E7EAF0",borderRadius:16,padding:16,marginTop:12},cardTitle:{fontSize:18,fontWeight:"800"},step:{lineHeight:21,marginTop:7},muted:{opacity:.6,marginTop:8,lineHeight:19},primary:{marginTop:12,borderRadius:12,padding:13,alignItems:"center",backgroundColor:"#FF4B1F",minHeight:46,justifyContent:"center"},primaryText:{color:"#fff",fontWeight:"800"},profileBtn:{marginTop:14,borderWidth:1,borderColor:"#CBD0D8",borderRadius:12,padding:12,alignItems:"center",minHeight:44,justifyContent:"center"},profileText:{fontWeight:"800"},secondary:{marginTop:10,borderWidth:1,borderColor:"#CBD0D8",borderRadius:12,padding:12,minHeight:44,alignItems:"center",justifyContent:"center"},section:{fontSize:21,fontWeight:"800",marginTop:25,color:"#10233F"},grid:{flexDirection:"row",gap:10,marginTop:12},action:{flex:1,borderWidth:1,borderColor:"#E7EAF0",borderRadius:16,padding:16,alignItems:"center"},actionIcon:{fontSize:22,color:"#FF4B1F",fontWeight:"900",marginBottom:5},state:{alignItems:"center",paddingVertical:40},errorTitle:{fontWeight:"800",fontSize:17,color:"#b42318"}});
