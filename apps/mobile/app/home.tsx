@@ -44,11 +44,11 @@ export default function HomeScreen(){
   try{await signOut();router.replace("/auth")}
   catch(e:any){Alert.alert("Sign out failed",e?.message||"Please try again.")}
  }
- return <KamproPage><View style={s.top}><VasudhaLogo/><Pressable accessibilityRole="button" accessibilityLabel="Notifications" onPress={()=>router.push("/notifications")} style={s.bell}><Text style={s.bellText}>🔔</Text></Pressable></View>
+ return <><KamproPage><View style={s.top}><VasudhaLogo/><Pressable accessibilityRole="button" accessibilityLabel="Notifications" onPress={()=>router.push("/notifications")} style={s.bell}><Text style={s.bellText}>🔔</Text></Pressable></View>
   {customer?<CustomerHome/>:<ProfessionalHome/>}
   <Pressable accessibilityRole="button" disabled={switching} onPress={toggleMode} style={[s.switch,switching&&s.disabled]}><Text style={s.switchText}>{switching?"Switching…":customer?"Switch to Professional mode":"Switch to Customer mode"}</Text><Text style={s.arrow}>›</Text></Pressable>
   <Pressable accessibilityRole="button" onPress={logout} style={s.signout}><Text>Sign out</Text></Pressable>
- </KamproPage><AppBottomNav/>
+ </KamproPage><AppBottomNav/></>
 }
 
 function CustomerHome(){
