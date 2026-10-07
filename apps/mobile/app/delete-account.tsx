@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { useAuth } from "../src/auth/AuthProvider";
 import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
+import { KAMPRO } from "../src/components/kamproTheme";
 export default function DeleteAccount(){
  const{session,signOut}=useAuth();const[busy,setBusy]=useState(false);
  async function remove(){if(!session)return;setBusy(true);const{error}=await supabase.functions.invoke("delete-account",{body:{}});if(error){setBusy(false);Alert.alert("Unable to delete account",error.message);return;}await signOut();setBusy(false);router.replace("/auth");}
