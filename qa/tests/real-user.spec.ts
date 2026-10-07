@@ -316,7 +316,7 @@ test.describe("VASUDHA real-user free QA", () => {
     await login(page, "customer", CUSTOMER_EMAIL, CUSTOMER_PASSWORD);
     await page.goto("/jobs");
     await expect(page.getByText("My Jobs")).toBeVisible();
-    await expect(page.getByText("Customer confirmed", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Customer confirmed", { exact: true }).first()).toBeVisible({ timeout: 20_000 });
     await page.getByText("Rate Professional", { exact: true }).click();
     await expect(page.getByText("Rate Your Experience")).toBeVisible();
 
