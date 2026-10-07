@@ -68,7 +68,7 @@ export default function BasicProfile() {
         <Text style={s.hint}>Your number is kept private and is shared only when the job flow permits it.</Text>
 
         <Pressable disabled={busy} onPress={save} style={s.primary}>
-          <Text style={s.primaryText}>{busy ? "Saving…" : "Continue to VASUDHA"}</Text>
+          <Text style={s.primaryText}>{busy ? "Saving…" : "Continue to KAMPRO"}</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -78,11 +78,11 @@ export default function BasicProfile() {
 const s = StyleSheet.create({
   safe:{flex:1,backgroundColor:"#fff"},
   c:{flex:1,padding:22,justifyContent:"center"},
-  title:{fontSize:28,fontWeight:"900",color:"#13201c",marginTop:28},
-  sub:{color:"#66736e",lineHeight:20,marginTop:7,marginBottom:20},
+  title:{fontSize:28,fontWeight:"900",color:"#10233F",marginTop:28},
+  sub:{color:"#6B7280",lineHeight:20,marginTop:7,marginBottom:20},
   label:{fontWeight:"800",color:"#46534f",marginTop:14,marginBottom:7},
-  input:{height:52,borderWidth:1,borderColor:"#cfdad6",borderRadius:12,paddingHorizontal:14,fontSize:16,color:"#13201c"},
-  hint:{fontSize:12,color:"#66736e",lineHeight:17,marginTop:7},
-  primary:{height:52,borderRadius:12,backgroundColor:"#087D65",alignItems:"center",justifyContent:"center",marginTop:26},
+  input:{height:52,borderWidth:1,borderColor:"#CBD0D8",borderRadius:12,paddingHorizontal:14,fontSize:16,color:"#10233F"},
+  hint:{fontSize:12,color:"#6B7280",lineHeight:17,marginTop:7},
+  primary:{height:52,borderRadius:12,backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",marginTop:26},
   primaryText:{color:"#fff",fontWeight:"900",fontSize:16},
 });
