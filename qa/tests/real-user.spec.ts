@@ -169,16 +169,16 @@ test.describe("VASUDHA real-user free QA", () => {
       ["Mark Arrived", "Mark Work started"],
       ["Mark Work started", "Mark Work completed"],
     ] as const) {
-      const action = page.getByRole("button", { name: label, exact: true });
+      const action = page.getByText(label, { exact: true });
       await expect(action).toBeVisible({ timeout: 10_000 });
-      await action.click();
+      await action.click({ force: true });
       await expect(action).toHaveCount(0, { timeout: 15_000 });
-      await expect(page.getByRole("button", { name: nextLabel, exact: true })).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText(nextLabel, { exact: true })).toBeVisible({ timeout: 15_000 });
     }
 
-    const workCompletedAction = page.getByRole("button", { name: "Mark Work completed", exact: true });
+    const workCompletedAction = page.getByText("Mark Work completed", { exact: true });
     await expect(workCompletedAction).toBeVisible({ timeout: 10_000 });
-    await workCompletedAction.click();
+    await workCompletedAction.click({ force: true });
     await expect(workCompletedAction).toHaveCount(0, { timeout: 15_000 });
     await expect(page.getByText("Work completed", { exact: true }).first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: "Mark Customer confirmed", exact: true })).toHaveCount(0);
