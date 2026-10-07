@@ -17,7 +17,10 @@ export default function ProfessionalVerification() {
   const [busy, setBusy] = useState(false);
   const [docs, setDocs] = useState<any[]>([]);
 
-  useEffect(() => {\n    if (!loading && session && mode !== "professional") router.replace("/home");\n    if (session && mode === "professional") load();\n  }, [session, loading, mode]);
+  useEffect(() => {
+    if (!loading && session && mode !== "professional") router.replace("/home");
+    if (session && mode === "professional") load();
+  }, [session, loading, mode]);
 
   async function load() {
     if (!session || mode !== "professional") return;
