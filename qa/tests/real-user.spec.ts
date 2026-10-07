@@ -290,7 +290,7 @@ test.describe("VASUDHA real-user free QA", () => {
     await expect(profileName).toBeVisible();
     await profileName.fill("Demo Customer One");
     await page.getByText("Save changes", { exact: true }).click();
-    await expect(page.getByText("Saved")).toBeVisible({ timeout: 10_000 }).catch(() => {});
+    await page.waitForTimeout(500);
     
     // Notifications must render and remain usable after the job workflow has created events.
     await page.goto("/notifications");
@@ -325,7 +325,7 @@ test.describe("VASUDHA real-user free QA", () => {
     }
     await page.getByPlaceholder("Tell us about the experience...").fill("QA review: service completed successfully.");
     await page.getByText("Submit Review", { exact: true }).click();
-    await expect(page.getByText("Thank you")).toBeVisible({ timeout: 15_000 }).catch(() => {});
+    await page.waitForTimeout(1000);
     
     // No VASUDHA job-value payment or quotation path is exposed.
     const body = (await page.locator("body").innerText()).toLowerCase();
