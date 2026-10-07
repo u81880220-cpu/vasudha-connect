@@ -5,6 +5,7 @@ import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { useAuth } from "../src/auth/AuthProvider";
 import { supabase } from "../src/lib/supabase";
 import JobLocationMap from "../src/components/JobLocationMap";
+import { KamproPage, KamproHeader, KamproCard } from "../src/components/KamproUI";
 
 export default function JobDetails(){
  const {jobId}=useLocalSearchParams<{jobId:string}>();const{mode}=useAuth();const[job,setJob]=useState<any>(null);const[privateData,setPrivateData]=useState<any>({});const[loading,setLoading]=useState(true);
@@ -31,9 +32,8 @@ export default function JobDetails(){
  async function cancelJob(){
   Alert.alert("Cancel this job?","Cancellation is allowed before work starts. If work has already started, use Report a Problem instead.",[{text:"Keep Job",style:"cancel"},{text:"Cancel Job",style:"destructive",onPress:async()=>{const{error}=await supabase.rpc("cancel_job",{p_job_id:job.id,p_reason:"Cancelled by participant"});if(error)Alert.alert("Unable to cancel",error.message);else{Alert.alert("Job cancelled","The other participant has been notified.",[{text:"OK",onPress:load}]);}}}]);
  }
- return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.c}>
-   <View style={s.top}><Pressable onPress={()=>router.back()} style={s.back}><Text style={s.backText}>‹</Text></Pressable><VasudhaLogo compact/><View style={{width:24}}/></View>
-   <Text style={s.title}>Job Details</Text>
+ return <KamproPage>
+   <KamproHeader title="Job Details" back onBack={()=>router.back()}/>
    {loading?<View style={s.state}><ActivityIndicator color="#FF4B1F"/><Text style={s.muted}>Loading job…</Text></View>:!job?<Text style={s.muted}>Job not found.</Text>:<>
     <View style={s.card}><Text style={s.name}>{job.title||"Service job"}</Text><Text style={s.badge}>{job.status||"In Progress"}</Text><Text style={s.label}>{mode==="professional"?"Customer":"Professional"}</Text><Text style={s.value}>{privateData?.customer_name||privateData?.professional_name||"Connected participant"}</Text><Text style={s.label}>Job location</Text><Text style={s.value}>{privateData?.location_text||"Location will be available after the job is accepted."}</Text></View>
     <JobLocationMap latitude={privateData?.latitude} longitude={privateData?.longitude} label={privateData?.location_text}/>
@@ -42,7 +42,7 @@ export default function JobDetails(){
     {job.status==="cancelled"&&job.cancellation_reason?<View style={s.cancelNote}><Text style={s.cancelNoteTitle}>Cancellation note</Text><Text style={s.cancelNoteText}>{job.cancellation_reason}</Text></View>:null}
     <Pressable style={s.track} onPress={()=>router.push({pathname:"/job-tracking",params:{jobId}})}><Text style={s.trackText}>Track Job →</Text></Pressable>
    </>}
- </ScrollView></SafeAreaView>;
+ </KamproPage>;
 }
 const s=StyleSheet.create({safe:{flex:1,backgroundColor:"#fff"},c:{padding:20,paddingBottom:40},top:{height:46,flexDirection:"row",alignItems:"center",justifyContent:"space-between"},back:{width:40,height:40,borderRadius:20,backgroundColor:"#F7F8FA",alignItems:"center",justifyContent:"center"},backText:{fontSize:30},more:{fontSize:24,color:"#FF4B1F"},title:{fontSize:28,fontWeight:"900",color:"#10233F",marginTop:18},card:{borderWidth:1,borderColor:"#E7EAF0",borderRadius:18,padding:16,marginTop:18},name:{fontSize:18,fontWeight:"900",color:"#10233F"},badge:{alignSelf:"flex-start",backgroundColor:"#FFF0EA",color:"#FF4B1F",paddingHorizontal:10,paddingVertical:5,borderRadius:12,fontWeight:"800",marginTop:8},label:{fontSize:11,color:"#6B7280",marginTop:16},value:{fontWeight:"800",marginTop:3},map:{height:180,borderRadius:18,marginTop:14,backgroundColor:"#e9f3ef",overflow:"hidden",alignItems:"center",justifyContent:"center"},route:{width:"70%",height:3,backgroundColor:"#FF4B1F",transform:[{rotate:"-18deg"}]},mapText:{position:"absolute",bottom:12,backgroundColor:"#fff",paddingHorizontal:10,paddingVertical:6,borderRadius:10,fontWeight:"800"},actions:{flexDirection:"row",gap:10,marginTop:12},secondary:{flex:1,borderWidth:1,borderColor:"#FF4B1F",borderRadius:12,minHeight:48,alignItems:"center",justifyContent:"center"},secondaryText:{color:"#FF4B1F",fontWeight:"900"},primary:{flex:1,backgroundColor:"#FF4B1F",borderRadius:12,minHeight:48,alignItems:"center",justifyContent:"center"},primaryText:{color:"#fff",fontWeight:"900"},navigate:{marginTop:12,borderRadius:12,minHeight:48,alignItems:"center",justifyContent:"center",backgroundColor:"#10233F"},navigateText:{color:"#fff",fontWeight:"900"},track:{marginTop:12,borderRadius:12,minHeight:48,alignItems:"center",justifyContent:"center",backgroundColor:"#FFF0EA"},cancel:{marginTop:12,borderWidth:1,borderColor:"#d8b7b3",borderRadius:12,minHeight:48,alignItems:"center",justifyContent:"center"},cancelText:{color:"#8b5b57",fontWeight:"900"},cancelNote:{marginTop:12,padding:12,borderRadius:12,backgroundColor:"#f7eceb"},cancelNoteTitle:{fontWeight:"900",color:"#8b5b57"},cancelNoteText:{marginTop:4,color:"#6b4a47"},trackText:{color:"#FF4B1F",fontWeight:"900"},state:{alignItems:"center",paddingVertical:50},muted:{color:"#6B7280",marginTop:4}});
 
