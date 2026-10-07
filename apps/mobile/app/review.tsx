@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useState } from "react";
 import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { useLocalSearchParams, router } from "expo-router";
