@@ -27,7 +27,7 @@ export default function Connections(){
   if(mode==="customer"){
    const {data,error}=await supabase.rpc("get_or_create_conversation",{p_professional_id:item.professional_id});
    if(error){Alert.alert("Chat unavailable",error.message);return;}
-   router.push({pathname:"/chat",params:{conversationId:data,otherName:item.profile?.display_name||"Professional"}});
+   router.push({pathname:"/chat",params:{conversationId:data,otherName:item.profile?.display_name||"Professional",professionalId:item.professional_id}});
   }else{
    const {data,error}=await supabase.from("conversations").select("id").eq("customer_id",item.customer_id).eq("professional_id",user?.id).maybeSingle();
    if(error||!data){Alert.alert("No chat yet","The customer has not started a chat.");return;}
