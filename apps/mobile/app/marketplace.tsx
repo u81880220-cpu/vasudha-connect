@@ -99,7 +99,7 @@ export default function Marketplace(){
 
       <View style={[s.mapWrap,{height:MAP_HEIGHT}]}>
         {userCoords && (Platform.OS==="web"
-          ? <WebMap userCoords={userCoords} items={visibleItems} selection={selection} onSelect={setSelectedMapPro}/>
+          ? <WebMap userCoords={userCoords} items={visibleItems} selection={selection} selectedMapPro={selectedMapPro} onSelect={setSelectedMapPro}/>
           : <NativeMap userCoords={userCoords} items={visibleItems}/>
         )}
         {!userCoords&&!loading&&<View style={s.locationEmpty}><Text style={s.locationTitle}>Location required</Text><Text>Allow location to see nearby professionals on the map.</Text><Pressable style={s.locationButton} onPress={requestLocation}><Text style={s.locationButtonText}>Enable location</Text></Pressable></View>}
@@ -151,7 +151,7 @@ export default function Marketplace(){
   </SafeAreaView>;
 }
 
-function WebMap({userCoords,items,selection,onSelect}:{userCoords:Coords;items:Professional[];selection:ServiceSelection;onSelect:(worker:Professional)=>void}) {
+function WebMap({userCoords,items,selection,selectedMapPro,onSelect}:{userCoords:Coords;items:Professional[];selection:ServiceSelection;selectedMapPro:Professional|null;onSelect:(worker:Professional)=>void}) {
   return <View style={s.webMap}>
     <View style={s.mapRoadA}/><View style={s.mapRoadB}/><View style={s.mapRoadC}/>
     <View style={s.mapArea}><Text style={s.mapAreaText}>NEARBY AREA</Text></View>
