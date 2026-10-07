@@ -40,7 +40,7 @@ test.describe("VASUDHA surface smoke", () => {
     }
 
     await page.goto("/professional-verification");
-    await expect(page.getByText("Professional Verification", { exact: true })).not.toBeVisible();
+    await expect(page).toHaveURL(/\/(home|customer-dashboard)/);
   });
 
   test("professional trust surfaces are reachable", async ({ page }) => {
@@ -63,10 +63,10 @@ test.describe("VASUDHA surface smoke", () => {
 
   test("admin exposes all operational areas and rejects bad password", async ({ page }) => {
     await page.goto("/admin");
-    await expect(page.getByText("VASUDHA CONNECT ADMIN")).toBeVisible();
+    await expect(page.getByText("Admin Console", { exact: true })).toBeVisible();
     await page.getByPlaceholder("Admin email").fill(ADMIN_EMAIL);
     await page.getByPlaceholder("Password").fill(ADMIN_PASSWORD);
-    await page.getByText("Sign in", { exact: true }).click();
+    await page.getByText("Sign in to Admin", { exact: true }).click();
     await expect(page.getByText("Dashboard", { exact: true })).toBeVisible({ timeout: 20_000 });
 
     for (const tab of [
