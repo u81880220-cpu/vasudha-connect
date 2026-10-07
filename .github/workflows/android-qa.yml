@@ -1,0 +1,52 @@
+name: Android QA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "package.json"
+      - ".github/workflows/android-qa.yml"
+
+jobs:
+  android-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package.json
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Expo environment check
+        run: npx expo-doctor
+
+      - name: Generate Android project
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --non-interactive
+
+      - name: Assemble release APK
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kampro-release-apk
+          path: apps/mobile/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
