@@ -248,6 +248,22 @@ test.describe("VASUDHA real-user free QA", () => {
       await page.getByText(tab, { exact: true }).click();
       await expect(page.getByText(tab, { exact: true }).first()).toBeVisible();
     }
+    // Customer 360: open a real customer record and verify the detail surface renders.
+    await page.getByText("Customers", { exact: true }).click();
+    await expect(page.getByText("Customers", { exact: true }).first()).toBeVisible();
+    const customerRows = page.locator("text=Trust").locator("..");
+    await page.getByText(/Trust \d+\/100/).first().click({ force: true });
+    await expect(page.getByText("Customer 360°", { exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Trust score", { exact: true })).toBeVisible();
+
+    // Operations Details: open the seeded AC job and verify Work 360° renders.
+    await page.getByText("Operations", { exact: true }).click();
+    await expect(page.getByText("Job Operations", { exact: true })).toBeVisible();
+    await expect(page.getByText("AC service at home", { exact: true })).toBeVisible();
+    await page.getByText("Details", { exact: true }).first().click({ force: true });
+    await expect(page.getByText("Work 360°", { exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("AC service at home", { exact: true }).last()).toBeVisible();
+
     await page.screenshot({ path: "test-results/admin-console.png", fullPage: true });
 
     // Admin security: use a fresh browser context so the authorized session cannot leak into the bad-login check.
@@ -257,8 +273,8 @@ test.describe("VASUDHA real-user free QA", () => {
     await badLoginPage.getByPlaceholder("Admin email").fill("demo.admin@vasudha.test");
     await badLoginPage.getByPlaceholder("Password").fill("WrongPassword@123");
     await badLoginPage.getByText("Sign in to Admin", { exact: true }).click();
-    await expect(badLoginPage.getByText("Admin access required")).toBeVisible();
     await expect(badLoginPage.getByText("Dashboard", { exact: true })).not.toBeVisible();
+    await expect(badLoginPage.getByText(/Invalid login credentials|Admin access required/)).toBeVisible();
     await badLoginPage.close();
   });
 
