@@ -21,8 +21,8 @@ Do NOT change:
 - Existing business model
 
 Do NOT add:
-- Quotes
-- Bidding
+- work requests
+- 
 - Maintenance plans
 - Stay & Earn
 - Property health/inspection
@@ -37,7 +37,7 @@ The existing KAMPRO primary navigation is **exactly four options** and must not 
 ### Customer / Professional primary navigation
 1. **Home** — `/home`
 2. **Find a Pro / Marketplace** — `/marketplace`
-3. **Connections / Chat** — `/connections`
+3. **Chat** — `/connections`
 4. **Profile** — `/profile`
 
 Chat/Connections is intentionally one of the four primary navigation destinations. **Do not create a separate Jobs tab or replace Chat/Connections with Jobs.** Jobs remain accessible through the existing screens and workflow.
@@ -79,7 +79,7 @@ Create a consistent, professional Indian service marketplace experience for desk
 4. Home
 5. Marketplace / Find a Pro
 6. Professional public profile
-7. Connections / Chat
+7. Chat
 8. Service request
 9. Jobs
 10. Job details
@@ -123,3 +123,18 @@ After implementation:
 
 ## Definition of done
 The KAMPRO interface must look like one coherent product across all screens, rather than individual pages receiving isolated color changes.
+
+
+## KAMPRO final UI/UX freeze — 2026-10-07
+
+### Primary navigation
+Home | Find a Pro | Chat | Profile. Jobs are not a primary navigation item.
+
+### Find a Pro
+The screen must have a Pro/skill search above the live map. Search results must drive both the map markers and the professional list. Map markers are tappable and open a professional preview with View Profile and Connect. The complete professional list remains below the map.
+
+### Frozen product journey
+Find → Connect → Chat / Call → Request Work → Professional Accepts → Navigate → Work → Complete → Review.
+
+### Presentation-only rule
+Stitch is the visual blueprint. GitHub implementation must preserve existing Supabase, authentication, RLS, routes, roles, APIs/RPCs, connection/unlock logic, chat logic, request/accept flow, job states and reviews. Do not add quotes, bidding, booking, payment/commission flows, maintenance plans, Stay & Earn, property health/inspection, insurance or invented guarantees/fees.
