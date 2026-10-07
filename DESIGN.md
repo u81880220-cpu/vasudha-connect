@@ -21,8 +21,7 @@ Do NOT change:
 - Existing business model
 
 Do NOT add:
-- work requests
-- 
+- quotation / bidding flows
 - Maintenance plans
 - Stay & Earn
 - Property health/inspection
