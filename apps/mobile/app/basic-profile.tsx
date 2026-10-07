@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { useAuth } from "../src/auth/AuthProvider";
 import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
+import { KAMPRO } from "../src/components/kamproTheme";
 
 export default function BasicProfile() {
   const { session } = useAuth();
@@ -76,12 +77,12 @@ export default function BasicProfile() {
 }
 
 const s = StyleSheet.create({
-  safe:{flex:1,backgroundColor:"#fff"},
-  c:{flex:1,padding:22,justifyContent:"center"},
+  safe:{flex:1,backgroundColor:KAMPRO.background},
+  c:{width:"100%",maxWidth:700,alignSelf:"center",flex:1,padding:28,justifyContent:"center"},
   title:{fontSize:28,fontWeight:"900",color:"#10233F",marginTop:28},
   sub:{color:"#6B7280",lineHeight:20,marginTop:7,marginBottom:20},
   label:{fontWeight:"800",color:"#46534f",marginTop:14,marginBottom:7},
-  input:{height:52,borderWidth:1,borderColor:"#CBD0D8",borderRadius:12,paddingHorizontal:14,fontSize:16,color:"#10233F"},
+  input:{height:54,borderWidth:1,borderColor:KAMPRO.border,borderRadius:14,paddingHorizontal:14,fontSize:16,color:"#10233F"},
   hint:{fontSize:12,color:"#6B7280",lineHeight:17,marginTop:7},
   primary:{height:52,borderRadius:12,backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",marginTop:26},
   primaryText:{color:"#fff",fontWeight:"900",fontSize:16},
