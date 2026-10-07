@@ -250,13 +250,16 @@ test.describe("VASUDHA real-user free QA", () => {
     }
     await page.screenshot({ path: "test-results/admin-console.png", fullPage: true });
 
-    // Admin security: a bad password must not expose the operational console.
-    await page.goto("/admin");
-    await page.getByPlaceholder("Admin email").fill("demo.admin@vasudha.test");
-    await page.getByPlaceholder("Password").fill("WrongPassword@123");
-    await page.getByText("Sign in to Admin", { exact: true }).click();
-    await expect(page.getByText("Admin access required")).toBeVisible();
-    await expect(page.getByText("Dashboard", { exact: true })).not.toBeVisible();
+    // Admin security: use a fresh browser context so the authorized session cannot leak into the bad-login check.
+    const badLoginPage = await page.context().browser()!.newPage();
+    await badLoginPage.goto("/admin");
+    await expect(badLoginPage.getByText("Admin Console", { exact: true })).toBeVisible();
+    await badLoginPage.getByPlaceholder("Admin email").fill("demo.admin@vasudha.test");
+    await badLoginPage.getByPlaceholder("Password").fill("WrongPassword@123");
+    await badLoginPage.getByText("Sign in to Admin", { exact: true }).click();
+    await expect(badLoginPage.getByText("Admin access required")).toBeVisible();
+    await expect(badLoginPage.getByText("Dashboard", { exact: true })).not.toBeVisible();
+    await badLoginPage.close();
   });
 
   test("Customer registration/profile/notifications and business-model guardrails", async ({ page }) => {
