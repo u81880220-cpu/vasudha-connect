@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
 import { supabase,getAuthRedirect } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
+import { KAMPRO } from "../src/components/kamproTheme";
 
 type Method="otp"|"email";
 
@@ -80,7 +81,7 @@ export default function AuthScreen(){
 }
 
 const s=StyleSheet.create({
- safe:{flex:1,backgroundColor:"#fff"},flex:{flex:1},container:{flex:1,padding:22,justifyContent:"center"},
+ safe:{flex:1,backgroundColor:KAMPRO.background},flex:{flex:1},container:{flex:1,padding:22,justifyContent:"center"},
  heading:{fontSize:26,fontWeight:"900",textAlign:"center",marginTop:28,color:"#10233F"},sub:{textAlign:"center",color:"#6B7280",marginTop:5,marginBottom:16},
  tabs:{flexDirection:"row",backgroundColor:"#F7F8FA",borderRadius:12,padding:3,marginBottom:14},tab:{flex:1,height:40,alignItems:"center",justifyContent:"center",borderRadius:9},tabOn:{backgroundColor:"#fff"},tabText:{fontWeight:"800",color:"#6B7280"},tabTextOn:{color:"#FF4B1F"},
  phoneRow:{flexDirection:"row",borderWidth:1,borderColor:"#CBD0D8",borderRadius:12,height:52,overflow:"hidden"},code:{paddingHorizontal:12,justifyContent:"center",backgroundColor:"#f7faf9",borderRightWidth:1,borderRightColor:"#CBD0D8"},phone:{flex:1,paddingHorizontal:12,fontSize:16},
