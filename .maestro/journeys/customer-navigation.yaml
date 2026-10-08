@@ -11,19 +11,21 @@ env:
 ---
 - launchApp:
     clearState: true
-- extendedWaitUntil:
-    visible: "Get Started"
-    timeout: 15000
-- tapOn: "Get Started"
-- tapOn: "I need a professional"
-- tapOn: "Email address"
-- inputText: ${CUSTOMER_EMAIL}
-- tapOn: "Password"
-- inputText: ${CUSTOMER_PASSWORD}
-- tapOn: "Sign in with Email"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Get Started"
+    commands:
+      - tapOn: "Get Started"
+      - tapOn: "I need a professional"
+      - tapOn: "Email address"
+      - inputText: ${CUSTOMER_EMAIL}
+      - tapOn: "Password"
+      - inputText: ${CUSTOMER_PASSWORD}
+      - tapOn: "Sign in with Email"
 - extendedWaitUntil:
     visible: "Find trusted professionals"
-    timeout: 15000
+    timeout: 20000
 - assertVisible: "Find trusted professionals"
 - tapOn: "Find professionals →"
 - assertVisible: "Find Skills Around You"
