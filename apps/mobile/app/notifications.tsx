@@ -1,5 +1,5 @@
 import { useEffect,useState } from "react";
-import { ActivityIndicator,Alert,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,View } from "react-native";
+import { ActivityIndicator,Alert,Pressable,ScrollView,StyleSheet,Text,View } from "react-native";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { AppBottomNav } from "../src/components/AppBottomNav";
 import { supabase } from "../src/lib/supabase";
