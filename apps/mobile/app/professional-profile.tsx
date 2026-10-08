@@ -1,5 +1,6 @@
 import {useEffect,useState} from "react";
-import {Alert,Pressable,SafeAreaView,ScrollView,StyleSheet,Switch,Text,TextInput,View} from "react-native";
+import {Alert,Pressable,ScrollView,StyleSheet,Switch,Text,TextInput,View} from "react-native";
+import {SafeAreaView} from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import {Link,router} from "expo-router";
 import {supabase} from "../src/lib/supabase";
@@ -56,7 +57,7 @@ export default function ProfessionalProfile(){
   const{error}=await supabase.from("portfolio_items").insert({professional_id:uid,title:port.title.trim(),description:port.description.trim()||null,media_url:port.media_url.trim()||null});
   if(error)Alert.alert("Portfolio",error.message);else{setPort({title:"",description:"",media_url:""});Alert.alert("Added","Portfolio item added.")}
  }
- return <SafeAreaView style={s.safe}>
+ return <SafeAreaView style={s.safe} edges={["top"]}>
   <ScrollView contentContainerStyle={s.c} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
    <View style={s.top}><Pressable onPress={()=>router.back()} style={s.back}><Text style={s.backText}>‹</Text></Pressable><VasudhaLogo compact/><View style={s.topSpacer}/></View>
    <Text style={s.t}>My Professional Profile</Text><Text style={s.sub}>Build a trusted profile that helps customers choose you.</Text>
