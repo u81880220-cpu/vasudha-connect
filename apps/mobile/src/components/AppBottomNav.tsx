@@ -55,6 +55,6 @@ const s=StyleSheet.create({
   iconPill:{width:38,height:30,borderRadius:15,alignItems:"center",justifyContent:"center"},
   iconPillActive:{backgroundColor:"#FFF0EA"},
   icon:{fontSize:20,color:KAMPRO.muted,lineHeight:25},
-  label:{fontSize:11,fontWeight:"800",color:KAMPRO.muted,marginTop:3,textAlign:"center"},
+  label:{fontSize:11,fontWeight:"800",color:"#10233F",marginTop:3,textAlign:"center"},
   active:{color:KAMPRO.brand},
 });
