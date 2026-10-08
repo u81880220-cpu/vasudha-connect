@@ -1,0 +1,25 @@
+appId: com.vasudha.connect
+name: KAMPRO Professional Login
+tags:
+  - smoke
+  - professional
+  - auth
+env:
+  PROFESSIONAL_EMAIL: ${PROFESSIONAL_EMAIL}
+  PROFESSIONAL_PASSWORD: ${PROFESSIONAL_PASSWORD}
+
+---
+- launchApp:
+    clearState: true
+- tapOn: "Use KAMPRO as a Professional"
+- assertVisible: "I am a professional"
+- tapOn: "I am a professional"
+- tapOn:
+    id: "KAMPRO email address"
+- inputText: ${PROFESSIONAL_EMAIL}
+- tapOn:
+    id: "KAMPRO password"
+- inputText: ${PROFESSIONAL_PASSWORD}
+- tapOn: "Sign in with Email"
+- assertVisible: "Switch to Customer mode"
+- takeScreenshot: professional-home
