@@ -1,6 +1,7 @@
 import * as Location from "expo-location";
 import React,{ useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Dimensions, FlatList, Image, Modal, Platform, Pressable, SafeAreaView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Dimensions, FlatList, Image, Modal, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
