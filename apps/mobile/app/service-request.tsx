@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import * as Location from "expo-location";
-import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput } from "react-native";
+import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { useLocalSearchParams, router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
@@ -8,7 +8,13 @@ import { ServicePicker, ServiceSelection } from "../src/components/ServicePicker
 import { KAMPRO } from "../src/components/kamproTheme";
 
 export default function ServiceRequest(){
- const {professionalId,serviceId,subServiceId,serviceName,subServiceName}=useLocalSearchParams<{professionalId:string;serviceId?:string;subServiceId?:string;serviceName?:string;subServiceName?:string}>();
+ const raw=useLocalSearchParams<{professionalId?:string;serviceId?:string|string[];subServiceId?:string|string[];serviceName?:string|string[];subServiceName?:string|string[]}>();
+ const first=(v?:string|string[])=>Array.isArray(v)?v[0]:v;
+ const professionalId=first(raw.professionalId)||"";
+ const serviceId=first(raw.serviceId)||"";
+ const subServiceId=first(raw.subServiceId)||"";
+ const serviceName=first(raw.serviceName)||"";
+ const subServiceName=first(raw.subServiceName)||"";
  const [selection,setSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:serviceId||null,serviceName:serviceName||null,subServiceId:subServiceId||null,subServiceName:subServiceName||null});
  const [loadingSelection,setLoadingSelection]=useState(!!serviceId);
  const [title,setTitle]=useState(""); const [description,setDescription]=useState(""); const [date,setDate]=useState(""); const [time,setTime]=useState(""); const [location,setLocation]=useState(""); const [busy,setBusy]=useState(false);
@@ -16,10 +22,15 @@ export default function ServiceRequest(){
  useEffect(()=>{resolveSelection();},[serviceId,subServiceId]);
 
  async function resolveSelection(){
-  if(!serviceId){setLoadingSelection(false);return;}
   setLoadingSelection(true);
+  let resolvedServiceId=serviceId;
+  if(!resolvedServiceId && serviceName){
+   const {data:byName}=await supabase.from("service_catalogue_services").select("id").eq("name",serviceName).eq("status","active").maybeSingle();
+   resolvedServiceId=byName?.id||"";
+  }
+  if(!resolvedServiceId){setLoadingSelection(false);return;}
   const[{data:svc},{data:sub}]=await Promise.all([
-   supabase.from("service_catalogue_services").select("id,category_id,name,legacy_skill_id").eq("id",serviceId).maybeSingle(),
+   supabase.from("service_catalogue_services").select("id,category_id,name,legacy_skill_id").eq("id",resolvedServiceId).maybeSingle(),
    subServiceId?supabase.from("service_catalogue_sub_services").select("id,service_id,name").eq("id",subServiceId).maybeSingle():Promise.resolve({data:null})
   ]);
   if(svc){
