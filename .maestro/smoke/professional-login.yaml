@@ -11,8 +11,7 @@ env:
 ---
 - launchApp:
     clearState: true
-- tapOn: "Use KAMPRO as a Professional"
-- assertVisible: "I am a professional"
+- tapOn: "Get Started"
 - tapOn: "I am a professional"
 - tapOn: "Email address"
 - inputText: ${PROFESSIONAL_EMAIL}
