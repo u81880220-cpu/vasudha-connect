@@ -37,6 +37,10 @@ function MarketplaceScreen(){
   const[userCoords,setUserCoords]=useState<Coords|null>(null);
   const[radius,setRadius]=useState(25);
   const[filtersOpen,setFiltersOpen]=useState(false);
+  const[locationPickerOpen,setLocationPickerOpen]=useState(false);
+  const[locationLabel,setLocationLabel]=useState("Detecting location…");
+  const[manualLocation,setManualLocation]=useState("");
+  const[locationBusy,setLocationBusy]=useState(false);
   const[verifiedOnly,setVerifiedOnly]=useState(true);
   const[availableOnly,setAvailableOnly]=useState(true);
   const[minRating,setMinRating]=useState(0);
@@ -49,23 +53,52 @@ function MarketplaceScreen(){
 
   async function requestLocation(){
     setLoading(true);
-    // Browser QA uses the KAMPRO demo location (Varanasi) so laptop geolocation
-    // permissions or inaccurate browser location never block marketplace testing.
-    if(Platform.OS==="web"){
-      const demoCoords={latitude:25.3176,longitude:82.9739};
-      setUserCoords(demoCoords);
-      await searchProfessionals(demoCoords);
-      return;
-    }
-    const permission=await Location.requestForegroundPermissionsAsync();
-    if(permission.status!=="granted"){
+    setLocationBusy(true);
+    try{
+      const permission=await Location.requestForegroundPermissionsAsync();
+      if(permission.status!=="granted"){
+        setLocationLabel("Location permission required");
+        setLoading(false);
+        return;
+      }
+      const pos=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});
+      const coords={latitude:pos.coords.latitude,longitude:pos.coords.longitude};
+      setUserCoords(coords);
+      const places=await Location.reverseGeocodeAsync(coords);
+      const p=places?.[0];
+      const city=p?.city||p?.district||p?.subregion||p?.region||"Current location";
+      const state=p?.region&&p.region!==city?p.region:"";
+      setLocationLabel(state?city+", "+state:city);
+      await searchProfessionals(coords);
+    }catch{
+      setLocationLabel("Unable to detect location");
       setLoading(false);
-      return;
+    }finally{
+      setLocationBusy(false);
     }
-    const pos=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});
-    const coords={latitude:pos.coords.latitude,longitude:pos.coords.longitude};
-    setUserCoords(coords);
-    await searchProfessionals(coords);
+  }
+
+  async function changeLocationManually(){
+    const value=manualLocation.trim();
+    if(!value||locationBusy)return;
+    setLocationBusy(true);
+    setLoading(true);
+    try{
+      const places=await Location.geocodeAsync(value);
+      const p=places?.[0];
+      if(!p)throw new Error("Location not found");
+      const coords={latitude:p.latitude,longitude:p.longitude};
+      setUserCoords(coords);
+      setLocationLabel(value);
+      setManualLocation("");
+      setLocationPickerOpen(false);
+      await searchProfessionals(coords);
+    }catch{
+      setSearchError("We couldn't find that location. Try a city or area name.");
+      setLoading(false);
+    }finally{
+      setLocationBusy(false);
+    }
   }
 
   async function searchProfessionals(coords:Coords){
@@ -96,6 +129,20 @@ function MarketplaceScreen(){
           <Text style={s.subtitle}>{items.length} professionals nearby</Text>
         </View>
         <View style={s.headerActions}><Pressable style={s.filterButton} onPress={()=>setFiltersOpen(true)}><Text style={s.filterButtonText}>☷</Text></Pressable><Pressable style={s.refresh} onPress={requestLocation}><Text style={s.refreshText}>↻</Text></Pressable></View>
+      </View>
+
+      <View style={s.locationBar}>
+        <View style={s.locationPin}><Text style={s.locationPinText}>⌖</Text></View>
+        <View style={{flex:1}}>
+          <Text style={s.locationLabel}>Your location (Auto-detected)</Text>
+          <Text style={s.locationValue} numberOfLines={1}>{locationLabel}</Text>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Change location" style={s.locationGps} onPress={requestLocation} disabled={locationBusy}>
+          <Text style={s.locationGpsText}>⌾</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Change location manually" style={s.changeLocation} onPress={()=>setLocationPickerOpen(true)}>
+          <Text style={s.changeLocationText}>Change⌄</Text>
+        </Pressable>
       </View>
 
       <View style={s.searchBox}><Text style={s.searchIcon}>⌕</Text><TextInput value={query} onChangeText={setQuery} placeholder="Search a Pro or skill" placeholderTextColor="#8B93A1" style={s.searchInput}/>{query?<Pressable onPress={()=>setQuery("")}><Text style={s.clear}>×</Text></Pressable>:null}</View>
@@ -145,7 +192,20 @@ function MarketplaceScreen(){
         </Pressable>}
       />
     </View>
-<Modal visible={filtersOpen} transparent animationType="slide" onRequestClose={()=>setFiltersOpen(false)}>
+<Modal visible={locationPickerOpen} transparent animationType="slide" onRequestClose={()=>setLocationPickerOpen(false)}>
+        <View style={s.modalBackdrop}>
+          <View style={s.filterSheet}>
+            <View style={s.sheetHead}><Text style={s.sheetTitle}>Change Location</Text><Pressable onPress={()=>setLocationPickerOpen(false)}><Text style={s.close}>×</Text></Pressable></View>
+            <Text style={s.filterHint}>Use GPS automatically or enter a city/area manually.</Text>
+            <Pressable style={s.locationCurrentButton} onPress={()=>{setLocationPickerOpen(false);void requestLocation();}}>
+              <Text style={s.locationCurrentButtonText}>⌖  Use current GPS location</Text>
+            </Pressable>
+            <TextInput value={manualLocation} onChangeText={setManualLocation} placeholder="Enter city or area" placeholderTextColor="#8B93A1" style={s.manualLocationInput}/>
+            <Pressable style={s.apply} onPress={changeLocationManually} disabled={locationBusy}><Text style={s.applyText}>{locationBusy?"Finding…":"Use this location"}</Text></Pressable>
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={filtersOpen} transparent animationType="slide" onRequestClose={()=>setFiltersOpen(false)}>
         <View style={s.modalBackdrop}>
           <View style={s.filterSheet}>
             <View style={s.sheetHead}><Text style={s.sheetTitle}>Filter Professionals</Text><Pressable onPress={()=>setFiltersOpen(false)}><Text style={s.close}>×</Text></Pressable></View>
@@ -200,13 +260,14 @@ function NativeMap({userCoords,items,selection}:{userCoords:Coords;items:Profess
 }
 
 const s=StyleSheet.create({
+  locationBar:{marginHorizontal:14,marginTop:10,minHeight:58,borderWidth:1,borderColor:"#DCE8F7",borderRadius:14,backgroundColor:"#F4F8FE",flexDirection:"row",alignItems:"center",paddingHorizontal:10,gap:8},locationPin:{width:30,height:30,borderRadius:15,backgroundColor:"#E8F0FC",alignItems:"center",justifyContent:"center"},locationPinText:{fontSize:17,color:"#365D8D"},locationLabel:{fontSize:9,color:"#6B7280"},locationValue:{fontSize:11,fontWeight:"800",color:"#10233F",marginTop:1},locationGps:{width:32,height:32,borderRadius:16,backgroundColor:"#E8F0FC",alignItems:"center",justifyContent:"center"},locationGpsText:{fontSize:18,color:"#2F80ED"},changeLocation:{borderWidth:1,borderColor:"#FF4B1F",borderRadius:12,paddingHorizontal:10,paddingVertical:7,backgroundColor:"#fff"},changeLocationText:{fontSize:11,fontWeight:"800",color:"#FF4B1F"},locationCurrentButton:{height:48,borderRadius:12,borderWidth:1,borderColor:"#DCE8F7",backgroundColor:"#F4F8FE",alignItems:"center",justifyContent:"center",marginTop:16},locationCurrentButtonText:{fontWeight:"800",color:"#10233F"},manualLocationInput:{height:50,borderWidth:1,borderColor:"#E7EAF0",borderRadius:12,paddingHorizontal:14,fontSize:15,color:"#172033",marginTop:12},
   safe:{flex:1,backgroundColor:"#fff"}, container:{flex:1}, header:{paddingHorizontal:14,paddingTop:8,flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:10},headerText:{flex:1},headerActions:{flexDirection:"row",alignItems:"center",gap:8},filterButton:{width:40,height:40,borderRadius:20,backgroundColor:"#f1f5f4",alignItems:"center",justifyContent:"center"},filterButtonText:{fontSize:21,color:"#FF4B1F"},
   title:{fontSize:22,fontWeight:"900",color:"#10233F"},subtitle:{marginTop:2,color:"#6B7280"},refresh:{width:40,height:40,borderRadius:20,backgroundColor:"#f1f5f4",alignItems:"center",justifyContent:"center"},refreshText:{fontSize:24},
   skills:{paddingHorizontal:14,paddingVertical:10,gap:8},skill:{paddingHorizontal:12,paddingVertical:7,borderRadius:16,backgroundColor:"#f3f5f5",alignItems:"center",minWidth:66},skillSelected:{backgroundColor:"#FF4B1F"},skillText:{fontWeight:"700"},skillTextSelected:{color:"#fff"},
   searchBox:{marginHorizontal:14,marginTop:8,minHeight:52,borderWidth:1,borderColor:"#E7EAF0",borderRadius:16,backgroundColor:"#fff",flexDirection:"row",alignItems:"center",paddingHorizontal:14},searchIcon:{fontSize:22,color:"#FF4B1F"},searchInput:{flex:1,fontSize:15,color:"#172033",paddingHorizontal:9,paddingVertical:10},clear:{fontSize:24,color:"#6B7280",paddingHorizontal:4},radiusRow:{flexDirection:"row",alignItems:"center",gap:7,paddingHorizontal:16,paddingBottom:10},label:{fontWeight:"800",marginRight:3,color:"#10233F"},radius:{paddingHorizontal:11,paddingVertical:6,borderRadius:14,backgroundColor:"#f3f5f5"},radiusSelected:{backgroundColor:"#d8f4eb"},radiusText:{fontSize:12,color:"#10233F"},radiusTextSelected:{fontSize:12,fontWeight:"800",color:"#087D65"},
-  mapWrap:{marginHorizontal:12,overflow:"hidden",backgroundColor:"#e8eeee",borderRadius:18,borderWidth:1,borderColor:"#dbe7e3",minHeight:220},map:{flex:1},webMap:{flex:1,backgroundColor:"#e9f3ef",position:"relative",overflow:"hidden"},webMapTitle:{fontSize:18,fontWeight:"900",color:"#10233F"},webMapText:{marginTop:5,color:"#6B7280"},webMapWorker:{marginTop:12,backgroundColor:"#fff",borderRadius:12,padding:10,flexDirection:"row",alignItems:"center",gap:10},mapRoadA:{position:"absolute",width:"140%",height:24,backgroundColor:"#fff",top:"42%",left:"-20%",transform:[{rotate:"-8deg"}]},mapRoadB:{position:"absolute",width:"130%",height:18,backgroundColor:"#fff",top:"65%",left:"-15%",transform:[{rotate:"18deg"}]},mapRoadC:{position:"absolute",width:18,height:"120%",backgroundColor:"#fff",left:"54%",top:"-10%",transform:[{rotate:"22deg"}]},mapArea:{position:"absolute",left:"34%",top:"35%",padding:10,borderRadius:12,backgroundColor:"rgba(255,255,255,.75)"},mapAreaText:{fontSize:11,fontWeight:"900",color:"#6B7280",letterSpacing:1},webMarker:{position:"absolute",width:38,height:38,borderRadius:19,backgroundColor:"#FF4B1F",borderWidth:3,borderColor:"#fff",alignItems:"center",justifyContent:"center",elevation:5},webMarkerText:{color:"#fff",fontWeight:"900"},webMarkerImage:{width:32,height:32,borderRadius:16},avatarImage:{width:52,height:52,borderRadius:26},markerImage:{width:34,height:34,borderRadius:17},webMarkerImage:{width:32,height:32,borderRadius:16},avatarImage:{width:52,height:52,borderRadius:26},markerImage:{width:34,height:34,borderRadius:17},youMarker:{position:"absolute",left:"48%",top:"48%",width:18,height:18,borderRadius:9,backgroundColor:"#1976d2",borderWidth:4,borderColor:"#fff",alignItems:"center",justifyContent:"center"},youMarkerText:{color:"#1976d2",fontSize:8},mapLegend:{position:"absolute",left:12,bottom:12,backgroundColor:"#fff",borderRadius:14,padding:12,elevation:4},mapLegendTitle:{fontWeight:"900",color:"#10233F"},mapLegendText:{fontSize:11,color:"#6B7280",marginTop:3},mapBadge:{position:"absolute",top:12,left:12,backgroundColor:"#fff",paddingHorizontal:11,paddingVertical:7,borderRadius:16,elevation:3},mapBadgeText:{fontWeight:"800"},
+  mapWrap:{marginHorizontal:12,overflow:"hidden",backgroundColor:"#e8eeee",borderRadius:18,borderWidth:1,borderColor:"#dbe7e3",minHeight:220},map:{flex:1},webMap:{flex:1,backgroundColor:"#e9f3ef",position:"relative",overflow:"hidden"},webMapTitle:{fontSize:18,fontWeight:"900",color:"#10233F"},webMapText:{marginTop:5,color:"#6B7280"},webMapWorker:{marginTop:12,backgroundColor:"#fff",borderRadius:12,padding:10,flexDirection:"row",alignItems:"center",gap:10},mapRoadA:{position:"absolute",width:"140%",height:24,backgroundColor:"#fff",top:"42%",left:"-20%",transform:[{rotate:"-8deg"}]},mapRoadB:{position:"absolute",width:"130%",height:18,backgroundColor:"#fff",top:"65%",left:"-15%",transform:[{rotate:"18deg"}]},mapRoadC:{position:"absolute",width:18,height:"120%",backgroundColor:"#fff",left:"54%",top:"-10%",transform:[{rotate:"22deg"}]},mapArea:{position:"absolute",left:"34%",top:"35%",padding:10,borderRadius:12,backgroundColor:"rgba(255,255,255,.75)"},mapAreaText:{fontSize:11,fontWeight:"900",color:"#6B7280",letterSpacing:1},webMarker:{position:"absolute",width:38,height:38,borderRadius:19,backgroundColor:"#FF4B1F",borderWidth:3,borderColor:"#fff",alignItems:"center",justifyContent:"center",elevation:5},webMarkerText:{color:"#fff",fontWeight:"900"},webMarkerImage:{width:32,height:32,borderRadius:16},avatarImage:{width:60,height:60,borderRadius:30},markerImage:{width:34,height:34,borderRadius:17},webMarkerImage:{width:32,height:32,borderRadius:16},avatarImage:{width:52,height:52,borderRadius:26},markerImage:{width:34,height:34,borderRadius:17},youMarker:{position:"absolute",left:"48%",top:"48%",width:18,height:18,borderRadius:9,backgroundColor:"#1976d2",borderWidth:4,borderColor:"#fff",alignItems:"center",justifyContent:"center"},youMarkerText:{color:"#1976d2",fontSize:8},mapLegend:{position:"absolute",left:12,bottom:12,backgroundColor:"#fff",borderRadius:14,padding:12,elevation:4},mapLegendTitle:{fontWeight:"900",color:"#10233F"},mapLegendText:{fontSize:11,color:"#6B7280",marginTop:3},mapBadge:{position:"absolute",top:12,left:12,backgroundColor:"#fff",paddingHorizontal:11,paddingVertical:7,borderRadius:16,elevation:3},mapBadgeText:{fontWeight:"800"},
   marker:{width:42,height:42,borderRadius:21,borderWidth:3,borderColor:"#fff",backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",elevation:4},markerText:{color:"#fff",fontWeight:"900",fontSize:15},
   callout:{width:190,padding:6},calloutName:{fontWeight:"800",fontSize:15},calloutLink:{fontWeight:"800",marginTop:5,color:"#087d65"},loadingOverlay:{position:"absolute",inset:0,backgroundColor:"rgba(255,255,255,.72)",alignItems:"center",justifyContent:"center"},loadingText:{marginTop:8,fontWeight:"700"},
   locationEmpty:{flex:1,alignItems:"center",justifyContent:"center",padding:30},locationTitle:{fontSize:18,fontWeight:"800",marginBottom:6},locationButton:{marginTop:14,backgroundColor:"#FF4B1F",paddingHorizontal:18,paddingVertical:11,borderRadius:12},locationButtonText:{color:"#fff",fontWeight:"800"},
-  modalBackdrop:{flex:1,backgroundColor:"rgba(19,32,28,.28)",justifyContent:"flex-end"},filterSheet:{backgroundColor:"#fff",borderTopLeftRadius:26,borderTopRightRadius:26,padding:22,paddingBottom:30},sheetHead:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},sheetTitle:{fontSize:21,fontWeight:"900",color:"#10233F"},close:{fontSize:28,color:"#10233F"},filterRow:{minHeight:54,flexDirection:"row",alignItems:"center",justifyContent:"space-between",borderBottomWidth:1,borderBottomColor:"#eef2f0"},filterLabel:{fontSize:15,fontWeight:"800",color:"#10233F",marginTop:16},ratingRow:{flexDirection:"row",gap:8,marginTop:10},ratingChip:{borderWidth:1,borderColor:"#CBD0D8",borderRadius:18,paddingHorizontal:14,paddingVertical:9},ratingChipOn:{backgroundColor:"#FF4B1F",borderColor:"#FF4B1F"},ratingText:{color:"#10233F",fontWeight:"700"},ratingOn:{color:"#fff",fontWeight:"800"},filterHint:{color:"#6B7280",marginTop:15},apply:{height:50,borderRadius:12,backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",marginTop:18},applyText:{color:"#fff",fontWeight:"900",fontSize:16},listHeader:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:16,paddingTop:12},listTitle:{fontSize:17,fontWeight:"900",color:"#10233F"},listHint:{fontSize:12,color:"#6B7280"},workerRow:{paddingHorizontal:12,paddingBottom:18,gap:10},card:{width:"100%",borderRadius:16,borderWidth:1,borderColor:"#e2e7e6",padding:12,marginTop:8,backgroundColor:"#fff",elevation:2},cardTop:{flexDirection:"row",alignItems:"center",gap:9},avatar:{width:42,height:42,borderRadius:21,backgroundColor:"#edf1f5",alignItems:"center",justifyContent:"center"},name:{fontSize:15,fontWeight:"900",color:"#10233F"},headline:{fontSize:12,color:"#6B7280",marginTop:2},verified:{color:"#FF4B1F",fontSize:18},distance:{marginTop:10,fontSize:12,color:"#6B7280"},rate:{marginTop:8,alignSelf:"flex-start",paddingHorizontal:9,paddingVertical:5,borderRadius:10,backgroundColor:"#e9f8f2"},rateText:{fontSize:12,fontWeight:"800",color:"#087d65"},view:{marginTop:9,fontWeight:"800",color:"#087d65"},empty:{padding:20,color:"#6B7280"}
+  modalBackdrop:{flex:1,backgroundColor:"rgba(19,32,28,.28)",justifyContent:"flex-end"},filterSheet:{backgroundColor:"#fff",borderTopLeftRadius:26,borderTopRightRadius:26,padding:22,paddingBottom:30},sheetHead:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},sheetTitle:{fontSize:21,fontWeight:"900",color:"#10233F"},close:{fontSize:28,color:"#10233F"},filterRow:{minHeight:54,flexDirection:"row",alignItems:"center",justifyContent:"space-between",borderBottomWidth:1,borderBottomColor:"#eef2f0"},filterLabel:{fontSize:15,fontWeight:"800",color:"#10233F",marginTop:16},ratingRow:{flexDirection:"row",gap:8,marginTop:10},ratingChip:{borderWidth:1,borderColor:"#CBD0D8",borderRadius:18,paddingHorizontal:14,paddingVertical:9},ratingChipOn:{backgroundColor:"#FF4B1F",borderColor:"#FF4B1F"},ratingText:{color:"#10233F",fontWeight:"700"},ratingOn:{color:"#fff",fontWeight:"800"},filterHint:{color:"#6B7280",marginTop:15},apply:{height:50,borderRadius:12,backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",marginTop:18},applyText:{color:"#fff",fontWeight:"900",fontSize:16},listHeader:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:16,paddingTop:12},listTitle:{fontSize:17,fontWeight:"900",color:"#10233F"},listHint:{fontSize:12,color:"#6B7280"},workerRow:{paddingHorizontal:12,paddingBottom:18,gap:10},card:{width:"100%",borderRadius:16,borderWidth:1,borderColor:"#e2e7e6",padding:12,marginTop:8,backgroundColor:"#fff",elevation:2},cardTop:{flexDirection:"row",alignItems:"center",gap:9},avatar:{width:60,height:60,borderRadius:30,backgroundColor:"#edf1f5",alignItems:"center",justifyContent:"center",overflow:"hidden"},name:{fontSize:15,fontWeight:"900",color:"#10233F"},headline:{fontSize:12,color:"#6B7280",marginTop:2},verified:{color:"#FF4B1F",fontSize:18},distance:{marginTop:10,fontSize:12,color:"#6B7280"},rate:{marginTop:8,alignSelf:"flex-start",paddingHorizontal:9,paddingVertical:5,borderRadius:10,backgroundColor:"#e9f8f2"},rateText:{fontSize:12,fontWeight:"800",color:"#087d65"},view:{marginTop:9,fontWeight:"800",color:"#087d65"},empty:{padding:20,color:"#6B7280"}
 });
