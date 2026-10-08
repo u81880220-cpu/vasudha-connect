@@ -13,31 +13,35 @@ export default function Connections(){
   if(!user)return; setLoading(true);setError("");
   const {data,error}=await supabase.from("professional_connections").select("id,customer_id,professional_id,expires_at,last_accessed_at").or(`customer_id.eq.${user.id},professional_id.eq.${user.id}`).order("last_accessed_at",{ascending:false});
   if(error){setError(error.message);Alert.alert("Unable to load connections",error.message);setLoading(false);return;}
-  const rows=await Promise.all((data||[]).map(async c=>{
-   const otherId= c.customer_id===user.id ? c.professional_id : c.customer_id;
-   const [{data:p},{data:pp},{data:conversation}]=await Promise.all([
-    supabase.from("profiles").select("display_name,full_name,avatar_url").eq("id",otherId).maybeSingle(),
-    supabase.from("professional_profiles").select("headline,trust_score").eq("user_id",c.professional_id).maybeSingle(),
-    supabase.from("conversations").select("id").eq("customer_id",c.customer_id).eq("professional_id",c.professional_id).maybeSingle()
-   ]);
-   let chatState=null;
-   if(conversation?.id){
-    const {data:state}=await supabase.rpc("get_conversation_chat_state",{p_conversation_id:conversation.id});
-    chatState=state||null;
-   }
-   return {...c,otherId,profile:p,professional:pp,conversationId:conversation?.id||null,chatState};
-  }));
+  const connections=data||[];
+  const otherIds=connections.map(c=>c.customer_id===user.id?c.professional_id:c.customer_id);
+  const professionalIds=connections.map(c=>c.professional_id);
+  const [{data:profiles},{data:professionals},{data:conversations}]=await Promise.all([
+    otherIds.length?supabase.from("profiles").select("id,display_name,full_name,avatar_url").in("id",[...new Set(otherIds)]):Promise.resolve({data:[] as any[]}),
+    professionalIds.length?supabase.from("professional_profiles").select("user_id,headline,trust_score").in("user_id",[...new Set(professionalIds)]):Promise.resolve({data:[] as any[]}),
+    supabase.from("conversations").select("id,customer_id,professional_id").or(`customer_id.eq.${user.id},professional_id.eq.${user.id}`)
+  ]);
+  const profileMap=new Map((profiles||[]).map((p:any)=>[p.id,p]));
+  const professionalMap=new Map((professionals||[]).map((p:any)=>[p.user_id,p]));
+  const conversationMap=new Map((conversations||[]).map((x:any)=>[`${x.customer_id}:${x.professional_id}`,x]));
+  const rows=connections.map(c=>{
+    const otherId=c.customer_id===user.id?c.professional_id:c.customer_id;
+    const conversation=conversationMap.get(`${c.customer_id}:${c.professional_id}`);
+    return {...c,otherId,profile:profileMap.get(otherId)||null,professional:professionalMap.get(c.professional_id)||null,conversationId:conversation?.id||null,chatState:null};
+  });
   setItems(rows); setLoading(false);
- }
- async function open(item:any){
+ } async function open(item:any){
   if(mode==="customer"){
-   const {data,error}=await supabase.rpc("get_or_create_conversation",{p_professional_id:item.professional_id});
-   if(error){Alert.alert("Chat unavailable",error.message);return;}
-   router.push({pathname:"/chat",params:{conversationId:data,otherName:item.profile?.display_name||"Professional",professionalId:item.professional_id}});
+   let conversationId=item.conversationId;
+   if(!conversationId){
+    const {data,error}=await supabase.rpc("get_or_create_conversation",{p_professional_id:item.professional_id});
+    if(error){Alert.alert("Chat unavailable",error.message);return;}
+    conversationId=data;
+   }
+   router.push({pathname:"/chat",params:{conversationId,otherName:item.profile?.display_name||"Professional",professionalId:item.professional_id}});
   }else{
-   const {data,error}=await supabase.from("conversations").select("id").eq("customer_id",item.customer_id).eq("professional_id",user?.id).maybeSingle();
-   if(error||!data){Alert.alert("No chat yet","The customer has not started a chat.");return;}
-   router.push({pathname:"/chat",params:{conversationId:data.id,otherName:item.profile?.display_name||"Customer",professionalId:item.professional_id}});
+   if(!item.conversationId){Alert.alert("No chat yet","The customer has not started a chat.");return;}
+   router.push({pathname:"/chat",params:{conversationId:item.conversationId,otherName:item.profile?.display_name||"Customer",professionalId:item.professional_id}});
   }
  }
  return <SafeAreaView style={s.safe}><View style={s.page}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
