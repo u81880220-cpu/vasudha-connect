@@ -5,23 +5,26 @@ import { useAuth } from "../src/auth/AuthProvider";
 import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { KAMPRO } from "../src/components/kamproTheme";
+import { ProfilePhotoPicker } from "../src/components/ProfilePhotoPicker";
 
 export default function BasicProfile() {
   const { session } = useAuth();
   const uid = session?.user.id;
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!uid) return;
     (async () => {
       const [{ data: p }, { data: c }] = await Promise.all([
-        supabase.from("profiles").select("full_name,display_name").eq("id", uid).maybeSingle(),
+        supabase.from("profiles").select("full_name,display_name,avatar_url").eq("id", uid).maybeSingle(),
         supabase.from("user_contact_details").select("phone").eq("user_id", uid).maybeSingle(),
       ]);
       setName(p?.full_name || p?.display_name || "");
       setPhone(c?.phone || "");
+      setAvatarUrl(p?.avatar_url || null);
     })();
   }, [uid]);
 
@@ -60,6 +63,7 @@ export default function BasicProfile() {
         <VasudhaLogo />
         <Text style={s.title}>Let's get you started</Text>
         <Text style={s.sub}>Just the basics. You can complete the rest of your profile later.</Text>
+        <ProfilePhotoPicker userId={uid} avatarUrl={avatarUrl} onUploaded={setAvatarUrl} />
 
         <Text style={s.label}>Your name *</Text>
         <TextInput value={name} onChangeText={setName} placeholder="Full name" style={s.input} autoCapitalize="words" />
