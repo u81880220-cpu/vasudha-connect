@@ -1,5 +1,5 @@
 import * as Location from "expo-location";
-import React,{ useEffect, useState } from "react";
+import React,{ useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Dimensions, FlatList, Modal, Platform, Pressable, SafeAreaView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
@@ -32,6 +32,7 @@ function MarketplaceScreen(){
   const[selectedMapPro,setSelectedMapPro]=useState<Professional|null>(null);
   const[items,setItems]=useState<Professional[]>([]);
   const[loading,setLoading]=useState(true);
+  const searchRequestRef=useRef(0);
   const[searchError,setSearchError]=useState("");
   const[userCoords,setUserCoords]=useState<Coords|null>(null);
   const[radius,setRadius]=useState(25);
@@ -68,11 +69,15 @@ function MarketplaceScreen(){
   }
 
   async function searchProfessionals(coords:Coords){
+    const requestId=++searchRequestRef.current;
     setLoading(true);
     setSearchError("");
-    const{data,error}=await supabase.rpc("nearby_professionals_map",{
+    const timeout=new Promise<{data:null;error:any}>(resolve=>setTimeout(()=>resolve({data:null,error:new Error("Search timed out")}),10000));
+    const request=supabase.rpc("nearby_professionals_map",{
       p_latitude:coords.latitude,p_longitude:coords.longitude,p_radius_km:radius,p_skill_id:selection.legacySkillId||null,p_sub_service_id:selection.subServiceId||null
     });
+    const{data,error}=await Promise.race([request,timeout]);
+    if(requestId!==searchRequestRef.current)return;
     if(error){
       setItems([]);
       setSearchError("We couldn't load professionals right now. Please try again.");
