@@ -1,0 +1,14 @@
+appId: com.vasudha.connect
+name: KAMPRO Customer Navigation Smoke
+tags:
+  - smoke
+  - customer
+  - navigation
+
+---
+- runFlow:
+    file: ../smoke/customer-login.yaml
+- tapOn: "Find professionals →"
+- assertVisible: "Find Skills Around You"
+- assertVisible: "Search a Pro or skill"
+- takeScreenshot: customer-find-a-pro
