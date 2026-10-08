@@ -84,7 +84,10 @@ function CurrentLocationBar(){
  </Pressable>
 }
 
-function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){\n const{session}=useAuth();\n const[activeJob,setActiveJob]=useState<any>(null);\n useEffect(()=>{if(!session?.user.id)return;let active=true;(async()=>{const{data}=await supabase.from("jobs").select("id,title,status,updated_at").eq("customer_id",session.user.id).in("status",["worker_accepted","on_the_way","arrived","work_started"]).order("updated_at",{ascending:false}).limit(1);if(active)setActiveJob(data?.[0]||null)})();return()=>{active=false}},[session?.user.id]);
+function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
+ const{session}=useAuth();
+ const[activeJob,setActiveJob]=useState<any>(null);
+ useEffect(()=>{if(!session?.user.id)return;let active=true;(async()=>{const{data}=await supabase.from("jobs").select("id,title,status,updated_at").eq("customer_id",session.user.id).in("status",["worker_accepted","on_the_way","arrived","work_started"]).order("updated_at",{ascending:false}).limit(1);if(active)setActiveJob(data?.[0]||null)})();return()=>{active=false}},[session?.user.id]);
  return <View>
   <Text style={s.greeting}>Good morning{name?`, ${name}`:""} 👋</Text>
   <CurrentLocationBar/>
