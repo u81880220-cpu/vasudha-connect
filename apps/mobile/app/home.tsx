@@ -1,5 +1,5 @@
 import {Link,router} from "expo-router";
-import {Alert,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,View,ActivityIndicator} from "react-native";
+import {Alert,Image,Pressable,SafeAreaView,ScrollView,StyleSheet,Switch,Text,View,ActivityIndicator} from "react-native";
 import {useEffect,useState} from "react";
 import {useAuth} from "../src/auth/AuthProvider";
 import {VasudhaLogo} from "../src/components/VasudhaLogo";
@@ -52,7 +52,6 @@ export default function HomeScreen(){
  return <><KamproPage><View style={s.top}><VasudhaLogo/><Pressable accessibilityRole="button" accessibilityLabel="Notifications" onPress={()=>router.push("/notifications")} style={s.bell}><Text style={s.bellText}>🔔</Text>{unreadNotifications>0?<View style={s.badge}><Text style={s.badgeText}>{unreadNotifications>99?"99+":unreadNotifications}</Text></View>:null}</Pressable></View>
   {customer?<CustomerHome name={customerName}/>:<ProfessionalHome/>}
   <Pressable accessibilityRole="button" disabled={switching} onPress={toggleMode} style={[s.switch,switching&&s.disabled]}><Text style={s.switchText}>{switching?"Switching…":customer?"Switch to Professional mode":"Switch to Customer mode"}</Text><Text style={s.arrow}>›</Text></Pressable>
-  <Pressable accessibilityRole="button" onPress={logout} style={s.signout}><Text style={s.signoutText}>Sign out</Text></Pressable>
  </KamproPage><AppBottomNav/></>
 }
 
@@ -93,40 +92,48 @@ function ProfessionalSetupNotice(){
 function ProfessionalHome(){
  const{session}=useAuth();
  const[professionalName,setProfessionalName]=useState("");
- const[stats,setStats]=useState({trust:0,verified:false,available:false,requests:0,jobs:0});
+ const[avatarUrl,setAvatarUrl]=useState<string|null>(null);
+ const[stats,setStats]=useState({trust:0,verified:false,available:false,requests:0,connections:0,rating:null as number|null,completion:0});
+ const[busy,setBusy]=useState(false);
  useEffect(()=>{
   if(!session?.user.id)return;
   let active=true;
   (async()=>{
-   const[{data:profile},{data:requests},{data:jobs},{data:userProfile}]=await Promise.all([
+   const[{data:profile},{data:requests},{data:connections},{data:jobs},{data:reviews},{data:userProfile}]=await Promise.all([
     supabase.from("professional_profiles").select("trust_score,verification_status,is_available").eq("user_id",session.user.id).maybeSingle(),
     supabase.rpc("get_professional_requests"),
-    supabase.from("professional_connections").select("id").eq("professional_id",session.user.id).gt("expires_at",new Date().toISOString()).limit(50),
-    supabase.from("profiles").select("full_name").eq("id",session.user.id).maybeSingle()
+    supabase.from("professional_connections").select("id").eq("professional_id",session.user.id).gt("expires_at",new Date().toISOString()),
+    supabase.from("jobs").select("id,status").eq("professional_id",session.user.id),
+    supabase.from("customer_job_reviews").select("punctuality,work_quality,professional_behaviour,communication,value_for_money,reliability,safety_care").eq("professional_id",session.user.id),
+    supabase.from("profiles").select("full_name,avatar_url").eq("id",session.user.id).maybeSingle()
    ]);
-   if(active){
-    setProfessionalName(userProfile?.full_name?.trim()||"");
-    setStats({
-    trust:Number(profile?.trust_score||0),
-    verified:profile?.verification_status==="verified",
-    available:!!profile?.is_available,
-    requests:(requests||[]).filter((x:any)=>x.status==="requested").length,
-    jobs:(jobs||[]).length
-    });
-   }
+   if(!active)return;
+   const allJobs=jobs||[], done=allJobs.filter((x:any)=>x.status==="customer_confirmed").length;
+   const rv=reviews||[];
+   const rating=rv.length?rv.reduce((sum:number,x:any)=>sum+(Number(x.punctuality)+Number(x.work_quality)+Number(x.professional_behaviour)+Number(x.communication)+Number(x.value_for_money)+Number(x.reliability)+Number(x.safety_care))/7,0)/rv.length:null;
+   setProfessionalName(userProfile?.full_name?.trim()||"");
+   setAvatarUrl(userProfile?.avatar_url||null);
+   setStats({trust:Number(profile?.trust_score||0),verified:profile?.verification_status==="verified",available:!!profile?.is_available,requests:(requests||[]).filter((x:any)=>x.status==="requested").length,connections:(connections||[]).length,rating,completion:allJobs.length?Math.round(done/allJobs.length*100):0});
   })();
   return()=>{active=false};
  },[session?.user.id]);
+ async function toggleAvailability(v:boolean){
+  if(busy)return;setBusy(true);
+  const{error}=await supabase.rpc("update_professional_profile",{p_headline:null,p_about:null,p_years_experience:0,p_service_radius_km:10,p_is_available:v,p_base_latitude:null,p_base_longitude:null});
+  setBusy(false);
+  if(error)Alert.alert("Availability update failed",error.message);else setStats(x=>({...x,available:v}));
+ }
  return <View>
-  <Text style={s.greeting}>Welcome back{professionalName?`, ${professionalName}`:""} 👋</Text>
+  <View style={s.proIdentity}><View style={s.proPhoto}>{avatarUrl?<Image source={{uri:avatarUrl}} style={s.proPhotoImage}/>:<Text style={s.proInitial}>{professionalName.slice(0,1).toUpperCase()||"P"}</Text>}</View><View style={{flex:1}}><Text style={s.greeting}>Good morning{professionalName?", "+professionalName:""} 👋</Text><Text style={s.proRole}>Professional account</Text></View></View>
   <Text style={s.heading}>Grow your business.</Text><Text style={s.heading}>Get more customers.</Text>
-  <ProfessionalSetupNotice/>
-  <View style={s.statHero}><Text style={s.statLabel}>Professional Trust</Text><Text style={s.statValue}>{Math.round(stats.trust)} <Text style={s.statSmall}>/ 100</Text></Text><Text style={s.meta}>{stats.verified?"✓ Verified":"Verification pending"} • {stats.available?"Available for customers":"Currently unavailable"}</Text></View>
-  <View style={s.grid}><Link href="/professional-dashboard" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>{stats.requests}</Text><Text>New requests</Text></Pressable></Link><Link href="/connections" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>{stats.jobs}</Text><Text>Connections</Text></Pressable></Link></View>
+  <View style={s.availability}><View style={{flex:1}}><Text style={s.availabilityTitle}>Available for new work</Text><Text style={s.meta}>{stats.available?"Customers can see you as available":"You are currently unavailable"}</Text></View><Switch value={stats.available} onValueChange={toggleAvailability} disabled={busy}/></View>
+  <View style={s.statHero}><Text style={s.statLabel}>Professional Trust</Text><Text style={s.statValue}>{Math.round(stats.trust)} <Text style={s.statSmall}>/ 100</Text></Text><Text style={s.meta}>{stats.verified?"✓ Verified":"Verification pending"}</Text></View>
+  <View style={s.grid}><View style={s.metric}><Text style={s.metricNumber}>{stats.rating==null?"—":stats.rating.toFixed(1)+"★"}</Text><Text>Rating</Text></View><View style={s.metric}><Text style={s.metricNumber}>{stats.completion}%</Text><Text>Completion</Text></View><Link href="/connections" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>{stats.connections}</Text><Text>Connections</Text></Pressable></Link></View>
+  <Link href="/jobs" asChild><Pressable style={s.requestCard}><View style={{flex:1}}><Text style={s.requestTitle}>New job requests</Text><Text style={s.meta}>{stats.requests?stats.requests+" request"+(stats.requests===1?"":"s")+" waiting for your response":"No pending requests right now"}</Text></View><Text style={s.view}>View →</Text></Pressable></Link>
   <Link href="/professional-profile" asChild><Pressable style={s.primary}><Text style={s.primaryText}>Manage professional profile</Text></Pressable></Link>
   <Text style={s.section}>Quick actions</Text>
   <View style={s.grid}><Link href="/professional-verification" asChild><Pressable style={s.action}><Text style={s.actionIcon}>✓</Text><Text>Verification</Text></Pressable></Link><Link href="/professional-profile" asChild><Pressable style={s.action}><Text style={s.actionIcon}>⌂</Text><Text>Services & area</Text></Pressable></Link></View>
  </View>
 }
-const s=StyleSheet.create({safe:{flex:1,backgroundColor:"#fff"},loading:{flex:1,alignItems:"center",justifyContent:"center"},container:{padding:18,paddingBottom:110},top:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},bell:{width:40,height:40,borderRadius:20,backgroundColor:"#F7F8FA",alignItems:"center",justifyContent:"center"},bellText:{fontSize:18,color:"#FF4B1F"},badge:{position:"absolute",right:-2,top:-2,minWidth:18,height:18,paddingHorizontal:4,borderRadius:9,backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",borderWidth:2,borderColor:"#fff"},badgeText:{color:"#fff",fontSize:10,fontWeight:"900"},greeting:{fontSize:14,color:"#6B7280",marginTop:22},heading:{fontSize:30,fontWeight:"900",color:"#10233F",lineHeight:35,marginTop:4,letterSpacing:-.5},search:{height:56,borderWidth:1,borderColor:"#E7EAF0",borderRadius:16,flexDirection:"row",alignItems:"center",paddingHorizontal:16,marginTop:20,backgroundColor:"#fff",shadowColor:"#10233F",shadowOpacity:.04,shadowRadius:10,shadowOffset:{width:0,height:4},elevation:2},searchIcon:{fontSize:23,color:"#FF4B1F"},searchText:{marginLeft:8,color:"#8a9691"},section:{fontSize:19,fontWeight:"900",marginTop:28,color:"#10233F"},services:{flexDirection:"row",gap:10,marginTop:10},service:{width:70,alignItems:"center"},serviceText:{fontSize:10,textAlign:"center",marginTop:5,fontWeight:"700",color:"#10233F"},hero:{marginTop:18,borderRadius:24,backgroundColor:"#FF4B1F",padding:24,minHeight:150,justifyContent:"center",shadowColor:"#D93812",shadowOpacity:.16,shadowRadius:18,shadowOffset:{width:0,height:8},elevation:4},heroTitle:{color:"#fff",fontSize:20,fontWeight:"900"},heroSub:{color:"#dff8f1",marginTop:5},heroAction:{color:"#fff",fontWeight:"900",marginTop:12},nearby:{marginTop:10,borderWidth:1,borderColor:"#E7EAF0",borderRadius:16,padding:14,flexDirection:"row",alignItems:"center",gap:12},avatar:{width:48,height:48,borderRadius:24,backgroundColor:"#FFF0EA",alignItems:"center",justifyContent:"center"},name:{fontWeight:"900"},meta:{color:"#6B7280",fontSize:12,marginTop:3},view:{color:"#FF4B1F",fontWeight:"900"},switch:{marginTop:22,height:50,borderWidth:1,borderColor:"#FF4B1F",borderRadius:12,flexDirection:"row",alignItems:"center",justifyContent:"space-between",paddingHorizontal:16},disabled:{opacity:.6},switchText:{color:"#FF4B1F",fontWeight:"900"},arrow:{fontSize:24,color:"#FF4B1F"},signout:{alignItems:"center",padding:18},signoutText:{color:"#10233F",fontWeight:"700"},setupNotice:{marginTop:16,borderWidth:1,borderColor:"#E18A2D",backgroundColor:"#FFF8EE",borderRadius:16,padding:15},setupTitle:{fontWeight:"900",color:"#10233F"},setupText:{color:"#6B7280",fontSize:12,marginTop:4,lineHeight:18},setupAction:{color:"#FF4B1F",fontWeight:"900",marginTop:8},statHero:{backgroundColor:"#FFF0EA",borderRadius:18,padding:18,marginTop:18},statLabel:{fontWeight:"800",color:"#FF4B1F"},statValue:{fontSize:38,fontWeight:"900",color:"#FF4B1F",marginTop:5},statSmall:{fontSize:16},grid:{flexDirection:"row",gap:10,marginTop:12},metric:{flex:1,borderWidth:1,borderColor:"#E7EAF0",borderRadius:16,padding:16,backgroundColor:"#fff"},metricNumber:{fontSize:26,fontWeight:"900",color:"#FF4B1F"},primary:{height:52,borderRadius:12,backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",marginTop:16},primaryText:{color:"#fff",fontWeight:"900"},action:{flex:1,borderWidth:1,borderColor:"#E7EAF0",borderRadius:16,padding:16,alignItems:"center",backgroundColor:"#fff"},actionIcon:{fontSize:22,color:"#FF4B1F",fontWeight:"900",marginBottom:5},muted:{color:"#6B7280",marginTop:8}});
+const s=StyleSheet.create({proIdentity:{flexDirection:"row",alignItems:"center",gap:12,marginTop:18},proPhoto:{width:58,height:58,borderRadius:29,backgroundColor:"#FFF0EA",alignItems:"center",justifyContent:"center",overflow:"hidden"},proPhotoImage:{width:"100%",height:"100%"},proInitial:{fontSize:22,fontWeight:"900",color:"#FF4B1F"},proRole:{fontSize:12,color:"#6B7280",marginTop:2},availability:{flexDirection:"row",alignItems:"center",marginTop:18,padding:15,borderWidth:1,borderColor:"#E7EAF0",borderRadius:16,backgroundColor:"#fff"},availabilityTitle:{fontWeight:"900",color:"#10233F"},requestCard:{marginTop:12,borderWidth:1,borderColor:"#FFD3C2",borderRadius:16,padding:15,flexDirection:"row",alignItems:"center",backgroundColor:"#FFF8F4"},requestTitle:{fontWeight:"900",fontSize:16,color:"#10233F"},safe:{flex:1,backgroundColor:"#fff"},loading:{flex:1,alignItems:"center",justifyContent:"center"},container:{padding:18,paddingBottom:110},top:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},bell:{width:40,height:40,borderRadius:20,backgroundColor:"#F7F8FA",alignItems:"center",justifyContent:"center"},bellText:{fontSize:18,color:"#FF4B1F"},badge:{position:"absolute",right:-2,top:-2,minWidth:18,height:18,paddingHorizontal:4,borderRadius:9,backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",borderWidth:2,borderColor:"#fff"},badgeText:{color:"#fff",fontSize:10,fontWeight:"900"},greeting:{fontSize:14,color:"#6B7280",marginTop:22},heading:{fontSize:30,fontWeight:"900",color:"#10233F",lineHeight:35,marginTop:4,letterSpacing:-.5},search:{height:56,borderWidth:1,borderColor:"#E7EAF0",borderRadius:16,flexDirection:"row",alignItems:"center",paddingHorizontal:16,marginTop:20,backgroundColor:"#fff",shadowColor:"#10233F",shadowOpacity:.04,shadowRadius:10,shadowOffset:{width:0,height:4},elevation:2},searchIcon:{fontSize:23,color:"#FF4B1F"},searchText:{marginLeft:8,color:"#8a9691"},section:{fontSize:19,fontWeight:"900",marginTop:28,color:"#10233F"},services:{flexDirection:"row",gap:10,marginTop:10},service:{width:70,alignItems:"center"},serviceText:{fontSize:10,textAlign:"center",marginTop:5,fontWeight:"700",color:"#10233F"},hero:{marginTop:18,borderRadius:24,backgroundColor:"#FF4B1F",padding:24,minHeight:150,justifyContent:"center",shadowColor:"#D93812",shadowOpacity:.16,shadowRadius:18,shadowOffset:{width:0,height:8},elevation:4},heroTitle:{color:"#fff",fontSize:20,fontWeight:"900"},heroSub:{color:"#dff8f1",marginTop:5},heroAction:{color:"#fff",fontWeight:"900",marginTop:12},nearby:{marginTop:10,borderWidth:1,borderColor:"#E7EAF0",borderRadius:16,padding:14,flexDirection:"row",alignItems:"center",gap:12},avatar:{width:48,height:48,borderRadius:24,backgroundColor:"#FFF0EA",alignItems:"center",justifyContent:"center"},name:{fontWeight:"900"},meta:{color:"#6B7280",fontSize:12,marginTop:3},view:{color:"#FF4B1F",fontWeight:"900"},switch:{marginTop:22,height:50,borderWidth:1,borderColor:"#FF4B1F",borderRadius:12,flexDirection:"row",alignItems:"center",justifyContent:"space-between",paddingHorizontal:16},disabled:{opacity:.6},switchText:{color:"#FF4B1F",fontWeight:"900"},arrow:{fontSize:24,color:"#FF4B1F"},signout:{alignItems:"center",padding:18},signoutText:{color:"#10233F",fontWeight:"700"},setupNotice:{marginTop:16,borderWidth:1,borderColor:"#E18A2D",backgroundColor:"#FFF8EE",borderRadius:16,padding:15},setupTitle:{fontWeight:"900",color:"#10233F"},setupText:{color:"#6B7280",fontSize:12,marginTop:4,lineHeight:18},setupAction:{color:"#FF4B1F",fontWeight:"900",marginTop:8},statHero:{backgroundColor:"#FFF0EA",borderRadius:18,padding:18,marginTop:18},statLabel:{fontWeight:"800",color:"#FF4B1F"},statValue:{fontSize:38,fontWeight:"900",color:"#FF4B1F",marginTop:5},statSmall:{fontSize:16},grid:{flexDirection:"row",gap:10,marginTop:12},metric:{flex:1,borderWidth:1,borderColor:"#E7EAF0",borderRadius:16,padding:16,backgroundColor:"#fff"},metricNumber:{fontSize:26,fontWeight:"900",color:"#FF4B1F"},primary:{height:52,borderRadius:12,backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",marginTop:16},primaryText:{color:"#fff",fontWeight:"900"},action:{flex:1,borderWidth:1,borderColor:"#E7EAF0",borderRadius:16,padding:16,alignItems:"center",backgroundColor:"#fff"},actionIcon:{fontSize:22,color:"#FF4B1F",fontWeight:"900",marginBottom:5},muted:{color:"#6B7280",marginTop:8}});
 const _keep=undefined;
