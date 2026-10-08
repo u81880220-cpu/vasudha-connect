@@ -14,7 +14,8 @@ export default function CustomerProfile() {
   });
   const [rep, setRep] = useState<any>(null);
   const [phone, setPhone] = useState("");
-  const [loading, setLoading] = useState(true);\n  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saved, setSaved] = useState(false);
   const editableFields = ["full_name","display_name","bio","city","state"];
 
   useEffect(() => {
@@ -96,7 +97,8 @@ export default function CustomerProfile() {
           </View>
         ))}
 
-        {saved ? <View style={s.success}><Text style={s.successText}>✓ Profile changed successfully.</Text></View> : null}\n        <Pressable style={s.p} onPress={save}>
+        {saved ? <View style={s.success}><Text style={s.successText}>✓ Profile changed successfully.</Text></View> : null}
+        <Pressable style={s.p} onPress={save}>
           <Text style={s.pt}>Save changes</Text>
         </Pressable>
       </ScrollView>
@@ -128,5 +130,7 @@ const s = StyleSheet.create({
   i: { borderWidth: 1, borderColor: "#E7EAF0", borderRadius: 12, padding: 12, marginTop: 6, minHeight: 48, backgroundColor: "#fff", color: "#10233F" },
   bio: { minHeight: 100, textAlignVertical: "top" },
   p: { marginTop: 24, backgroundColor: "#FF4B1F", padding: 15, borderRadius: 12, alignItems: "center", justifyContent: "center", minHeight: 50 },
-  pt: { color: "#fff", fontWeight: "900" },\n  success: { marginTop: 18, padding: 12, borderRadius: 10, backgroundColor: "#ECFDF3", borderWidth: 1, borderColor: "#A7F3D0" },\n  successText: { color: "#047857", fontWeight: "800", textAlign: "center" }
+  pt: { color: "#fff", fontWeight: "900" },
+  success: { marginTop: 18, padding: 12, borderRadius: 10, backgroundColor: "#ECFDF3", borderWidth: 1, borderColor: "#A7F3D0" },
+  successText: { color: "#047857", fontWeight: "800", textAlign: "center" }
 });
