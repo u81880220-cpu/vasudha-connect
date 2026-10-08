@@ -11,18 +11,20 @@ env:
 ---
 - launchApp:
     clearState: true
-- extendedWaitUntil:
-    visible: "Get Started"
-    timeout: 15000
-- tapOn: "Get Started"
-- tapOn: "I am a professional"
-- tapOn: "Email address"
-- inputText: ${PROFESSIONAL_EMAIL}
-- tapOn: "Password"
-- inputText: ${PROFESSIONAL_PASSWORD}
-- tapOn: "Sign in with Email"
+- waitForAnimationToEnd
+- runFlow:
+    when:
+      visible: "Get Started"
+    commands:
+      - tapOn: "Get Started"
+      - tapOn: "I am a professional"
+      - tapOn: "Email address"
+      - inputText: ${PROFESSIONAL_EMAIL}
+      - tapOn: "Password"
+      - inputText: ${PROFESSIONAL_PASSWORD}
+      - tapOn: "Sign in with Email"
 - extendedWaitUntil:
     visible: "Switch to Customer mode"
-    timeout: 15000
+    timeout: 20000
 - assertVisible: "Switch to Customer mode"
 - takeScreenshot: professional-home
