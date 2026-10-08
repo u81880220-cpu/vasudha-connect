@@ -1,0 +1,44 @@
+[
+  {
+    "eventType": "VIEW_CLICKED",
+    "elementDescriptors": [
+      { "contentDescription": "Get Started" }
+    ]
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "elementDescriptors": [
+      { "contentDescription": "⌕, I need a professional, Find trusted skills around you for your work., ›" }
+    ]
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "elementDescriptors": [
+      { "contentDescription": "Email" }
+    ]
+  },
+  {
+    "eventType": "VIEW_TEXT_CHANGED",
+    "replacementText": "demo.customer1@vasudha.test",
+    "elementDescriptors": [
+      { "contentDescription": "KAMPRO email address" }
+    ]
+  },
+  {
+    "eventType": "VIEW_TEXT_CHANGED",
+    "replacementText": "Demo@12345",
+    "elementDescriptors": [
+      { "contentDescription": "KAMPRO password" }
+    ]
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "elementDescriptors": [
+      { "contentDescription": "Sign in with Email" }
+    ]
+  },
+  {
+    "eventType": "WAIT",
+    "delayTime": 5000
+  }
+]
