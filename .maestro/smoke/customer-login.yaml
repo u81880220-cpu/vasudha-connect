@@ -1,0 +1,23 @@
+appId: com.vasudha.connect
+name: KAMPRO Customer Login
+tags:
+  - smoke
+  - customer
+  - auth
+env:
+  CUSTOMER_EMAIL: ${CUSTOMER_EMAIL}
+  CUSTOMER_PASSWORD: ${CUSTOMER_PASSWORD}
+
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "KAMPRO email address"
+- inputText: ${CUSTOMER_EMAIL}
+- tapOn:
+    id: "KAMPRO password"
+- inputText: ${CUSTOMER_PASSWORD}
+- tapOn: "Sign in with Email"
+- assertVisible: "Find trusted professionals"
+- assertVisible: "Popular services"
+- takeScreenshot: customer-home
