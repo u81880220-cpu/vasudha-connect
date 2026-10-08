@@ -11,7 +11,8 @@ env:
 ---
 - launchApp:
     clearState: true
-- waitForAnimationToEnd
+- waitForAnimationToEnd:
+    timeout: 5000
 - runFlow:
     when:
       visible: "Get Started"
@@ -23,8 +24,28 @@ env:
       - tapOn: "Password"
       - inputText: ${PROFESSIONAL_PASSWORD}
       - tapOn: "Sign in with Email"
+- runFlow:
+    when:
+      visible: "How do you want to use"
+    commands:
+      - tapOn: "I am a professional"
+      - tapOn: "Email address"
+      - inputText: ${PROFESSIONAL_EMAIL}
+      - tapOn: "Password"
+      - inputText: ${PROFESSIONAL_PASSWORD}
+      - tapOn: "Sign in with Email"
+- runFlow:
+    when:
+      visible: "Welcome Back"
+    commands:
+      - tapOn: "Use KAMPRO as a Professional"
+      - tapOn: "I am a professional"
+      - tapOn: "Email address"
+      - inputText: ${PROFESSIONAL_EMAIL}
+      - tapOn: "Password"
+      - inputText: ${PROFESSIONAL_PASSWORD}
+      - tapOn: "Sign in with Email"
 - extendedWaitUntil:
     visible: "Switch to Customer mode"
     timeout: 20000
-- assertVisible: "Switch to Customer mode"
 - takeScreenshot: professional-home
