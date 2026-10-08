@@ -1,4 +1,5 @@
 import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { StyleSheet, View } from "react-native";
 import { AuthProvider } from "../src/auth/AuthProvider";
 
@@ -7,6 +8,7 @@ export const unstable_settings = { anchor: "index" };
 export default function RootLayout(){
   return (
     <AuthProvider>
+      <StatusBar style="dark" hidden={false} />
       <View style={s.webRoot}>
         <Stack screenOptions={{headerShown:false}} />
       </View>
