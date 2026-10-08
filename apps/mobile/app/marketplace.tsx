@@ -22,7 +22,7 @@ export default function Marketplace(){ return <MarketplaceErrorBoundary><Marketp
 class MarketplaceErrorBoundary extends React.Component<any,{error:Error|null}>{
  state={error:null};
  static getDerivedStateFromError(error:Error){ return {error}; }
- render(){ if(this.state.error) return <SafeAreaView style={s.safe}><View style={s.errorBox}><Text style={s.errorTitle}>Find a Pro could not open</Text><Text style={s.errorText}>{this.state.error.message}</Text><Pressable style={s.locationButton} onPress={()=>this.setState({error:null})}><Text style={s.locationButtonText}>Try again</Text></Pressable></View><AppBottomNav active="map"/></SafeAreaView>; return this.props.children; }
+ render(){ if(this.state.error) return <SafeAreaView style={s.safe} edges={["top"]}><View style={s.errorBox}><Text style={s.errorTitle}>Find a Pro could not open</Text><Text style={s.errorText}>{this.state.error.message}</Text><Pressable style={s.locationButton} onPress={()=>this.setState({error:null})}><Text style={s.locationButtonText}>Try again</Text></Pressable></View><AppBottomNav active="map"/></SafeAreaView>; return this.props.children; }
 }
 
 function MarketplaceScreen(){
