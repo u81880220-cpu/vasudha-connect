@@ -17,7 +17,7 @@ export default function ProfessionalProfile(){
  const[serviceSelection,setServiceSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:null,serviceName:null,subServiceId:null,subServiceName:null});
  const[selectedSubServices,setSelectedSubServices]=useState<any[]>([]);
  const[areas,setAreas]=useState<any[]>([]);
- const[phone,setPhone]=useState("");const[avatarUrl,setAvatarUrl]=useState<string|null>(null);
+ const[phone,setPhone]=useState("");const[phone2,setPhone2]=useState("");const[avatarUrl,setAvatarUrl]=useState<string|null>(null);
  const[port,setPort]=useState({title:"",description:"",media_url:""}),[area,setArea]=useState({label:"",city:"",state:"",radius_km:"10"}),[baseLocation,setBaseLocation]=useState<{latitude:number;longitude:number}|null>(null),[loading,setLoading]=useState(true);
  useEffect(()=>{if(uid)load()},[uid]);
  async function load(){
@@ -25,12 +25,12 @@ export default function ProfessionalProfile(){
   const[q,a,ct,pss,pr]=await Promise.all([
    supabase.from("professional_profiles").select("headline,about,years_experience,service_radius_km,is_available,verification_status,base_latitude,base_longitude").eq("user_id",uid).maybeSingle(),
    supabase.from("service_areas").select("id,label,city,state,radius_km").eq("professional_id",uid).order("created_at"),
-   supabase.from("user_contact_details").select("phone").eq("user_id",uid).maybeSingle(),
+   supabase.from("user_contact_details").select("phone,phone_2").eq("user_id",uid).maybeSingle(),
    supabase.from("professional_sub_services").select("sub_service_id").eq("professional_id",uid),
    supabase.from("profiles").select("avatar_url").eq("id",uid).maybeSingle()
   ]);
   if(q.data){setP({...q.data,years_experience:String(q.data.years_experience||0),service_radius_km:String(q.data.service_radius_km||10)});if(q.data.base_latitude!=null&&q.data.base_longitude!=null)setBaseLocation({latitude:Number(q.data.base_latitude),longitude:Number(q.data.base_longitude)});}
-  setPhone(ct.data?.phone||"");setAvatarUrl(pr.data?.avatar_url||null);setAreas(a.data||[]);
+  setPhone(ct.data?.phone||"");setPhone2(ct.data?.phone_2||"");setAvatarUrl(pr.data?.avatar_url||null);setAreas(a.data||[]);
   const ids=(pss.data||[]).map((x:any)=>x.sub_service_id);
   if(ids.length){const{data:catalog}=await supabase.from("service_catalogue_sub_services").select("id,name,service_id,service_catalogue_services(name)").in("id",ids);setSelectedSubServices((catalog||[]).map((x:any)=>({id:x.id,name:x.name,serviceId:x.service_id,serviceName:x.service_catalogue_services?.name||"Service"})));}else setSelectedSubServices([]);
   setLoading(false);
@@ -40,7 +40,7 @@ export default function ProfessionalProfile(){
   if(!coords){try{const perm=await Location.requestForegroundPermissionsAsync();if(perm.status==="granted"){const pos=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});coords={latitude:pos.coords.latitude,longitude:pos.coords.longitude};setBaseLocation(coords);}}catch{}}
   const{error}=await supabase.rpc("update_professional_profile",{p_headline:p.headline?.trim()||null,p_about:p.about?.trim()||null,p_years_experience:Number(p.years_experience)||0,p_service_radius_km:Number(p.service_radius_km)||10,p_is_available:!!p.is_available,p_base_latitude:coords?.latitude??null,p_base_longitude:coords?.longitude??null});
   if(error)return Alert.alert("Save failed",error.message);
-  const {error:phoneError}=await supabase.from("user_contact_details").upsert({user_id:uid,phone:pPhone(phone),updated_at:new Date().toISOString()});
+  const {error:phoneError}=await supabase.from("user_contact_details").upsert({user_id:uid,phone:pPhone(phone),phone_2:phone2.trim()||null,updated_at:new Date().toISOString()});
   if(phoneError)return Alert.alert("Phone save failed",phoneError.message);
   await supabase.from("professional_sub_services").delete().eq("professional_id",uid);
   if(selectedSubServices.length){const{error:serviceError}=await supabase.from("professional_sub_services").insert(selectedSubServices.map((x,i)=>({professional_id:uid,sub_service_id:x.id,years_experience:Number(p.years_experience)||0,is_primary:i===0})));if(serviceError)return Alert.alert("Services save failed",serviceError.message);}
@@ -63,7 +63,7 @@ export default function ProfessionalProfile(){
    <ProfilePhotoPicker userId={uid} avatarUrl={avatarUrl} onUploaded={setAvatarUrl} />
    {loading?<Text style={s.muted}>Loading profile…</Text>:null}
    <View style={s.status}><View><Text style={s.statusTitle}>Professional profile</Text><Text style={s.statusSub}>Verification: {p.verification_status||"pending"}</Text></View><View style={[s.dot,{backgroundColor:p.is_available?"#FF4B1F":"#aebbb7"}]}/></View>
-   <Text style={s.section}>Profile details</Text><View style={s.card}><Text style={s.l}>Contact phone</Text><TextInput style={s.i} keyboardType="phone-pad" placeholder="+91 98765 43210" value={phone} onChangeText={setPhone}/><Text style={s.helper}>Your phone is shown to a customer only after they unlock your professional profile.</Text></View>
+   <Text style={s.section}>Profile details</Text><View style={s.card}><Text style={s.l}>Contact phone</Text><TextInput style={s.i} keyboardType="phone-pad" placeholder="+91 98765 43210" value={phone} onChangeText={setPhone}/><TextInput style={s.i} keyboardType="phone-pad" placeholder="+91 98765 43210" value={phone2} onChangeText={setPhone2}/><Text style={s.helper}>Both numbers are shown to a connected customer after they unlock your professional profile.</Text></View>
    <View style={s.card}>
     <Text style={s.l}>Professional headline</Text><TextInput style={s.i} placeholder="e.g. Experienced Electrician" value={p.headline||""} onChangeText={v=>setP({...p,headline:v})}/>
     <Text style={s.l}>About your work</Text><TextInput style={[s.i,s.big]} placeholder="Tell customers about your experience and services" value={p.about||""} onChangeText={v=>setP({...p,about:v})} multiline/>
