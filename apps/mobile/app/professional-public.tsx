@@ -28,10 +28,10 @@ export default function ProfessionalPublic(){
   if(error)Alert.alert("Unable to unlock",error.message);else{Alert.alert("Professional unlocked","Phone and KAMPRO chat are now available for this professional.");load();}
  }
  const connected=!!data?.profile?.connected;
- const phone=data?.profile?.phone;
- async function call(){
-  if(!phone)return Alert.alert("Phone unavailable","This professional has not added a phone number.");
-  await Linking.openURL(`tel:${phone}`);
+ const phone=data?.profile?.phone; const phone2=data?.profile?.phone_2;
+ async function call(number?:string){
+  const target=number||phone||phone2;if(!target)return Alert.alert("Phone unavailable","This professional has not added a phone number.");
+  await Linking.openURL(`tel:${target}`);
  }
  if(!data)return <SafeAreaView style={s.safe}><View style={s.container}><Text style={s.title}>Professional</Text><Text style={s.muted}>Loading profile...</Text></View></SafeAreaView>;
  return <SafeAreaView style={s.safe}>
@@ -51,7 +51,7 @@ export default function ProfessionalPublic(){
    {connected ? <>
     <Text style={s.label}>About</Text><Text style={s.body}>{data.profile?.about||"Professional information available after connection."}</Text>
     <Text style={s.label}>Approved work history</Text>{(data.portfolio||[]).length===0?<Text style={s.muted}>No approved work samples yet.</Text>:(data.portfolio||[]).map((x:any)=><View key={x.id} style={s.portfolio}><Text style={s.portfolioTitle}>{x.title}</Text>{x.description?<Text style={s.body}>{x.description}</Text>:null}</View>)}
-    <View style={s.contactBox}><Text style={s.connectTitle}>Contact unlocked</Text><Text style={s.muted}>You can now contact this professional directly.</Text>{phone?<Text style={s.phone}>{phone}</Text>:<Text style={s.muted}>No phone number available.</Text>}<View style={s.actions}><Pressable style={s.secondary} onPress={call}><Text style={s.secondaryText}>Call</Text></Pressable></View><Pressable onPress={async()=>{
+    <View style={s.contactBox}><Text style={s.connectTitle}>Contact unlocked</Text><Text style={s.muted}>You can now contact this professional directly.</Text>{phone?<Text style={s.phone}>Contact 1: {phone}</Text>:null}{phone2?<Text style={s.phone}>Contact 2: {phone2}</Text>:null}{!phone&&!phone2?<Text style={s.muted}>No phone number available.</Text>:null}<View style={s.actions}>{phone?<Pressable style={s.secondary} onPress={()=>call(phone)}><Text style={s.secondaryText}>Call 1</Text></Pressable>:null}{phone2?<Pressable style={s.secondary} onPress={()=>call(phone2)}><Text style={s.secondaryText}>Call 2</Text></Pressable>:null}</View><Pressable onPress={async()=>{
     let nextServiceId=serviceId||"",nextSubServiceId=subServiceId||"",nextServiceName=serviceName||"",nextSubServiceName=subServiceName||"";
     // If the customer opened this profile without carrying the marketplace
     // service selection, use the professional's displayed offered service.
