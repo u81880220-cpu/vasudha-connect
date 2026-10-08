@@ -1,0 +1,12 @@
+appId: com.vasudha.connect
+name: KAMPRO Professional Navigation Smoke
+tags:
+  - smoke
+  - professional
+  - navigation
+
+---
+- runFlow:
+    file: ../smoke/professional-login.yaml
+- assertVisible: "Switch to Customer mode"
+- takeScreenshot: professional-home
