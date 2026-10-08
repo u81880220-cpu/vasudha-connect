@@ -89,7 +89,7 @@ function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
  const[activeJob,setActiveJob]=useState<any>(null);
  useEffect(()=>{if(!session?.user.id)return;let active=true;(async()=>{const{data}=await supabase.from("jobs").select("id,title,status,updated_at").eq("customer_id",session.user.id).in("status",["worker_accepted","on_the_way","arrived","work_started"]).order("updated_at",{ascending:false}).limit(1);if(active)setActiveJob(data?.[0]||null)})();return()=>{active=false}},[session?.user.id]);
  return <View>
-  <Text style={s.greeting}>Good morning{name?`, ${name}`:""} 👋</Text>
+  <View style={s.customerIdentity}><View style={s.customerPhoto}>{avatarUrl?<Image source={{uri:avatarUrl}} style={s.customerPhotoImage}/>:<Text style={s.customerInitial}>{name?.slice(0,1).toUpperCase()||"C"}</Text>}</View><Text style={s.greeting}>Good morning{name ? ", "+name : ""} 👋</Text></View>
   <CurrentLocationBar/>
   <Text style={s.heading}>Find trusted professionals</Text><Text style={s.heading}>around you.</Text>
   <Pressable accessibilityRole="button" accessibilityLabel="Search for services" onPress={()=>router.push("/marketplace")} style={s.search}><Text style={s.searchIcon}>⌕</Text><Text style={s.searchText}>Search for services...</Text></Pressable>
@@ -98,6 +98,7 @@ function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
   <Link href="/marketplace" asChild><Pressable style={s.hero}><Text style={s.heroTitle}>Kam hai? Pro bulaiye.</Text><Text style={s.heroSub}>Verified professionals at your doorstep.</Text><Text style={s.heroAction}>Find professionals →</Text></Pressable></Link>
   <Text style={s.section}>Your connections</Text>
   <Link href="/customer-dashboard" asChild><Pressable style={s.nearby}><View style={s.avatar}><Text>✓</Text></View><View style={{flex:1}}><Text style={s.name}>Connections & conversations</Text><Text style={s.meta}>Open your professional connections and chats</Text></View><Text style={s.view}>Open</Text></Pressable></Link>
+  {activeJob?<Pressable onPress={()=>router.push({pathname:"/job-tracking",params:{jobId:activeJob.id}})} style={s.activeJob}><View style={s.activeJobIcon}><Text>📍</Text></View><View style={{flex:1}}><Text style={s.activeJobTitle}>Active job</Text><Text style={s.name}>{activeJob.title||"Professional service"}</Text><Text style={s.meta}>Professional is {String(activeJob.status||"on_the_way").replaceAll("_"," ")} · Tap to track live location</Text></View><Text style={s.view}>Track →</Text></Pressable>:null}
  </View>
 }
 function ProfessionalSetupNotice(){
