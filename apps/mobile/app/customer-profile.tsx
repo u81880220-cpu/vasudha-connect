@@ -53,7 +53,7 @@ export default function CustomerProfile() {
   const score = Math.min(100, Math.max(0, Number(rep?.trust_score ?? f.customer_trust_score ?? 0)));
 
   return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView style={s.safe} edges={["top"]}>
       <ScrollView contentContainerStyle={s.c} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={s.top}>
           <Pressable onPress={() => router.back()} style={s.back} accessibilityLabel="Go back">
