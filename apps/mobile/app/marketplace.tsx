@@ -119,6 +119,7 @@ function MarketplaceScreen(){
       </View>
 
       <FlatList
+        style={{flex:1}}
         showsVerticalScrollIndicator={false}
         data={visibleItems}
         keyExtractor={x=>x.professional_id}
