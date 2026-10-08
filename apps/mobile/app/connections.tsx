@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { AppBottomNav } from "../src/components/AppBottomNav";
 import { router } from "expo-router";
@@ -44,7 +45,7 @@ export default function Connections(){
    router.push({pathname:"/chat",params:{conversationId:item.conversationId,otherName:item.profile?.display_name||"Customer",professionalId:item.professional_id}});
   }
  }
- return <SafeAreaView style={s.safe}><View style={s.page}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
+ return <SafeAreaView style={s.safe} edges={["top"]}><View style={s.page}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
   <VasudhaLogo/><Text style={s.title}>My Chats</Text><Text style={s.muted}>{mode==="customer"?"Professionals you can message":"Customers you can message"}</Text>
   {loading?<View style={s.state}><ActivityIndicator/><Text style={s.muted}>Loading connections…</Text></View>:error?<View style={s.state}><Text style={s.errorTitle}>Couldn't load connections</Text><Pressable onPress={load} style={s.primary}><Text style={s.primaryText}>Try again</Text></Pressable></View>:items.length===0?<View style={s.empty}><Text style={s.emptyTitle}>No chats yet</Text><Text style={s.muted}>{mode==="customer"?"Connect with a professional to start a chat.":"When a customer connects with you, the chat will appear here."}</Text></View>:
    items.map(x=><View key={x.id} style={s.card}><Text style={s.name}>{x.profile?.display_name||x.profile?.full_name||"User"}</Text>{x.professional?.headline?<Text style={s.muted}>{x.professional.headline}</Text>:null}{x.professional?.trust_score!=null?<Text style={s.score}>Trust {Math.round(x.professional.trust_score)}/100</Text>:null}{mode==="professional"&&x.customerReputation?<Text style={s.score}>Customer trust {Math.round(x.customerReputation.trust_score||0)}/100</Text>:null}<Text style={[s.expiry,x.chatState?.active===false&&s.closedExpiry]}>{!x.conversationId?"Chat not started":x.chatState?.active===false?"Chat closed":"Chat active"}</Text><Pressable style={[s.primary,x.chatState?.active===false&&s.closedButton]} onPress={()=>open(x)}><Text style={s.primaryText}>{x.conversationId&&x.chatState?.active===false?"View Chat":"Open Chat"}</Text></Pressable></View>)
