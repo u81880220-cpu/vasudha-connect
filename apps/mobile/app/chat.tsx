@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { useAuth } from "../src/auth/AuthProvider";
@@ -9,7 +9,6 @@ import { KAMPRO } from "../src/components/kamproTheme";
 import { AppBottomNav } from "../src/components/AppBottomNav";
 
 export default function Chat(){
- const insets=useSafeAreaInsets();
  const {conversationId,otherName,professionalId,serviceId,subServiceId,serviceName,subServiceName}=useLocalSearchParams<{conversationId:string;otherName:string;professionalId?:string;serviceId?:string;subServiceId?:string;serviceName?:string;subServiceName?:string}>();const {user,mode}=useAuth();const [messages,setMessages]=useState<any[]>([]);const [body,setBody]=useState("");const [sending,setSending]=useState(false);const [loading,setLoading]=useState(true);const [chatActive,setChatActive]=useState(true);const [chatStatus,setChatStatus]=useState<string|null>(null);
  useEffect(()=>{load();if(!conversationId)return;const ch=supabase.channel("chat-"+conversationId).on("postgres_changes",{event:"INSERT",schema:"public",table:"messages",filter:`conversation_id=eq.${conversationId}`},payload=>setMessages(prev=>prev.some(x=>x.id===payload.new.id)?prev:[...prev,payload.new])).subscribe();return()=>{supabase.removeChannel(ch);};},[conversationId]);
  async function load(){if(!conversationId){setLoading(false);return;}setLoading(true);const[stateRes,msgRes]=await Promise.all([supabase.rpc("get_conversation_chat_state",{p_conversation_id:conversationId}),supabase.from("messages").select("id,conversation_id,sender_id,body,created_at").eq("conversation_id",conversationId).order("created_at",{ascending:true})]);if(stateRes.error)Alert.alert("Unable to load chat status",stateRes.error.message);else{const state=stateRes.data||{};setChatActive(state.active!==false);setChatStatus(state.status||null);}if(msgRes.error)Alert.alert("Unable to load chat",msgRes.error.message);else setMessages(msgRes.data||[]);setLoading(false);}
