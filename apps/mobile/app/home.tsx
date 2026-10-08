@@ -119,7 +119,8 @@ function ProfessionalHome(){
  },[session?.user.id]);
  async function toggleAvailability(v:boolean){
   if(busy)return;setBusy(true);
-  const{error}=await supabase.rpc("update_professional_profile",{p_headline:null,p_about:null,p_years_experience:0,p_service_radius_km:10,p_is_available:v,p_base_latitude:null,p_base_longitude:null});
+  const{data:current}=await supabase.from("professional_profiles").select("headline,about,years_experience,service_radius_km,base_latitude,base_longitude").eq("user_id",session?.user.id).maybeSingle();
+  const{error}=await supabase.rpc("update_professional_profile",{p_headline:current?.headline||null,p_about:current?.about||null,p_years_experience:Number(current?.years_experience||0),p_service_radius_km:Number(current?.service_radius_km||10),p_is_available:v,p_base_latitude:current?.base_latitude??null,p_base_longitude:current?.base_longitude??null});
   setBusy(false);
   if(error)Alert.alert("Availability update failed",error.message);else setStats(x=>({...x,available:v}));
  }
