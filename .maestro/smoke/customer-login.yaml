@@ -11,6 +11,8 @@ env:
 ---
 - launchApp:
     clearState: true
+- tapOn: "Get Started"
+- tapOn: "I need a professional"
 - tapOn: "Email address"
 - inputText: ${CUSTOMER_EMAIL}
 - tapOn: "Password"
