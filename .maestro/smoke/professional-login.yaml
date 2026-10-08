@@ -14,11 +14,9 @@ env:
 - tapOn: "Use KAMPRO as a Professional"
 - assertVisible: "I am a professional"
 - tapOn: "I am a professional"
-- tapOn:
-    id: "KAMPRO email address"
+- tapOn: "Email address"
 - inputText: ${PROFESSIONAL_EMAIL}
-- tapOn:
-    id: "KAMPRO password"
+- tapOn: "Password"
 - inputText: ${PROFESSIONAL_PASSWORD}
 - tapOn: "Sign in with Email"
 - assertVisible: "Switch to Customer mode"
