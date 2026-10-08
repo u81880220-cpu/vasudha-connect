@@ -4,9 +4,19 @@ tags:
   - smoke
   - professional
   - navigation
+env:
+  PROFESSIONAL_EMAIL: ${PROFESSIONAL_EMAIL}
+  PROFESSIONAL_PASSWORD: ${PROFESSIONAL_PASSWORD}
 
 ---
-- runFlow:
-    file: ../smoke/professional-login.yaml
+- launchApp:
+    clearState: true
+- tapOn: "Get Started"
+- tapOn: "I am a professional"
+- tapOn: "Email address"
+- inputText: ${PROFESSIONAL_EMAIL}
+- tapOn: "Password"
+- inputText: ${PROFESSIONAL_PASSWORD}
+- tapOn: "Sign in with Email"
 - assertVisible: "Switch to Customer mode"
 - takeScreenshot: professional-home
