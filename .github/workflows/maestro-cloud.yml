@@ -9,8 +9,11 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Checkout
+      - name: Checkout latest main
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
 
       - name: Setup Node 22
         uses: actions/setup-node@v4
@@ -46,6 +49,16 @@ jobs:
       - name: Build ARM-compatible debug APK
         working-directory: apps/mobile/android
         run: ./gradlew assembleDebug --no-daemon
+
+      - name: Verify Maestro workspace
+        run: |
+          echo "Testing commit: $(git rev-parse HEAD)"
+          echo "Customer login flow:"
+          sed -n '1,120p' .maestro/smoke/customer-login.yaml
+          echo "Customer navigation flow:"
+          sed -n '1,120p' .maestro/journeys/customer-navigation.yaml
+          echo "Professional login flow:"
+          sed -n '1,120p' .maestro/smoke/professional-login.yaml
 
       - name: Run KAMPRO Maestro smoke suite
         uses: mobile-dev-inc/action-maestro-cloud@v3.0.1
