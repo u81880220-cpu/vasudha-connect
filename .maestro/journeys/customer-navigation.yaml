@@ -4,10 +4,20 @@ tags:
   - smoke
   - customer
   - navigation
+env:
+  CUSTOMER_EMAIL: ${CUSTOMER_EMAIL}
+  CUSTOMER_PASSWORD: ${CUSTOMER_PASSWORD}
 
 ---
-- runFlow:
-    file: ../smoke/customer-login.yaml
+- launchApp:
+    clearState: true
+- tapOn: "Get Started"
+- tapOn: "I need a professional"
+- tapOn: "Email address"
+- inputText: ${CUSTOMER_EMAIL}
+- tapOn: "Password"
+- inputText: ${CUSTOMER_PASSWORD}
+- tapOn: "Sign in with Email"
 - assertVisible: "Find trusted professionals"
 - tapOn: "Find professionals →"
 - assertVisible: "Find Skills Around You"
