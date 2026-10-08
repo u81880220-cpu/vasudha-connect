@@ -45,7 +45,7 @@ export default function CustomerProfile() {
     const { error } = await supabase.from("profiles").update(f).eq("id", session.user.id);
     if (error) Alert.alert("Save failed", error.message);
     else { const {error:phoneError}=await supabase.from("user_contact_details").upsert({user_id:session.user.id,phone:phone.trim()||null,phone_2:phone2.trim()||null,updated_at:new Date().toISOString()}); if(phoneError){Alert.alert("Phone save failed",phoneError.message);return;}
-      Alert.alert("Saved", "Profile updated.");
+      Alert.alert("Changed successfully", "Your customer profile has been updated.");
       router.back();
     }
   }
