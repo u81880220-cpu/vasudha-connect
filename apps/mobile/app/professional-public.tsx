@@ -51,7 +51,22 @@ export default function ProfessionalPublic(){
    {connected ? <>
     <Text style={s.label}>About</Text><Text style={s.body}>{data.profile?.about||"Professional information available after connection."}</Text>
     <Text style={s.label}>Approved work history</Text>{(data.portfolio||[]).length===0?<Text style={s.muted}>No approved work samples yet.</Text>:(data.portfolio||[]).map((x:any)=><View key={x.id} style={s.portfolio}><Text style={s.portfolioTitle}>{x.title}</Text>{x.description?<Text style={s.body}>{x.description}</Text>:null}</View>)}
-    <View style={s.contactBox}><Text style={s.connectTitle}>Contact unlocked</Text><Text style={s.muted}>You can now contact this professional directly.</Text>{phone?<Text style={s.phone}>{phone}</Text>:<Text style={s.muted}>No phone number available.</Text>}<View style={s.actions}><Pressable style={s.secondary} onPress={call}><Text style={s.secondaryText}>Call</Text></Pressable><Pressable onPress={async()=>{const {data:conversationId,error}=await supabase.rpc("get_or_create_conversation",{p_professional_id:professionalId});if(error||!conversationId){Alert.alert("Chat unavailable",error?.message||"Unable to open chat.");return;}router.push({pathname:"/chat",params:{conversationId,otherName:data.profile?.display_name||"Professional",professionalId,serviceId:serviceId||"",subServiceId:subServiceId||"",serviceName:serviceName||"",subServiceName:subServiceName||""}})}} style={s.primary}><Text style={s.primaryText}>Message</Text></Pressable></View><Pressable onPress={()=>router.push({pathname:"/service-request",params:{professionalId,serviceId:serviceId||"",subServiceId:subServiceId||"",serviceName:serviceName||"",subServiceName:subServiceName||""}})} style={s.createJob}><Text style={s.createJobText}>Create Job</Text></Pressable></View><Text style={s.directNote}>After connection, you can communicate directly with this professional about the requested work.</Text>
+    <View style={s.contactBox}><Text style={s.connectTitle}>Contact unlocked</Text><Text style={s.muted}>You can now contact this professional directly.</Text>{phone?<Text style={s.phone}>{phone}</Text>:<Text style={s.muted}>No phone number available.</Text>}<View style={s.actions}><Pressable style={s.secondary} onPress={call}><Text style={s.secondaryText}>Call</Text></Pressable><Pressable onPress={async()=>{const {data:conversationId,error}=await supabase.rpc("get_or_create_conversation",{p_professional_id:professionalId});if(error||!conversationId){Alert.alert("Chat unavailable",error?.message||"Unable to open chat.");return;}router.push({pathname:"/chat",params:{conversationId,otherName:data.profile?.display_name||"Professional",professionalId,serviceId:serviceId||"",subServiceId:subServiceId||"",serviceName:serviceName||"",subServiceName:subServiceName||""}})}} style={s.primary}><Text style={s.primaryText}>Message</Text></Pressable></View><Pressable onPress={async()=>{
+    let nextServiceId=serviceId||"",nextSubServiceId=subServiceId||"",nextServiceName=serviceName||"",nextSubServiceName=subServiceName||"";
+    // If the customer opened this profile without carrying the marketplace
+    // service selection, use the professional's displayed offered service.
+    if(!nextServiceId && data?.sub_services?.[0]?.id){
+      nextSubServiceId=nextSubServiceId||data.sub_services[0].id;
+      nextSubServiceName=nextSubServiceName||data.sub_services[0].name||"";
+      const {data:sub}=await supabase.from("service_catalogue_sub_services").select("service_id,name").eq("id",nextSubServiceId).maybeSingle();
+      if(sub?.service_id){
+        const {data:svc}=await supabase.from("service_catalogue_services").select("id,name").eq("id",sub.service_id).maybeSingle();
+        nextServiceId=svc?.id||"";
+        nextServiceName=svc?.name||"";
+      }
+    }
+    router.push({pathname:"/service-request",params:{professionalId,serviceId:nextServiceId,subServiceId:nextSubServiceId,serviceName:nextServiceName,subServiceName:nextSubServiceName}});
+  }} style={s.createJob}><Text style={s.createJobText}>Create Job</Text></Pressable></View><Text style={s.directNote}>After connection, you can communicate directly with this professional about the requested work.</Text>
    </> : <View style={s.connectBox}><Text style={s.connectTitle}>Unlock this professional</Text><Text style={s.muted}>Before unlocking, contact details and messaging stay private.</Text><Text style={s.balance}>Connections available: {balance}</Text><Pressable onPress={unlock} disabled={busy} style={s.primary}><Text style={s.primaryText}>{busy?"Unlocking…":balance>0?"Use 1 connection":"Get connections"}</Text></Pressable></View>}
   </ScrollView><AppBottomNav active="map"/>
  </SafeAreaView>;
