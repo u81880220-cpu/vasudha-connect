@@ -1,0 +1,10 @@
+flows:
+  - "smoke/*"
+  - "journeys/*"
+
+platform:
+  android:
+    disableAnimations: true
+
+executionOrder:
+  continueOnFailure: true
