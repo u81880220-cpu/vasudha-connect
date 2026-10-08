@@ -92,28 +92,33 @@ function ProfessionalSetupNotice(){
 
 function ProfessionalHome(){
  const{session}=useAuth();
+ const[professionalName,setProfessionalName]=useState("");
  const[stats,setStats]=useState({trust:0,verified:false,available:false,requests:0,jobs:0});
  useEffect(()=>{
   if(!session?.user.id)return;
   let active=true;
   (async()=>{
-   const[{data:profile},{data:requests},{data:jobs}]=await Promise.all([
+   const[{data:profile},{data:requests},{data:jobs},{data:userProfile}]=await Promise.all([
     supabase.from("professional_profiles").select("trust_score,verification_status,is_available").eq("user_id",session.user.id).maybeSingle(),
     supabase.rpc("get_professional_requests"),
-    supabase.from("professional_connections").select("id").eq("professional_id",session.user.id).gt("expires_at",new Date().toISOString()).limit(50)
+    supabase.from("professional_connections").select("id").eq("professional_id",session.user.id).gt("expires_at",new Date().toISOString()).limit(50),
+    supabase.from("profiles").select("full_name").eq("id",session.user.id).maybeSingle()
    ]);
-   if(active)setStats({
+   if(active){
+    setProfessionalName(userProfile?.full_name?.trim()||"");
+    setStats({
     trust:Number(profile?.trust_score||0),
     verified:profile?.verification_status==="verified",
     available:!!profile?.is_available,
     requests:(requests||[]).filter((x:any)=>x.status==="requested").length,
     jobs:(jobs||[]).length
-   });
+    });
+   }
   })();
   return()=>{active=false};
  },[session?.user.id]);
  return <View>
-  <Text style={s.greeting}>Welcome back{customerName?`, ${customerName}`:""} 👋</Text>
+  <Text style={s.greeting}>Welcome back{professionalName?`, ${professionalName}`:""} 👋</Text>
   <Text style={s.heading}>Grow your business.</Text><Text style={s.heading}>Get more customers.</Text>
   <ProfessionalSetupNotice/>
   <View style={s.statHero}><Text style={s.statLabel}>Professional Trust</Text><Text style={s.statValue}>{Math.round(stats.trust)} <Text style={s.statSmall}>/ 100</Text></Text><Text style={s.meta}>{stats.verified?"✓ Verified":"Verification pending"} • {stats.available?"Available for customers":"Currently unavailable"}</Text></View>
