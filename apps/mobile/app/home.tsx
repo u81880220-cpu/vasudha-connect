@@ -11,7 +11,8 @@ import { KamproPage, KamproCard, KamproPrimary, KamproSection } from "../src/com
 
 const services=["Electrician","Plumber","Carpenter","Painter","AC Technician"];
 
-// KAMPRO QA: authenticated landing screen\nexport default function HomeScreen(){
+// KAMPRO QA: authenticated landing screen
+export default function HomeScreen(){
  const{session,loading,mode,setMode,signOut}=useAuth();
  const[switching,setSwitching]=useState(false);
  const[customerName,setCustomerName]=useState("");
