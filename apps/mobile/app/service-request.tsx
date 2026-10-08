@@ -48,10 +48,10 @@ export default function ServiceRequest(){
   setBusy(true);
   let latitude:null|number=null, longitude:null|number=null;
   try{if(location.trim()&&await Location.hasServicesEnabledAsync()){const perm=await Location.requestForegroundPermissionsAsync();if(perm.status==="granted"){const places=await Location.geocodeAsync(location.trim());if(places[0]){latitude=places[0].latitude;longitude=places[0].longitude;}}}}catch{}
-  const {error}=await supabase.rpc("create_service_request",{p_professional_id:professionalId,p_service_id:selection.serviceId,p_sub_service_id:selection.subServiceId||null,p_title:title.trim()||null,p_description:description.trim()||null,p_preferred_date:date||null,p_preferred_time:time.trim()||null,p_location_text:location.trim()||null,p_location_latitude:latitude,p_location_longitude:longitude});
+  const {data:requestId,error}=await supabase.rpc("create_service_request",{p_professional_id:professionalId,p_service_id:selection.serviceId,p_sub_service_id:selection.subServiceId||null,p_title:title.trim()||null,p_description:description.trim()||null,p_preferred_date:date||null,p_preferred_time:time.trim()||null,p_location_text:location.trim()||null,p_location_latitude:latitude,p_location_longitude:longitude});
   setBusy(false);
   if(error)Alert.alert("Request failed",error.message);
-  else{Alert.alert("Request created","Your job request has been sent to the professional.");router.back();}
+  else router.replace({pathname:"/jobs",params:{created:"1",requestId:String(requestId||"")}});
  }
 
  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
