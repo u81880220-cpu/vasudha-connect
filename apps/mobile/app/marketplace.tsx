@@ -121,7 +121,7 @@ function MarketplaceScreen(){
     setLoading(false);
   }
 
-  return <SafeAreaView style={s.safe}>
+  return <SafeAreaView style={s.safe} edges={["top"]}>
     <View style={s.container}>
       <View style={s.header}>
         <VasudhaLogo compact/>
