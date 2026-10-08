@@ -5,6 +5,7 @@ import { useAuth } from "../src/auth/AuthProvider";
 import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { AppBottomNav } from "../src/components/AppBottomNav";
+import { ProfilePhotoPicker } from "../src/components/ProfilePhotoPicker";
 
 export default function CustomerProfile() {
   const { session } = useAuth();
@@ -24,7 +25,7 @@ export default function CustomerProfile() {
     if (!session?.user.id) return;
     setLoading(true);
     const { data, error } = await supabase.from("profiles")
-      .select("full_name,display_name,bio,city,state,country,customer_trust_score")
+      .select("full_name,display_name,bio,city,state,country,customer_trust_score,avatar_url")
       .eq("id", session.user.id).maybeSingle();
     if (error) Alert.alert("Error", error.message);
     else if (data) setF(data);
@@ -62,6 +63,7 @@ export default function CustomerProfile() {
 
         <Text style={s.t}>My Customer Profile</Text>
         <Text style={s.sub}>Your profile helps professionals understand who they are working with.</Text>
+        <ProfilePhotoPicker userId={session?.user.id} avatarUrl={f.avatar_url} onUploaded={(url)=>setF({...f,avatar_url:url})} />
         {loading ? <Text style={s.muted}>Loading profile…</Text> : null}
 
         <View style={s.trust}>
