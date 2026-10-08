@@ -11,11 +11,9 @@ env:
 ---
 - launchApp:
     clearState: true
-- tapOn:
-    id: "KAMPRO email address"
+- tapOn: "Email address"
 - inputText: ${CUSTOMER_EMAIL}
-- tapOn:
-    id: "KAMPRO password"
+- tapOn: "Password"
 - inputText: ${CUSTOMER_PASSWORD}
 - tapOn: "Sign in with Email"
 - assertVisible: "Find trusted professionals"
