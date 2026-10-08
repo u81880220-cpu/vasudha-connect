@@ -17,8 +17,8 @@ export default function Notifications(){
   await read(n.id);
   const d=n.data||{};
   if(d.conversation_id){router.push({pathname:"/chat",params:{conversationId:d.conversation_id}});return;}
+  if(d.complaint_id){router.push({pathname:"/complaints",params:{complaintId:d.complaint_id}});return;}
   if(d.job_id){router.push({pathname:"/job-details",params:{jobId:d.job_id}});return;}
-  if(d.complaint_id){router.push("/complaints");return;}
   if(d.request_id){router.push(mode==="professional"?"/professional-dashboard":"/customer-dashboard");return;}
  }
  const shown=tab==="All"?items:tab==="Unread"?items.filter(n=>!n.read_at):tab==="Messages"?items.filter(n=>n.type==="message"):items.filter(n=>n.type==="job");
