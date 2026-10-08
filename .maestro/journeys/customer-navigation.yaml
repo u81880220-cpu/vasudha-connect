@@ -8,6 +8,7 @@ tags:
 ---
 - runFlow:
     file: ../smoke/customer-login.yaml
+- assertVisible: "Find trusted professionals"
 - tapOn: "Find professionals →"
 - assertVisible: "Find Skills Around You"
 - assertVisible: "Search a Pro or skill"
