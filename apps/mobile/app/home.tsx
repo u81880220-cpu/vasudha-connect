@@ -13,7 +13,9 @@ const services=["Electrician","Plumber","Carpenter","Painter","AC Technician"];
 
 export default function HomeScreen(){
  const{session,loading,mode,setMode,signOut}=useAuth();
- const[switching,setSwitching]=useState(false);\n const[customerName,setCustomerName]=useState("");\n const[unreadNotifications,setUnreadNotifications]=useState(0);
+ const[switching,setSwitching]=useState(false);
+ const[customerName,setCustomerName]=useState("");
+ const[unreadNotifications,setUnreadNotifications]=useState(0);
  const[checkingOnboarding,setCheckingOnboarding]=useState(true);
  useEffect(()=>{if(!loading&&!session)router.replace("/auth")},[loading,session]);
  useEffect(()=>{
@@ -26,7 +28,9 @@ export default function HomeScreen(){
    // Do not block login on incomplete professional onboarding.
    // The home screen remains the authenticated landing page; professionals
    // can complete registration from the profile/verification actions.
-   setCustomerName(profile?.full_name?.trim()||"");\n   setUnreadNotifications(unreadCount||0);\n   setCheckingOnboarding(false);
+   setCustomerName(profile?.full_name?.trim()||"");
+   setUnreadNotifications(unreadCount||0);
+   setCheckingOnboarding(false);
   })();
   return()=>{active=false};
  },[loading,session?.user.id,mode]);
