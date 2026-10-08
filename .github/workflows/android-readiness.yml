@@ -42,3 +42,13 @@ jobs:
           grep -q 'com.vasudha.connect' android/app/build.gradle
           grep -q 'ACCESS_FINE_LOCATION' android/app/src/main/AndroidManifest.xml
           grep -q 'ACCESS_COARSE_LOCATION' android/app/src/main/AndroidManifest.xml
+
+      - name: Assemble latest KAMPRO Android APK
+        run: ./android/gradlew assembleDebug --no-daemon
+
+      - name: Upload latest KAMPRO debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kampro-latest-debug-apk
+          path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
