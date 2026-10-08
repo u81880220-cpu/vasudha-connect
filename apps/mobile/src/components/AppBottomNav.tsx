@@ -50,11 +50,11 @@ const s=StyleSheet.create({
     shadowOffset:{width:0,height:-3},
     elevation:8
   },
-  item:{flex:1,alignItems:"center",justifyContent:"center",minWidth:52},
+  item:{flex:1,alignItems:"center",justifyContent:"center",minWidth:0},
   pressed:{opacity:.65},
   iconPill:{width:38,height:30,borderRadius:15,alignItems:"center",justifyContent:"center"},
   iconPillActive:{backgroundColor:"#FFF0EA"},
   icon:{fontSize:20,color:KAMPRO.muted,lineHeight:25},
-  label:{fontSize:11,fontWeight:"800",color:KAMPRO.muted,marginTop:3},
+  label:{fontSize:11,fontWeight:"800",color:KAMPRO.muted,marginTop:3,textAlign:"center"},
   active:{color:KAMPRO.brand},
 });
