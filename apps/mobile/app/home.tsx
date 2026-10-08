@@ -13,7 +13,7 @@ const services=["Electrician","Plumber","Carpenter","Painter","AC Technician"];
 
 export default function HomeScreen(){
  const{session,loading,mode,setMode,signOut}=useAuth();
- const[switching,setSwitching]=useState(false);
+ const[switching,setSwitching]=useState(false);\n const[customerName,setCustomerName]=useState("");
  const[checkingOnboarding,setCheckingOnboarding]=useState(true);
  useEffect(()=>{if(!loading&&!session)router.replace("/auth")},[loading,session]);
  useEffect(()=>{
@@ -26,7 +26,7 @@ export default function HomeScreen(){
    // Do not block login on incomplete professional onboarding.
    // The home screen remains the authenticated landing page; professionals
    // can complete registration from the profile/verification actions.
-   setCheckingOnboarding(false);
+   setCustomerName(profile?.full_name?.trim()||"");\n   setCheckingOnboarding(false);
   })();
   return()=>{active=false};
  },[loading,session?.user.id,mode]);
@@ -45,15 +45,15 @@ export default function HomeScreen(){
   catch(e:any){Alert.alert("Sign out failed",e?.message||"Please try again.")}
  }
  return <><KamproPage><View style={s.top}><VasudhaLogo/><Pressable accessibilityRole="button" accessibilityLabel="Notifications" onPress={()=>router.push("/notifications")} style={s.bell}><Text style={s.bellText}>🔔</Text></Pressable></View>
-  {customer?<CustomerHome/>:<ProfessionalHome/>}
+  {customer?<CustomerHome name={customerName}/>:<ProfessionalHome/>}
   <Pressable accessibilityRole="button" disabled={switching} onPress={toggleMode} style={[s.switch,switching&&s.disabled]}><Text style={s.switchText}>{switching?"Switching…":customer?"Switch to Professional mode":"Switch to Customer mode"}</Text><Text style={s.arrow}>›</Text></Pressable>
   <Pressable accessibilityRole="button" onPress={logout} style={s.signout}><Text style={s.signoutText}>Sign out</Text></Pressable>
  </KamproPage><AppBottomNav/></>
 }
 
-function CustomerHome(){
+function CustomerHome({name}:{name:string}){
  return <View>
-  <Text style={s.greeting}>Good morning 👋</Text>
+  <Text style={s.greeting}>Good morning{name?`, ${name}`:""} 👋</Text>
   <Text style={s.heading}>Find trusted professionals</Text><Text style={s.heading}>around you.</Text>
   <Pressable accessibilityRole="button" accessibilityLabel="Search for services" onPress={()=>router.push("/marketplace")} style={s.search}><Text style={s.searchIcon}>⌕</Text><Text style={s.searchText}>Search for services...</Text></Pressable>
   <Text style={s.section}>Popular services</Text>
