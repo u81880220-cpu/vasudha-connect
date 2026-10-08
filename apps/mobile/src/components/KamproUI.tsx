@@ -18,7 +18,7 @@ const s=StyleSheet.create({
  safe:{flex:1,backgroundColor:KAMPRO.background},
  scroll:{paddingBottom:110},
  shell:{flex:1,alignItems:"center",backgroundColor:KAMPRO.background},
- content:{width:"100%",maxWidth:1180,paddingHorizontal:24,paddingTop:18,paddingBottom:24},
+ content:{width:"100%",maxWidth:1180,alignSelf:"center",paddingHorizontal:18,paddingTop:14,paddingBottom:24},
  header:{minHeight:62,position:"relative",justifyContent:"center",marginBottom:8},
  brand:{alignItems:"flex-start"},
  headerAction:{position:"absolute",right:0,top:8},
