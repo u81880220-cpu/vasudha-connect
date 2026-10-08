@@ -33,6 +33,16 @@ jobs:
         working-directory: apps/mobile
         run: npx expo prebuild --platform android --no-install
 
+      - name: Repair Android NDK 27.1.12297006 if needed
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager -type f | head -n 1)"
+          fi
+          rm -rf "$ANDROID_HOME/ndk/27.1.12297006"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" --install "ndk;27.1.12297006"
+
       - name: Build ARM-compatible debug APK
         working-directory: apps/mobile/android
         run: ./gradlew assembleDebug --no-daemon
