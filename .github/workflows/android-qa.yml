@@ -58,3 +58,5 @@ jobs:
           name: kampro-android-debug-apk
           path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      # Build requested from latest main source.
