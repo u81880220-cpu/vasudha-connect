@@ -11,12 +11,16 @@ env:
 ---
 - launchApp:
     clearState: true
-- tapOn: "Get Started"
-- tapOn: "I am a professional"
-- tapOn: "Email address"
-- inputText: ${PROFESSIONAL_EMAIL}
-- tapOn: "Password"
-- inputText: ${PROFESSIONAL_PASSWORD}
-- tapOn: "Sign in with Email"
+- runFlow:
+    when:
+      visible: "Get Started"
+    commands:
+      - tapOn: "Get Started"
+      - tapOn: "I am a professional"
+      - tapOn: "Email address"
+      - inputText: ${PROFESSIONAL_EMAIL}
+      - tapOn: "Password"
+      - inputText: ${PROFESSIONAL_PASSWORD}
+      - tapOn: "Sign in with Email"
 - assertVisible: "Switch to Customer mode"
 - takeScreenshot: professional-home
