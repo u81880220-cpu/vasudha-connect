@@ -44,7 +44,7 @@ export default function ProfessionalProfile(){
   if(phoneError)return Alert.alert("Phone save failed",phoneError.message);
   await supabase.from("professional_sub_services").delete().eq("professional_id",uid);
   if(selectedSubServices.length){const{error:serviceError}=await supabase.from("professional_sub_services").insert(selectedSubServices.map((x,i)=>({professional_id:uid,sub_service_id:x.id,years_experience:Number(p.years_experience)||0,is_primary:i===0})));if(serviceError)return Alert.alert("Services save failed",serviceError.message);}
-  Alert.alert("Saved","Professional profile updated.");load();
+  Alert.alert("Saved successfully","Your professional profile has been updated.");load();
  }
  async function addArea(){
   if(!area.label.trim())return Alert.alert("Service area","Enter an area.");
