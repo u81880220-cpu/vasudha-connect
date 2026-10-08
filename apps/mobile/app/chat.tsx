@@ -8,6 +8,7 @@ import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { KAMPRO } from "../src/components/kamproTheme";
 
 export default function Chat(){
+ const insets=useSafeAreaInsets();
  const {conversationId,otherName,professionalId,serviceId,subServiceId,serviceName,subServiceName}=useLocalSearchParams<{conversationId:string;otherName:string;professionalId?:string;serviceId?:string;subServiceId?:string;serviceName?:string;subServiceName?:string}>();const {user,mode}=useAuth();const [messages,setMessages]=useState<any[]>([]);const [body,setBody]=useState("");const [sending,setSending]=useState(false);const [loading,setLoading]=useState(true);
  useEffect(()=>{load();if(!conversationId)return;const ch=supabase.channel("chat-"+conversationId).on("postgres_changes",{event:"INSERT",schema:"public",table:"messages",filter:`conversation_id=eq.${conversationId}`},payload=>setMessages(prev=>prev.some(x=>x.id===payload.new.id)?prev:[...prev,payload.new])).subscribe();return()=>{supabase.removeChannel(ch);};},[conversationId]);
  async function load(){if(!conversationId){setLoading(false);return;}setLoading(true);const{data,error}=await supabase.from("messages").select("id,conversation_id,sender_id,body,created_at").eq("conversation_id",conversationId).order("created_at",{ascending:true});if(error)Alert.alert("Unable to load chat",error.message);else setMessages(data||[]);setLoading(false);}
