@@ -11,13 +11,17 @@ env:
 ---
 - launchApp:
     clearState: true
-- tapOn: "Get Started"
-- tapOn: "I need a professional"
-- tapOn: "Email address"
-- inputText: ${CUSTOMER_EMAIL}
-- tapOn: "Password"
-- inputText: ${CUSTOMER_PASSWORD}
-- tapOn: "Sign in with Email"
+- runFlow:
+    when:
+      visible: "Get Started"
+    commands:
+      - tapOn: "Get Started"
+      - tapOn: "I need a professional"
+      - tapOn: "Email address"
+      - inputText: ${CUSTOMER_EMAIL}
+      - tapOn: "Password"
+      - inputText: ${CUSTOMER_PASSWORD}
+      - tapOn: "Sign in with Email"
 - assertVisible: "Find trusted professionals"
 - tapOn: "Find professionals →"
 - assertVisible: "Find Skills Around You"
