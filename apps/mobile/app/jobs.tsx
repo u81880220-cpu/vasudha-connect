@@ -23,7 +23,15 @@ export default function Jobs(){
   if(error)Alert.alert("Unable to load jobs",error.message); else setJobs(data||[]);
   if(mode==="customer"){
     const{data:rq,error:re}=await supabase.from("service_requests").select("*").eq("customer_id",user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false});
-    if(!re)setRequests(rq||[]);
+    if(!re){
+      const ids=[...new Set((rq||[]).map((x:any)=>x.professional_id).filter(Boolean))];
+      const names:Record<string,string>={};
+      if(ids.length){
+        const{data:profiles}=await supabase.from("profiles").select("id,display_name,full_name").in("id",ids);
+        (profiles||[]).forEach((p:any)=>{names[p.id]=p.display_name||p.full_name||"Professional"});
+      }
+      setRequests((rq||[]).map((x:any)=>({...x,professional_name:names[x.professional_id]||null})));
+    }
   } else {
     const{data:rq,error:re}=await supabase.from("service_requests").select("*").eq("professional_id",user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false});
     if(!re){
@@ -47,9 +55,10 @@ export default function Jobs(){
     jobs.length===0&&requests.length===0?<View style={s.empty}><View style={s.emptyIcon}><Text>✓</Text></View><Text style={s.emptyTitle}>No jobs yet</Text><Text style={s.emptyText}>{mode==="customer"?"Your accepted services will appear here.":"Jobs assigned to you will appear here."}</Text></View>:
     requests.map(r=><View key={`request-${r.id}`} style={s.card}>
       <View style={s.cardTop}><View style={{flex:1}}><Text style={s.name}>{r.title||"Service request"}</Text><Text style={s.id}>REQUEST · {String(r.id).slice(0,8).toUpperCase()}</Text></View></View>
-      <View style={s.badge}><View style={s.badgeDot}/><Text style={s.badgeText}>Awaiting professional</Text></View>
-      <Text style={s.requestService}>Service request submitted</Text>
-      {mode==="professional"?<Text style={s.muted}>Requested by: {r.customer_name||"Customer"}</Text>:null}
+      <View style={s.badge}><View style={s.badgeDot}/><Text style={s.badgeText}>{r.status==="submitted"||r.status==="requested"?"Pending professional acceptance":"Request status: "+r.status}</Text></View>
+      <Text style={s.requestService}>{mode==="customer"?"Professional: "+(r.professional_name||"Awaiting assignment"):"Requested by: "+(r.customer_name||"Customer")}</Text>
+      {mode==="customer"&&r.professional_id?<Pressable onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:r.professional_id}})}><Text style={s.detailsLink}>View professional profile →</Text></Pressable>:null}
+      {mode==="customer"?<Text style={s.muted}>Your request is saved. The professional has not accepted it yet.</Text>:null}
       <Text style={s.muted}>Created: {new Date(r.created_at).toLocaleString()}</Text>
     </View>),
     jobs.map(j=>{const n=nextFor(j),idx=steps.indexOf(j.status);const isProfessional=j.professional_id===user?.id;const isCustomer=j.customer_id===user?.id;return <View key={j.id} style={s.card}>
