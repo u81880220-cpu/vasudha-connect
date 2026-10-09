@@ -1,20 +1,23 @@
 import { router,usePathname } from "expo-router";
 import { Pressable,StyleSheet,Text,View } from "react-native";
 import { KAMPRO } from "./kamproTheme";
+import { useKamproLanguage } from "../i18n/LanguageProvider";
 
 const tabs=[
-  ["/home","⌂","Home"],
-  ["/marketplace","⌖","Find a Pro"],
-  ["/connections","◌","Chat"],
-  ["/profile","◉","Profile"],
+  ["/home","⌂","home"],
+  ["/marketplace","⌖","findPro"],
+  ["/connections","◌","chat"],
+  ["/profile","◉","profile"],
 ] as const;
 
 type NavKey = "home" | "map" | "chat" | "connections" | "profile";
 export function AppBottomNav({active}: {active?: NavKey}){
   const path=usePathname();
+  const {t}=useKamproLanguage();
   return (
     <View style={s.bar}>
-      {tabs.map(([href,icon,label])=>{
+      {tabs.map(([href,icon,key])=>{
+        const label=t(key);
         const isActive=path===href || (active==="map" && href==="/marketplace") || ((active==="chat" || active==="connections") && href==="/connections") || (active==="home" && href==="/home") || (active==="profile" && href==="/profile");
         return (
           <Pressable
