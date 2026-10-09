@@ -18,34 +18,34 @@ env:
       visible: "Get Started"
     commands:
       - tapOn: "Get Started"
+      - extendedWaitUntil:
+          visible: "I am a professional"
+          timeout: 10000
       - tapOn: "I am a professional"
-      - tapOn: "Email address"
-      - inputText: ${PROFESSIONAL_EMAIL}
-      - tapOn: "Password"
-      - inputText: ${PROFESSIONAL_PASSWORD}
-      - tapOn: "Sign in with Email"
 - runFlow:
     when:
       visible: "How do you want to use"
     commands:
       - tapOn: "I am a professional"
-      - tapOn: "Email address"
-      - inputText: ${PROFESSIONAL_EMAIL}
-      - tapOn: "Password"
-      - inputText: ${PROFESSIONAL_PASSWORD}
-      - tapOn: "Sign in with Email"
 - runFlow:
     when:
       visible: "Welcome Back"
     commands:
       - tapOn: "Use KAMPRO as a Professional"
+      - extendedWaitUntil:
+          visible: "I am a professional"
+          timeout: 10000
       - tapOn: "I am a professional"
-      - tapOn: "Email address"
-      - inputText: ${PROFESSIONAL_EMAIL}
-      - tapOn: "Password"
-      - inputText: ${PROFESSIONAL_PASSWORD}
-      - tapOn: "Sign in with Email"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 20000
+- tapOn: "Email address"
+- inputText: ${PROFESSIONAL_EMAIL}
+- tapOn: "Password"
+- inputText: ${PROFESSIONAL_PASSWORD}
+- hideKeyboard
+- tapOn: "Sign in with Email"
 - extendedWaitUntil:
     visible: "Switch to Customer mode"
-    timeout: 20000
+    timeout: 30000
 - takeScreenshot: professional-home
