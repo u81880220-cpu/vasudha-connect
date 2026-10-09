@@ -55,7 +55,7 @@ export default function HomeScreen(){
   try{await signOut();router.replace("/auth")}
   catch(e:any){Alert.alert("Sign out failed",e?.message||"Please try again.")}
  }
- return <><KamproPage><View style={s.top}><VasudhaLogo/><View style={s.topActions}><LanguageSwitch/><Pressable accessibilityRole="button" accessibilityLabel="Notifications" onPress={()=>router.push("/notifications")} style={s.bell}><Text style={s.bellText}>🔔</Text>{unreadNotifications>0?<View style={s.badge}><Text style={s.badgeText}>{unreadNotifications>99?"99+":unreadNotifications}</Text></View>:null}</Pressable></View>
+ return <><KamproPage><View style={s.top}><VasudhaLogo/><View style={s.topActions}><LanguageSwitch/><Pressable accessibilityRole="button" accessibilityLabel="Notifications" onPress={()=>router.push("/notifications")} style={s.bell}><Text style={s.bellText}>🔔</Text>{unreadNotifications>0?<View style={s.badge}><Text style={s.badgeText}>{unreadNotifications>99?"99+":unreadNotifications}</Text></View>:null}</Pressable></View></View>
   {customer?<CustomerHome name={customerName} avatarUrl={customerAvatarUrl}/>:<ProfessionalHome/>}
   <Pressable accessibilityRole="button" disabled={switching} onPress={toggleMode} style={[s.switch,switching&&s.disabled]}><Text style={s.switchText}>{switching?t("switching"):customer?t("switchToProfessional"):t("switchToCustomer")}</Text><Text style={s.arrow}>›</Text></Pressable>
  </KamproPage><AppBottomNav/></>
