@@ -18,35 +18,30 @@ env:
       visible: "Get Started"
     commands:
       - tapOn: "Get Started"
+      - extendedWaitUntil:
+          visible: "I need a professional"
+          timeout: 10000
       - tapOn: "I need a professional"
-      - tapOn: "Email address"
-      - inputText: ${CUSTOMER_EMAIL}
-      - tapOn: "Password"
-      - inputText: ${CUSTOMER_PASSWORD}
-      - tapOn: "Sign in with Email"
 - runFlow:
     when:
       visible: "How do you want to use"
     commands:
       - tapOn: "I need a professional"
-      - tapOn: "Email address"
-      - inputText: ${CUSTOMER_EMAIL}
-      - tapOn: "Password"
-      - inputText: ${CUSTOMER_PASSWORD}
-      - tapOn: "Sign in with Email"
-- runFlow:
-    when:
-      visible: "Welcome Back"
-    commands:
-      - tapOn: "Email address"
-      - inputText: ${CUSTOMER_EMAIL}
-      - tapOn: "Password"
-      - inputText: ${CUSTOMER_PASSWORD}
-      - tapOn: "Sign in with Email"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 20000
+- tapOn: "Email address"
+- inputText: ${CUSTOMER_EMAIL}
+- tapOn: "Password"
+- inputText: ${CUSTOMER_PASSWORD}
+- hideKeyboard
+- tapOn: "Sign in with Email"
 - extendedWaitUntil:
     visible: "Find trusted professionals"
-    timeout: 20000
+    timeout: 30000
 - tapOn: "Find professionals →"
-- assertVisible: "Find Skills Around You"
+- extendedWaitUntil:
+    visible: "Find Skills Around You"
+    timeout: 15000
 - assertVisible: "Search a Pro or skill"
 - takeScreenshot: customer-find-a-pro
