@@ -38,12 +38,10 @@ export function AuthProvider({children}:PropsWithChildren){
    };
  },[]);
 
- async function loadMode(userId:string,registeredMode?:unknown){
-   // Registration role is the default after every login. current_mode is only the last in-app switch.
-   if(registeredMode==="professional"||registeredMode==="customer"){setModeState(registeredMode);return;}
-   const{data}=await supabase.from("profiles").select("current_mode").eq("id",userId).maybeSingle();
-   if(data?.current_mode==="professional")setModeState("professional");
-   else setModeState("customer");
+ async function loadMode(_userId:string,registeredMode?:unknown){
+   // Always restore the account's registration role after login. Never infer the default from current_mode,
+   // because that field changes when the user switches modes inside the app.
+   setModeState(registeredMode==="professional"?"professional":"customer");
  }
 
  async function setMode(nextMode:AppMode){
