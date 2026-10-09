@@ -27,7 +27,9 @@
     "react-native-web": "0.21.0",
     "@expo/metro-runtime": "~6.1.2",
     "react-native-screens": "~4.16.0",
-    "expo-status-bar": "~3.0.9"
+    "expo-status-bar": "~3.0.9",
+    "react-native-cashfree-pg-sdk": "^2.2.2",
+    "cashfree-pg-api-contract": "^2.2.0"
   },
   "engines": {
     "node": "22.x"
