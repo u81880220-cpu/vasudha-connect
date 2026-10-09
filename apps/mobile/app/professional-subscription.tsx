@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { useAuth } from "../src/auth/AuthProvider";
+import { startCashfreeCheckout } from "../src/lib/cashfree-checkout";
 
 type Plan={plan_id:string;code:string;name:string;description?:string|null;price_inr:number;billing_interval:string};
 type Sub={plan_name:string;price_inr:number;billing_interval:string;status:string;started_at?:string|null;current_period_start?:string|null;current_period_end?:string|null;cancelled_at?:string|null;plan_id?:string};
@@ -28,29 +29,15 @@ export default function ProfessionalSubscription(){
   setLoading(false);
  }
  async function openCheckout(data:any,description:string){
-  if(Platform.OS!=="web"||typeof window==="undefined"){
-   Alert.alert("Cashfree order created","Secure payment order is ready, but native Cashfree SDK checkout must be added and tested before taking payments in the Android app.");
-   return;
+  if(!data?.payment_session_id||!data?.cashfree_order_id){
+   Alert.alert("Payment unavailable","Cashfree did not return a valid payment session. No payment was taken.");return;
   }
-  const w=window as any;
-  const launch=()=>{
-   if(!w.Cashfree){Alert.alert("Payment unavailable","Cashfree checkout could not be loaded.");return;}
-   const cashfree=w.Cashfree({mode:data.environment==="production"?"production":"sandbox"});
-   cashfree.checkout({paymentSessionId:data.payment_session_id,redirectTarget:"_self"}).catch((e:any)=>{
-    Alert.alert("Payment could not be opened",e?.message||"Please try again.");
-   });
-  };
-  if(w.Cashfree){launch();return;}
-  try{
-   await new Promise<void>((resolve,reject)=>{
-    const script=document.createElement("script");
-    script.src="https://sdk.cashfree.com/js/v3/cashfree.js";
-    script.onload=()=>resolve();
-    script.onerror=()=>reject(new Error("Cashfree checkout script failed to load."));
-    document.head.appendChild(script);
-   });
-   launch();
-  }catch(e:any){Alert.alert("Payment unavailable",e?.message||"Cashfree checkout could not be loaded.");}
+  startCashfreeCheckout(data,description,()=>{
+   Alert.alert("Payment submitted","KAMPRO will activate your subscription only after Cashfree confirms payment on the server.");
+   void load();
+  },(message:string)=>{
+   Alert.alert("Payment not completed",message);
+  });
  }
  async function subscribe(planId:string,name:string){
   setCreating(planId);
