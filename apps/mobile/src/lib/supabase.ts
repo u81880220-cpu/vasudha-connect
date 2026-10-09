@@ -18,6 +18,6 @@ export const supabase=createClient(url,publishableKey,{
 });
 
 export function getAuthRedirect(){
-  if(typeof window!=="undefined") return window.location.origin+"/auth/callback";
-  return "vasudhaconnect://auth/callback";
+  if(typeof window!=="undefined") return window.location.origin+"/auth";
+  return "vasudhaconnect://auth";
 }
