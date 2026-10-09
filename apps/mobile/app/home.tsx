@@ -57,7 +57,7 @@ export default function HomeScreen(){
  }
  return <><KamproPage><View style={s.top}><VasudhaLogo/><View style={s.topActions}><LanguageSwitch/><Pressable accessibilityRole="button" accessibilityLabel="Notifications" onPress={()=>router.push("/notifications")} style={s.bell}><Text style={s.bellText}>🔔</Text>{unreadNotifications>0?<View style={s.badge}><Text style={s.badgeText}>{unreadNotifications>99?"99+":unreadNotifications}</Text></View>:null}</Pressable></View>
   {customer?<CustomerHome name={customerName} avatarUrl={customerAvatarUrl}/>:<ProfessionalHome/>}
-  <Pressable accessibilityRole="button" disabled={switching} onPress={toggleMode} style={[s.switch,switching&&s.disabled]}><Text style={s.switchText}>{switching?"t("switching"):customer?t("switchToProfessional"):t("switchToCustomer")}</Text><Text style={s.arrow}>›</Text></Pressable>
+  <Pressable accessibilityRole="button" disabled={switching} onPress={toggleMode} style={[s.switch,switching&&s.disabled]}><Text style={s.switchText}>{switching?t("switching"):customer?t("switchToProfessional"):t("switchToCustomer")}</Text><Text style={s.arrow}>›</Text></Pressable>
  </KamproPage><AppBottomNav/></>
 }
 
@@ -82,7 +82,7 @@ function CurrentLocationBar(){
  useEffect(()=>{void detectLocation()},[]);
  return <Pressable accessibilityRole="button" accessibilityLabel="Detect current location" onPress={detectLocation} style={s.locationBar}>
   <View style={s.locationPin}><Text style={s.locationPinText}>⌖</Text></View>
-  <View style={{flex:1}}><Text style={s.locationLabel}>{t("currentLocation")}</Text><Text style={s.locationValue}>{loadingLocation?"t("detectingLocation"):locationText}</Text></View>
+  <View style={{flex:1}}><Text style={s.locationLabel}>{t("currentLocation")}</Text><Text style={s.locationValue}>{loadingLocation?t("detectingLocation"):locationText}</Text></View>
   <Text style={s.locationTarget}>⌾</Text>
  </Pressable>
 }
