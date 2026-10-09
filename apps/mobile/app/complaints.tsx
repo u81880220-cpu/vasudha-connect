@@ -6,6 +6,8 @@ import { supabase } from "../src/lib/supabase";
 import { useAuth } from "../src/auth/AuthProvider";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { KAMPRO } from "../src/components/kamproTheme";
+import { LanguageSwitch } from "../src/components/LanguageSwitch";
+import { useKamproLanguage } from "../src/i18n/LanguageProvider";
 
 const labels: Record<string,string> = {
   open:"Submitted", under_review:"Under review", upheld:"Upheld", dismissed:"Dismissed", resolved:"Resolved"
@@ -17,6 +19,7 @@ function categoryLabel(value:any) {
 
 export default function Complaints() {
   const { user, mode } = useAuth();
+  const { t } = useKamproLanguage();
   const [items,setItems] = useState<any[]>([]);
   const [loading,setLoading] = useState(true);
   const [error,setError] = useState("");
@@ -60,24 +63,25 @@ export default function Complaints() {
             <Text style={s.refreshText}>↻</Text>
           </Pressable>
         </View>
+        <View style={{alignItems:"flex-end",marginTop:8}}><LanguageSwitch/></View>
 
-        <Text style={s.title}>Complaints & Reports</Text>
+        <Text style={s.title}>{t("complaints")}</Text>
         <Text style={s.sub}>
           {mode === "professional" ? "Track reports involving your professional account." : "Track complaints you have submitted."}
         </Text>
 
         {loading ? (
-          <View style={s.state}><ActivityIndicator color={KAMPRO.brand}/><Text style={s.muted}>Loading complaint history…</Text></View>
+          <View style={s.state}><ActivityIndicator color={KAMPRO.brand}/><Text style={s.muted}>{t("loading")} </Text></View>
         ) : error ? (
           <View style={s.empty}>
             <Text style={s.emptyTitle}>Unable to load complaints</Text>
             <Text style={s.muted}>{error}</Text>
-            <Pressable onPress={load} style={s.retry}><Text style={s.retryText}>Try again</Text></Pressable>
+            <Pressable onPress={load} style={s.retry}><Text style={s.retryText}>{t("tryAgain")}</Text></Pressable>
           </View>
         ) : items.length === 0 ? (
           <View style={s.empty}>
-            <Text style={s.emptyTitle}>No complaints</Text>
-            <Text style={s.muted}>Your complaint history will appear here.</Text>
+            <Text style={s.emptyTitle}>{t("noComplaints")}</Text>
+            <Text style={s.muted}>{t("complaintHistory")}</Text>
           </View>
         ) : (
           items.map((x:any) => {
@@ -101,7 +105,7 @@ export default function Complaints() {
         )}
 
         <Pressable style={s.secondary} onPress={() => router.back()}>
-          <Text style={s.secondaryText}>Back</Text>
+          <Text style={s.secondaryText}>{t("back")}</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
