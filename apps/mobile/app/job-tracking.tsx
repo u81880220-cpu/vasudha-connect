@@ -17,9 +17,14 @@ export default function JobTracking(){
  useEffect(()=>{if(!jobId)return; let active=true; const tick=async()=>{const{data}=await supabase.rpc("get_job_live_location",{p_job_id:jobId});if(active)setLive(data?.[0]||null)}; void tick(); const t=setInterval(tick,10000); return()=>{active=false;clearInterval(t)}},[jobId]);
  async function load(){if(!jobId){setLoading(false);return;}const{data}=await supabase.from("jobs").select("*").eq("id",jobId).maybeSingle();setJob(data);if(data){const{data:pd}=await supabase.rpc("get_job_contact_and_location",{p_job_id:jobId});setPrivateData(pd||{});}setLoading(false);}
  async function openCustomerNavigation(){
-  const lat=Number(privateData?.service_location?.latitude);
-  const lng=Number(privateData?.service_location?.longitude);
-  if(!Number.isFinite(lat)||!Number.isFinite(lng)){Alert.alert("Location unavailable","The customer location is not available for navigation yet.");return;}
+  const rawLat=privateData?.service_location?.latitude;
+  const rawLng=privateData?.service_location?.longitude;
+  const lat=rawLat==null||rawLat===""?NaN:Number(rawLat);
+  const lng=rawLng==null||rawLng===""?NaN:Number(rawLng);
+  if(!Number.isFinite(lat)||!Number.isFinite(lng)||lat < -90||lat > 90||lng < -180||lng > 180||(lat===0&&lng===0)){
+   Alert.alert("Location unavailable","The customer's service address has no valid map coordinates yet. Ask the customer to set their service location, then reopen tracking.");
+   return;
+  }
   const url=`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
   try{await Linking.openURL(url)}catch(e:any){Alert.alert("Navigation unavailable",e?.message||"Could not open maps.");}
  }
