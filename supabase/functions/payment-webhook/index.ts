@@ -27,11 +27,13 @@ Deno.serve(async (req: Request) => {
 
     const event = JSON.parse(rawBody);
     const eventType = String(event?.type || "");
-    if (eventType !== "PAYMENT_SUCCESS" && eventType !== "payment.captured") {
+    if (eventType !== "PAYMENT_SUCCESS_WEBHOOK" && eventType !== "PAYMENT_SUCCESS" && eventType !== "payment.captured") {
       return Response.json({ ok: true, ignored: true, event_type: eventType });
     }
     const orderId = event?.data?.order?.order_id || event?.data?.order_id;
+    const paymentStatus = String(event?.data?.payment?.payment_status || event?.data?.payment_status || "");
     const paymentId = String(event?.data?.payment?.cf_payment_id || event?.data?.payment_id || "");
+    if (paymentStatus && paymentStatus !== "SUCCESS") return Response.json({ ok: true, ignored: true, payment_status: paymentStatus });
     if (!orderId || !paymentId) return Response.json({ error: "Missing payment identifiers" }, { status: 400 });
 
     const admin = createClient(supabaseUrl, serviceRole);
