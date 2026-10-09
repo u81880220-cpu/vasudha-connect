@@ -9,6 +9,15 @@
     "web": "expo start --web",
     "demo:seed": "node scripts/create-demo-accounts.mjs"
   },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": [
+          "react-native-cashfree-pg-sdk"
+        ]
+      }
+    }
+  },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@supabase/supabase-js": "^2.57.4",
