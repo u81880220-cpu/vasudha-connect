@@ -7,6 +7,15 @@ const STORAGE_KEY = "kampro-language-v1";
 
 const messages = {
   en: {
+    chatClosedTitle: "Chat closed",
+    chatEndedCompleted: "This chat ended when the job was completed.",
+    messagingUnavailable: "Messaging is no longer available for this job.",
+    requestJob: "Request Job",
+    requestJobHint: "After you agree, send the job details here for professional acceptance.",
+    writeMessage: "Write a message...",
+    send: "Send",
+    startConversation: "Start the conversation.",
+    loadingMessages: "Loading messages…",
     myProfessionalProfile: "My Professional Profile",
     myCustomerProfile: "My Customer Profile",
     professionalReputationSubtitle: "Your reputation and professional performance on KAMPRO.",
@@ -115,6 +124,15 @@ const messages = {
     languageSettings: "Language / भाषा",
   },
   hi: {
+    chatClosedTitle: "चैट बंद है",
+    chatEndedCompleted: "काम पूरा होने पर यह चैट समाप्त हो गई।",
+    messagingUnavailable: "इस काम के लिए अब संदेश भेजना उपलब्ध नहीं है।",
+    requestJob: "काम का अनुरोध करें",
+    requestJobHint: "सहमति के बाद प्रोफ़ेशनल की स्वीकृति के लिए काम का विवरण यहाँ भेजें।",
+    writeMessage: "संदेश लिखें...",
+    send: "भेजें",
+    startConversation: "बातचीत शुरू करें।",
+    loadingMessages: "संदेश लोड हो रहे हैं…",
     myProfessionalProfile: "मेरी प्रोफ़ेशनल प्रोफ़ाइल",
     myCustomerProfile: "मेरी ग्राहक प्रोफ़ाइल",
     professionalReputationSubtitle: "KAMPRO पर आपकी प्रतिष्ठा और पेशेवर प्रदर्शन।",
