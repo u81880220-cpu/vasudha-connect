@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { VasudhaLogo } from "./VasudhaLogo";
 import { LanguageSwitch } from "./LanguageSwitch";
@@ -10,7 +10,9 @@ export function KamproPage({children,scroll=true}:{children:ReactNode;scroll?:bo
  return <SafeAreaView style={s.safe} edges={["top"]}>{scroll?<ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>{body}</ScrollView>:body}</SafeAreaView>;
 }
 export function KamproHeader({title,subtitle,back,onBack,action}:{title?:string;subtitle?:string;back?:boolean;onBack?:()=>void;action?:ReactNode}){
- return <View style={s.header}>{back?<Pressable onPress={onBack} style={s.back}><Text style={s.backText}>‹</Text></Pressable>:null}<View style={s.brand}><VasudhaLogo compact/></View><View style={s.language}><LanguageSwitch/></View>{action?<View style={s.headerAction}>{action}</View>:null}{title?<View style={s.headingWrap}><Text style={s.title}>{title}</Text>{subtitle?<Text style={s.subtitle}>{subtitle}</Text>:null}</View>:null}</View>;
+ const {width}=useWindowDimensions();
+ const titleSize=width<360?22:width<400?25:30;
+ return <View style={s.header}>{back?<Pressable onPress={onBack} style={s.back}><Text style={s.backText}>‹</Text></Pressable>:null}<View style={s.brand}><VasudhaLogo compact/></View><View style={s.language}><LanguageSwitch/></View>{action?<View style={s.headerAction}>{action}</View>:null}{title?<View style={s.headingWrap}><Text style={[s.title,{fontSize:titleSize}]}>{title}</Text>{subtitle?<Text style={s.subtitle}>{subtitle}</Text>:null}</View>:null}</View>;
 }
 export function KamproSection({title,children}:{title:string;children:ReactNode}){return <View style={s.section}><Text style={s.sectionTitle}>{title}</Text>{children}</View>}
 export function KamproCard({children,accent=false}:{children:ReactNode;accent?:boolean}){return <View style={[s.card,accent&&s.accent]}>{children}</View>}
