@@ -5,6 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase,getAuthRedirect } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { KAMPRO } from "../src/components/kamproTheme";
+import { LanguageSwitch } from "../src/components/LanguageSwitch";
 
 type Method="mobile"|"email";
 
@@ -99,6 +100,7 @@ export default function AuthScreen(){
 
  if(isReset)return <SafeAreaView style={s.safe}><KeyboardAvoidingView style={s.flex} behavior={Platform.OS==="ios"?"padding":"height"}><View style={s.container}><VasudhaLogo/><Text style={s.heading}>Reset your password</Text><Text style={s.sub}>Choose a new password for your KAMPRO account.</Text><TextInput value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" placeholder="New password (8+ characters)" placeholderTextColor="#7B8794" style={s.input}/><TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry autoCapitalize="none" placeholder="Confirm new password" placeholderTextColor="#7B8794" style={s.input}/><Pressable disabled={busy} onPress={updatePassword} style={s.primary}><Text style={s.primaryText}>{busy?"Updating…":"Update password"}</Text></Pressable></View></KeyboardAvoidingView></SafeAreaView>;
  return <SafeAreaView style={s.safe}><KeyboardAvoidingView style={s.flex} behavior={Platform.OS==="ios"?"padding":"height"}><View style={s.container}>
+  <View style={{alignItems:"flex-end",marginBottom:10}}><LanguageSwitch/></View>
   <VasudhaLogo/>
   <Text style={s.heading}>Welcome Back</Text>
   <Text style={s.sub}>{accountMode==="signup"?"Create your KAMPRO account":"Sign in to continue"}</Text>
