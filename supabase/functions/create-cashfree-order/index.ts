@@ -7,13 +7,14 @@ const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const appId = Deno.env.get("CASHFREE_APP_ID") || "";
 const secretKey = Deno.env.get("CASHFREE_SECRET_KEY") || "";
 const apiVersion = Deno.env.get("CASHFREE_API_VERSION") || "2025-01-01";
+const returnUrl = Deno.env.get("CASHFREE_RETURN_URL") || "";
 const env = (Deno.env.get("CASHFREE_ENV") || "sandbox").toLowerCase();
 const apiBase = env === "production" ? "https://api.cashfree.com/pg" : "https://sandbox.cashfree.com/pg";
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
   try {
-    if (!appId || !secretKey) return Response.json({ error: "Cashfree is not configured on the server." }, { status: 503 });
+    if (!appId || !secretKey || !returnUrl) return Response.json({ error: "Cashfree credentials and CASHFREE_RETURN_URL must be configured on the server." }, { status: 503 });
     const authorization = req.headers.get("Authorization");
     if (!authorization) return Response.json({ error: "Unauthorized" }, { status: 401 });
     const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authorization } } });
@@ -32,7 +33,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         order_id: orderId, order_amount: Number(order.amount_inr), order_currency: "INR",
         customer_details: { customer_id: user.id.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 50), customer_phone: phone, ...(user.email ? { customer_email: user.email } : {}) },
-        order_meta: { return_url: Deno.env.get("CASHFREE_RETURN_URL") || "https://example.com/payment-return?order_id={order_id}" },
+        order_meta: { return_url: returnUrl },
         order_note: "KAMPRO connection package"
       })
     });
