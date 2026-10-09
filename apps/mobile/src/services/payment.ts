@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabase";
 
-export type PaymentProvider="test"|"razorpay";
+export type PaymentProvider="test"|"cashfree";
 export type ConnectionPaymentResult={orderId:string;provider:PaymentProvider;status:"paid"|"pending"};
 
 export async function createConnectionPayment(packageCode:string,provider:PaymentProvider):Promise<ConnectionPaymentResult>{
@@ -12,5 +12,5 @@ export async function createConnectionPayment(packageCode:string,provider:Paymen
     if(paymentError)throw paymentError;
     return {orderId:data.id,provider:"test",status:paid?.status==="paid"?"paid":"pending"};
   }
-  return {orderId:data.id,provider:"razorpay",status:"pending"};
+  return {orderId:data.id,provider:"cashfree",status:"pending"};
 }
