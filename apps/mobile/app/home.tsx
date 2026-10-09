@@ -87,11 +87,13 @@ function CurrentLocationBar(){
 function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
  const{session}=useAuth();
  const[activeJob,setActiveJob]=useState<any>(null);
- useEffect(()=>{if(!session?.user.id)return;let active=true;(async()=>{const{data}=await supabase.from("jobs").select("id,title,status,updated_at").eq("customer_id",session.user.id).in("status",["worker_accepted","on_the_way","arrived","work_started"]).order("updated_at",{ascending:false}).limit(1);if(active)setActiveJob(data?.[0]||null)})();return()=>{active=false}},[session?.user.id]);
+ const[recentRequests,setRecentRequests]=useState<any[]>([]);
+ useEffect(()=>{if(!session?.user.id)return;let active=true;(async()=>{const[{data:jobs},{data:requests}]=await Promise.all([supabase.from("jobs").select("id,title,status,created_at,updated_at,professional_id").eq("customer_id",session.user.id).in("status",["worker_accepted","on_the_way","arrived","work_started"]).order("created_at",{ascending:false}).limit(3),supabase.from("service_requests").select("id,title,status,created_at,professional_id").eq("customer_id",session.user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false}).limit(3)]);if(active){setActiveJob(jobs?.[0]||null);setRecentRequests(requests||[])}})();return()=>{active=false}},[session?.user.id]);
  return <View>
   <View style={s.customerIdentity}><View style={s.customerPhoto}>{avatarUrl?<Image source={{uri:avatarUrl}} style={s.customerPhotoImage}/>:<Text style={s.customerInitial}>{name?.slice(0,1).toUpperCase()||"C"}</Text>}</View><Text style={[s.greeting,s.customerGreeting]} numberOfLines={1} ellipsizeMode="tail">Good morning{name ? ", "+name : ""} 👋</Text></View>
   <CurrentLocationBar/>
-  {activeJob?<Pressable onPress={()=>router.push({pathname:"/job-tracking",params:{jobId:activeJob.id}})} style={s.activeJobHero}><View style={s.activeJobIcon}><Text>📍</Text></View><View style={{flex:1}}><Text style={s.activeJobTitle}>Active job · Track now</Text><Text style={s.name}>{activeJob.title||"Professional service"}</Text><Text style={s.meta}>Professional is {String(activeJob.status||"on_the_way").replaceAll("_"," ")} · View tracking details</Text></View><Text style={s.view}>Track →</Text></Pressable>:null}
+  {activeJob?<Pressable onPress={()=>router.push({pathname:"/job-tracking",params:{jobId:activeJob.id}})} style={s.activeJobHero}><View style={s.activeJobIcon}><Text>📍</Text></View><View style={{flex:1}}><Text style={s.activeJobTitle}>Active job · Track now</Text><Text style={s.name}>{activeJob.title||"Professional service"}</Text><Text style={s.meta}>Status: {String(activeJob.status||"on_the_way").replaceAll("_"," ")} · Created {new Date(activeJob.created_at||activeJob.updated_at).toLocaleString()}</Text></View><Text style={s.view}>Track →</Text></Pressable>:null}
+  {recentRequests.map(r=><Pressable key={r.id} onPress={()=>router.push("/jobs")} style={s.activeJobHero}><View style={s.activeJobIcon}><Text>🧰</Text></View><View style={{flex:1}}><Text style={s.activeJobTitle}>Job request sent</Text><Text style={s.name}>{r.title||"Professional service"}</Text><Text style={s.meta}>Created {new Date(r.created_at).toLocaleString()} · Status: {r.status}</Text></View><Text style={s.view}>View →</Text></Pressable>)}
   <Text style={s.heading}>Find trusted professionals</Text><Text style={s.heading}>around you.</Text>
   <Pressable accessibilityRole="button" accessibilityLabel="Search for services" onPress={()=>router.push("/marketplace")} style={s.search}><Text style={s.searchIcon}>⌕</Text><Text style={s.searchText}>Search for services...</Text></Pressable>
   <Text style={s.section}>Popular services</Text>
@@ -129,18 +131,20 @@ function ProfessionalHome(){
  const[professionalName,setProfessionalName]=useState("");
  const[avatarUrl,setAvatarUrl]=useState<string|null>(null);
  const[stats,setStats]=useState({trust:0,verified:false,available:false,requests:0,connections:0,rating:null as number|null,completion:0});
+ const[incomingJobs,setIncomingJobs]=useState<any[]>([]);
  const[busy,setBusy]=useState(false);
  useEffect(()=>{
   if(!session?.user.id)return;
   let active=true;
   (async()=>{
-   const[{data:profile},{data:requests},{data:connections},{data:jobs},{data:reviews},{data:userProfile}]=await Promise.all([
+   const[{data:profile},{data:requests},{data:connections},{data:jobs},{data:reviews},{data:userProfile},{data:incoming}]=await Promise.all([
     supabase.from("professional_profiles").select("trust_score,verification_status,is_available").eq("user_id",session.user.id).maybeSingle(),
     supabase.rpc("get_professional_requests"),
     supabase.from("professional_connections").select("id").eq("professional_id",session.user.id).gt("expires_at",new Date().toISOString()),
     supabase.from("jobs").select("id,status").eq("professional_id",session.user.id),
     supabase.from("customer_job_reviews").select("punctuality,work_quality,professional_behaviour,communication,value_for_money,reliability,safety_care").eq("professional_id",session.user.id),
-    supabase.from("profiles").select("full_name,avatar_url").eq("id",session.user.id).maybeSingle()
+    supabase.from("profiles").select("full_name,avatar_url").eq("id",session.user.id).maybeSingle(),
+    supabase.from("service_requests").select("id,title,status,created_at,customer_id").eq("professional_id",session.user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false}).limit(5)
    ]);
    if(!active)return;
    const allJobs=jobs||[], done=allJobs.filter((x:any)=>x.status==="customer_confirmed").length;
@@ -148,7 +152,8 @@ function ProfessionalHome(){
    const rating=rv.length?rv.reduce((sum:number,x:any)=>sum+(Number(x.punctuality)+Number(x.work_quality)+Number(x.professional_behaviour)+Number(x.communication)+Number(x.value_for_money)+Number(x.reliability)+Number(x.safety_care))/7,0)/rv.length:null;
    setProfessionalName(userProfile?.full_name?.trim()||"");
    setAvatarUrl(userProfile?.avatar_url||null);
-   setStats({trust:Number(profile?.trust_score||0),verified:profile?.verification_status==="verified",available:!!profile?.is_available,requests:(requests||[]).filter((x:any)=>x.status==="requested").length,connections:(connections||[]).length,rating,completion:allJobs.length?Math.round(done/allJobs.length*100):0});
+   setIncomingJobs(incoming||[]);
+   setStats({trust:Number(profile?.trust_score||0),verified:profile?.verification_status==="verified",available:!!profile?.is_available,requests:(incoming||[]).length,connections:(connections||[]).length,rating,completion:allJobs.length?Math.round(done/allJobs.length*100):0});
   })();
   return()=>{active=false};
  },[session?.user.id]);
@@ -166,7 +171,8 @@ function ProfessionalHome(){
   <View style={s.availability}><View style={{flex:1}}><Text style={s.availabilityTitle}>Available for new work</Text><Text style={s.meta}>{stats.available?"Customers can see you as available":"You are currently unavailable"}</Text></View><Switch value={stats.available} onValueChange={toggleAvailability} disabled={busy}/></View>
   <View style={s.statHero}><Text style={s.statLabel}>Professional Trust</Text><Text style={s.statValue}>{Math.round(stats.trust)} <Text style={s.statSmall}>/ 100</Text></Text><Text style={s.meta}>{stats.verified?"✓ Verified":"Verification pending"}</Text></View>
   <View style={s.grid}><View style={s.metric}><Text style={s.metricNumber}>{stats.rating==null?"—":stats.rating.toFixed(1)+"★"}</Text><Text style={s.metricLabel} numberOfLines={1} adjustsFontSizeToFit>Rating</Text></View><View style={s.metric}><Text style={s.metricNumber}>{stats.completion}%</Text><Text style={s.metricLabel} numberOfLines={1} adjustsFontSizeToFit>Completion</Text></View><Link href="/connections" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>{stats.connections}</Text><Text style={s.metricLabel} numberOfLines={1} adjustsFontSizeToFit>Connections</Text></Pressable></Link></View>
-  <Link href="/jobs" asChild><Pressable style={s.requestCard}><View style={{flex:1}}><Text style={s.requestTitle}>New job requests</Text><Text style={s.meta}>{stats.requests?stats.requests+" request"+(stats.requests===1?"":"s")+" waiting for your response":"No pending requests right now"}</Text></View><Text style={s.view}>View All →</Text></Pressable></Link>
+  <Link href="/jobs" asChild><Pressable style={s.requestCard}><View style={{flex:1}}><Text style={s.requestTitle}>Incoming job requests</Text><Text style={s.meta}>{stats.requests?stats.requests+" request"+(stats.requests===1?"":"s")+" waiting for your response":"No pending requests right now"}</Text></View><Text style={s.view}>View All →</Text></Pressable></Link>
+  {incomingJobs.map(r=><Pressable key={r.id} onPress={()=>router.push("/jobs")} style={s.requestCard}><View style={{flex:1}}><Text style={s.requestTitle}>{r.title||"New service request"}</Text><Text style={s.meta}>Customer: {r.customer_id? "View request details": "Customer details unavailable"}</Text><Text style={s.meta}>Received {new Date(r.created_at).toLocaleString()} · {r.status}</Text></View><Text style={s.view}>Open →</Text></Pressable>)}
   <Link href="/professional-profile" asChild><Pressable style={s.primary}><Text style={s.primaryText}>Manage professional profile</Text></Pressable></Link>
   <Text style={s.section}>Quick actions</Text>
   <View style={s.grid}><Link href="/professional-verification" asChild><Pressable style={s.action}><Text style={s.actionIcon}>✓</Text><Text style={s.actionText}>Verification</Text></Pressable></Link><Link href="/professional-profile" asChild><Pressable style={s.action}><Text style={s.actionIcon}>⌂</Text><Text style={s.actionText}>Services & area</Text></Pressable></Link></View>
