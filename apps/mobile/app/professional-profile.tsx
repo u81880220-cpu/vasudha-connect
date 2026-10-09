@@ -41,6 +41,7 @@ export default function ProfessionalProfile(){
   if(!coords){try{const perm=await Location.requestForegroundPermissionsAsync();if(perm.status==="granted"){const pos=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});coords={latitude:pos.coords.latitude,longitude:pos.coords.longitude};setBaseLocation(coords);}}catch{}}
   const{error}=await supabase.rpc("update_professional_profile",{p_headline:p.headline?.trim()||null,p_about:p.about?.trim()||null,p_years_experience:Number(p.years_experience)||0,p_service_radius_km:Number(p.service_radius_km)||10,p_is_available:!!p.is_available,p_base_latitude:coords?.latitude??null,p_base_longitude:coords?.longitude??null});
   if(error)return Alert.alert("Save failed",error.message);
+  if(coords){const{error:locationError}=await supabase.rpc("update_professional_marketplace_location",{p_latitude:coords.latitude,p_longitude:coords.longitude});if(locationError)Alert.alert("Location not refreshed","Your profile was saved, but live marketplace location could not be refreshed: "+locationError.message);}
   const {error:phoneError}=await supabase.from("user_contact_details").upsert({user_id:uid,phone:pPhone(phone),phone_2:phone2.trim()||null,updated_at:new Date().toISOString()});
   if(phoneError)return Alert.alert("Phone save failed",phoneError.message);
   await supabase.from("professional_sub_services").delete().eq("professional_id",uid);
