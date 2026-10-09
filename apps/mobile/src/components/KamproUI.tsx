@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { VasudhaLogo } from "./VasudhaLogo";
+import { LanguageSwitch } from "./LanguageSwitch";
 import { KAMPRO } from "./kamproTheme";
 
 export function KamproPage({children,scroll=true}:{children:ReactNode;scroll?:boolean}){
@@ -9,7 +10,7 @@ export function KamproPage({children,scroll=true}:{children:ReactNode;scroll?:bo
  return <SafeAreaView style={s.safe} edges={["top"]}>{scroll?<ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>{body}</ScrollView>:body}</SafeAreaView>;
 }
 export function KamproHeader({title,subtitle,back,onBack,action}:{title?:string;subtitle?:string;back?:boolean;onBack?:()=>void;action?:ReactNode}){
- return <View style={s.header}>{back?<Pressable onPress={onBack} style={s.back}><Text style={s.backText}>‹</Text></Pressable>:null}<View style={s.brand}><VasudhaLogo compact/></View>{action?<View style={s.headerAction}>{action}</View>:null}{title?<View style={s.headingWrap}><Text style={s.title}>{title}</Text>{subtitle?<Text style={s.subtitle}>{subtitle}</Text>:null}</View>:null}</View>;
+ return <View style={s.header}>{back?<Pressable onPress={onBack} style={s.back}><Text style={s.backText}>‹</Text></Pressable>:null}<View style={s.brand}><VasudhaLogo compact/></View><View style={s.language}><LanguageSwitch/></View>{action?<View style={s.headerAction}>{action}</View>:null}{title?<View style={s.headingWrap}><Text style={s.title}>{title}</Text>{subtitle?<Text style={s.subtitle}>{subtitle}</Text>:null}</View>:null}</View>;
 }
 export function KamproSection({title,children}:{title:string;children:ReactNode}){return <View style={s.section}><Text style={s.sectionTitle}>{title}</Text>{children}</View>}
 export function KamproCard({children,accent=false}:{children:ReactNode;accent?:boolean}){return <View style={[s.card,accent&&s.accent]}>{children}</View>}
@@ -22,7 +23,8 @@ const s=StyleSheet.create({
  content:{width:"100%",maxWidth:1180,alignSelf:"center",paddingHorizontal:18,paddingTop:14,paddingBottom:24},
  header:{minHeight:62,position:"relative",justifyContent:"center",marginBottom:8},
  brand:{alignItems:"flex-start"},
- headerAction:{position:"absolute",right:0,top:8},
+ language:{position:"absolute",right:0,top:0},
+ headerAction:{position:"absolute",right:132,top:8},
  headingWrap:{marginTop:18},
  title:{fontSize:30,fontWeight:"900",color:KAMPRO.navy,letterSpacing:-.4},
  subtitle:{fontSize:13,color:KAMPRO.muted,marginTop:5,lineHeight:19},
