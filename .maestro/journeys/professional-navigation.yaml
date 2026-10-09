@@ -27,15 +27,6 @@ env:
       visible: "How do you want to use"
     commands:
       - tapOn: "I am a professional"
-- runFlow:
-    when:
-      visible: "Welcome Back"
-    commands:
-      - tapOn: "Use KAMPRO as a Professional"
-      - extendedWaitUntil:
-          visible: "I am a professional"
-          timeout: 10000
-      - tapOn: "I am a professional"
 - extendedWaitUntil:
     visible: "Welcome Back"
     timeout: 20000
