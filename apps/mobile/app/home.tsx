@@ -62,6 +62,7 @@ export default function HomeScreen(){
 }
 
 function CurrentLocationBar(){
+ const {t}=useKamproLanguage();
  const[locationText,setLocationText]=useState("Detecting your location…");
  const[loadingLocation,setLoadingLocation]=useState(false);
  async function detectLocation(){
@@ -89,6 +90,7 @@ function CurrentLocationBar(){
 
 function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
  const{session}=useAuth();
+ const {t}=useKamproLanguage();
  const[activeJob,setActiveJob]=useState<any>(null);
  const[recentRequests,setRecentRequests]=useState<any[]>([]);
  useEffect(()=>{if(!session?.user.id)return;let active=true;(async()=>{const[{data:jobs},{data:requests}]=await Promise.all([supabase.from("jobs").select("id,title,status,created_at,updated_at,professional_id").eq("customer_id",session.user.id).in("status",["worker_accepted","on_the_way","arrived","work_started"]).order("created_at",{ascending:false}).limit(3),supabase.from("service_requests").select("id,title,status,created_at,professional_id").eq("customer_id",session.user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false}).limit(3)]);if(active){setActiveJob(jobs?.[0]||null);setRecentRequests(requests||[])}})();return()=>{active=false}},[session?.user.id]);
@@ -131,6 +133,7 @@ function ProfessionalSetupNotice(){
 
 function ProfessionalHome(){
  const{session}=useAuth();
+ const {t}=useKamproLanguage();
  const[professionalName,setProfessionalName]=useState("");
  const[avatarUrl,setAvatarUrl]=useState<string|null>(null);
  const[stats,setStats]=useState({trust:0,verified:false,available:false,requests:0,connections:0,rating:null as number|null,completion:0});
