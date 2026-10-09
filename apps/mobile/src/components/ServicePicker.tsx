@@ -34,7 +34,11 @@ export function ServicePicker({value,onChange,title="Choose a service",optionalS
  const currentSubs=subs.filter(x=>x.service_id===serviceId);
  const category=categories.find(x=>x.id===categoryId),service=services.find(x=>x.id===serviceId),sub=currentSubs.find(x=>x.id===subId);
 
- function chooseCategory(id:string){setCategoryId(id);setServiceId(null);setSubId(null);}
+ function chooseCategory(id:string){
+  setCategoryId(id);setServiceId(null);setSubId(null);
+  const cat=categories.find(x=>x.id===id);
+  onChange({categoryId:id,categoryName:cat?.name||null,serviceId:null,serviceName:null,legacySkillId:null,subServiceId:null,subServiceName:null});
+ }
 
  function chooseService(id:string){
   setServiceId(id);
