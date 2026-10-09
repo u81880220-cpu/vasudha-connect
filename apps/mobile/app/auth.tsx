@@ -19,14 +19,6 @@ export default function AuthScreen(){
 
  useEffect(()=>{const {data}=supabase.auth.onAuthStateChange((event,session)=>{if(event==="SIGNED_IN"&&session&&!isReset){setTimeout(async()=>{try{const {error}=await supabase.rpc("switch_app_mode",{p_mode:mode});if(error)throw error;router.replace("/home");}catch(e){Alert.alert("Could not set account mode",e instanceof Error?e.message:"Please try again.");}},0);}});return()=>data.subscription.unsubscribe();},[isReset,mode]);
  async function updatePassword(){if(password.length<8)return Alert.alert("Password too short","Use at least 8 characters.");if(password!==confirmPassword)return Alert.alert("Passwords do not match","Enter the same password in both fields.");setBusy(true);try{const{error}=await supabase.auth.updateUser({password});if(error)throw error;Alert.alert("Password updated","Your password has been changed.");router.replace("/home");}catch(e){Alert.alert("Unable to update password",e instanceof Error?e.message:"Please request a new reset link.");}finally{setBusy(false);}}
- async function sendOtp(){
-  if(accountMode==="signup"&&fullName.trim().length<2)return Alert.alert("Enter your name","Please enter your full name before creating your account.");
-  if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
-  setBusy(true);
-  try{const{error}=await supabase.auth.signInWithOtp({phone:"+91"+phone.replace(/\D/g,"").slice(-10),options:{data:{initial_mode:mode,full_name:fullName.trim()||undefined}}});if(error)throw error;setSent(true);}
-  catch(e){Alert.alert("Unable to send OTP",e instanceof Error?e.message:"Please try again.");}
-  finally{setBusy(false);}
- }
  async function verifyOtp(){
   if(otp.trim().length<4)return Alert.alert("Enter OTP","Please enter the OTP you received.");
   setBusy(true);
@@ -59,7 +51,7 @@ export default function AuthScreen(){
  async function startMobileRecovery(){
   if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Enter the mobile number linked to your KAMPRO account first.");
   setBusy(true);
-  try{const{error}=await supabase.auth.signInWithOtp({phone:"+91"+phone.replace(/\D/g,"").slice(-10)});if(error)throw error;setMobileRecovery(true);setPinRecoveryReady(false);setOtp("");setSent(true);Alert.alert("OTP sent","Verify your mobile number to set a new PIN/password.");}
+  try{const{error}=await supabase.auth.signInWithOtp({phone:"+91"+phone.replace(/\D/g,"").slice(-10),options:{shouldCreateUser:false}});if(error)throw error;setMobileRecovery(true);setPinRecoveryReady(false);setOtp("");setSent(true);Alert.alert("OTP sent","Verify your mobile number to set a new PIN/password.");}
   catch(e){Alert.alert("Unable to send recovery OTP",e instanceof Error?e.message:"Please try again.");}
   finally{setBusy(false);}
  }
