@@ -6,16 +6,16 @@ import { supabase,getAuthRedirect } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { KAMPRO } from "../src/components/kamproTheme";
 
-type Method="otp"|"email";
+type Method="mobile"|"email";
 
 export default function AuthScreen(){
  const params=useLocalSearchParams<{mode?:string}>();
  const [mode,setMode]=useState<"customer"|"professional">(params.mode==="professional"?"professional":"customer");
- const [method,setMethod]=useState<Method>("email");
+ const [method,setMethod]=useState<Method>("mobile");
  const [phone,setPhone]=useState(""); const [otp,setOtp]=useState("");
  const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [fullName,setFullName]=useState("");
  const [accountMode,setAccountMode]=useState<"login"|"signup">("login");
- const [sent,setSent]=useState(false); const [busy,setBusy]=useState(false); const [resetSent,setResetSent]=useState(false); const [confirmPassword,setConfirmPassword]=useState(""); const [feedback,setFeedback]=useState<{kind:"error"|"success";text:string}|null>(null); const isReset=params.mode==="reset-password";
+ const [sent,setSent]=useState(false); const [busy,setBusy]=useState(false); const [resetSent,setResetSent]=useState(false); const [confirmPassword,setConfirmPassword]=useState(""); const [mobileRecovery,setMobileRecovery]=useState(false); const [pinRecoveryReady,setPinRecoveryReady]=useState(false); const [feedback,setFeedback]=useState<{kind:"error"|"success";text:string}|null>(null); const isReset=params.mode==="reset-password";
 
  useEffect(()=>{const {data}=supabase.auth.onAuthStateChange((event,session)=>{if(event==="SIGNED_IN"&&session&&!isReset){setTimeout(async()=>{try{const {error}=await supabase.rpc("switch_app_mode",{p_mode:mode});if(error)throw error;router.replace("/home");}catch(e){Alert.alert("Could not set account mode",e instanceof Error?e.message:"Please try again.");}},0);}});return()=>data.subscription.unsubscribe();},[isReset,mode]);
  async function updatePassword(){if(password.length<8)return Alert.alert("Password too short","Use at least 8 characters.");if(password!==confirmPassword)return Alert.alert("Passwords do not match","Enter the same password in both fields.");setBusy(true);try{const{error}=await supabase.auth.updateUser({password});if(error)throw error;Alert.alert("Password updated","Your password has been changed.");router.replace("/home");}catch(e){Alert.alert("Unable to update password",e instanceof Error?e.message:"Please request a new reset link.");}finally{setBusy(false);}}
@@ -30,8 +30,45 @@ export default function AuthScreen(){
  async function verifyOtp(){
   if(otp.trim().length<4)return Alert.alert("Enter OTP","Please enter the OTP you received.");
   setBusy(true);
-  try{const{data,error}=await supabase.auth.verifyOtp({phone:"+91"+phone.replace(/\D/g,"").slice(-10),token:otp.trim(),type:"sms"});if(error)throw error;if(accountMode==="signup"&&data.user&&fullName.trim())await supabase.from("profiles").update({full_name:fullName.trim(),display_name:fullName.trim()}).eq("id",data.user.id);const{error:modeError}=await supabase.rpc("switch_app_mode",{p_mode:mode});if(modeError)throw modeError;router.replace("/home");}
-  catch(e){Alert.alert("OTP verification failed",e instanceof Error?e.message:"Please try again.");}
+  try{
+   const{data,error}=await supabase.auth.verifyOtp({phone:"+91"+phone.replace(/\D/g,"").slice(-10),token:otp.trim(),type:"sms"});if(error)throw error;
+   if(mobileRecovery){setMobileRecovery(false);setPinRecoveryReady(true);setSent(false);setOtp("");return;}
+   if(accountMode==="signup"&&data.user&&fullName.trim())await supabase.from("profiles").update({full_name:fullName.trim(),display_name:fullName.trim()}).eq("id",data.user.id);
+   const{error:modeError}=await supabase.rpc("switch_app_mode",{p_mode:mode});if(modeError)throw modeError;router.replace("/home");
+  }catch(e){Alert.alert("OTP verification failed",e instanceof Error?e.message:"Please try again.");}
+  finally{setBusy(false);}
+ }
+ async function mobileLogin(){
+  if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
+  if(password.length<8)return Alert.alert("Enter PIN/password","Use at least 8 characters.");
+  setBusy(true);
+  try{const{error}=await supabase.auth.signInWithPassword({phone:"+91"+phone.replace(/\D/g,"").slice(-10),password});if(error)throw error;const{error:modeError}=await supabase.rpc("switch_app_mode",{p_mode:mode});if(modeError)throw modeError;router.replace("/home");}
+  catch(e){Alert.alert("Mobile sign in failed",e instanceof Error?e.message:"Please try again.");}
+  finally{setBusy(false);}
+ }
+ async function mobileSignup(){
+  if(fullName.trim().length<2)return Alert.alert("Enter your name","Please enter your full name before creating your account.");
+  if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
+  if(password.length<8)return Alert.alert("PIN/password too short","Use at least 8 characters.");
+  if(password!==confirmPassword)return Alert.alert("PIN/passwords do not match","Enter the same PIN/password in both fields.");
+  setBusy(true);
+  try{const{data,error}=await supabase.auth.signUp({phone:"+91"+phone.replace(/\D/g,"").slice(-10),password,options:{data:{initial_mode:mode,full_name:fullName.trim()}}});if(error)throw error;if(data.session){const{error:modeError}=await supabase.rpc("switch_app_mode",{p_mode:mode});if(modeError)throw modeError;router.replace("/home");}else{setMobileRecovery(false);setSent(true);setOtp("");}}
+  catch(e){Alert.alert("Mobile account creation failed",e instanceof Error?e.message:"Please try again.");}
+  finally{setBusy(false);}
+ }
+ async function startMobileRecovery(){
+  if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Enter the mobile number linked to your KAMPRO account first.");
+  setBusy(true);
+  try{const{error}=await supabase.auth.signInWithOtp({phone:"+91"+phone.replace(/\D/g,"").slice(-10)});if(error)throw error;setMobileRecovery(true);setPinRecoveryReady(false);setOtp("");setSent(true);Alert.alert("OTP sent","Verify your mobile number to set a new PIN/password.");}
+  catch(e){Alert.alert("Unable to send recovery OTP",e instanceof Error?e.message:"Please try again.");}
+  finally{setBusy(false);}
+ }
+ async function updateMobilePin(){
+  if(password.length<8)return Alert.alert("PIN/password too short","Use at least 8 characters.");
+  if(password!==confirmPassword)return Alert.alert("PIN/passwords do not match","Enter the same PIN/password in both fields.");
+  setBusy(true);
+  try{const{error}=await supabase.auth.updateUser({password});if(error)throw error;Alert.alert("PIN/password updated","Your mobile login credential has been updated.");setPinRecoveryReady(false);setMobileRecovery(false);setPassword("");setConfirmPassword("");setOtp("");setSent(false);router.replace("/home");}
+  catch(e){Alert.alert("Unable to update PIN/password",e instanceof Error?e.message:"Please verify your mobile number and try again.");}
   finally{setBusy(false);}
  }
  async function emailLogin(){
@@ -74,14 +111,14 @@ export default function AuthScreen(){
   <Text style={s.heading}>Welcome Back</Text>
   <Text style={s.sub}>{accountMode==="signup"?"Create your KAMPRO account":"Sign in to continue"}</Text>
   <View style={s.tabs}>
-   <Pressable onPress={()=>setMethod("otp")} style={[s.tab,method==="otp"&&s.tabOn]}><Text style={[s.tabText,method==="otp"&&s.tabTextOn]}>Mobile OTP</Text></Pressable>
+   <Pressable onPress={()=>{setMethod("mobile");setSent(false);setMobileRecovery(false);setPinRecoveryReady(false);}} style={[s.tab,method==="mobile"&&s.tabOn]}><Text style={[s.tabText,method==="mobile"&&s.tabTextOn]}>Mobile + PIN</Text></Pressable>
    <Pressable onPress={()=>setMethod("email")} style={[s.tab,method==="email"&&s.tabOn]}><Text style={[s.tabText,method==="email"&&s.tabTextOn]}>Email</Text></Pressable>
   </View>
   {accountMode==="signup"&&<TextInput value={fullName} onChangeText={setFullName} placeholder="Full name" placeholderTextColor="#7B8794" style={s.input} autoCapitalize="words"/>}
-  {method==="otp"?(
-   !sent?<><View style={s.phoneRow}><View style={s.code}><Text>🇮🇳 +91</Text></View><TextInput value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="98765 43210" placeholderTextColor="#7B8794" style={s.phone}/></View>
-   <Pressable disabled={busy} onPress={sendOtp} style={s.primary}><Text style={s.primaryText}>{busy?"Sending…":"Send OTP"}</Text></Pressable></>
-   :<><Text style={s.otpLabel}>Enter OTP sent to +91 {phone}</Text><TextInput value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} placeholder="••••••" placeholderTextColor="#7B8794" style={s.otp}/><Pressable disabled={busy} onPress={verifyOtp} style={s.primary}><Text style={s.primaryText}>{busy?"Verifying…":"Verify & Continue"}</Text></Pressable><Pressable onPress={()=>setSent(false)}><Text style={s.change}>Change mobile number</Text></Pressable></>
+  {method==="mobile"?(
+   pinRecoveryReady?<><Text style={s.otpLabel}>Choose a new PIN/password for +91 {phone}</Text><TextInput value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" placeholder="New PIN/password (8+ characters)" placeholderTextColor="#7B8794" style={s.input}/><TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry autoCapitalize="none" placeholder="Confirm new PIN/password" placeholderTextColor="#7B8794" style={s.input}/><Pressable disabled={busy} onPress={updateMobilePin} style={s.primary}><Text style={s.primaryText}>{busy?"Updating…":"Set new PIN/password"}</Text></Pressable></>
+   :sent?<><Text style={s.otpLabel}>{mobileRecovery?"Enter recovery OTP sent to":"Enter confirmation OTP sent to"} +91 {phone}</Text><TextInput value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} placeholder="••••••" placeholderTextColor="#7B8794" style={s.otp}/><Pressable disabled={busy} onPress={verifyOtp} style={s.primary}><Text style={s.primaryText}>{busy?"Verifying…":mobileRecovery?"Verify and set new PIN":"Verify mobile number"}</Text></Pressable><Pressable onPress={()=>{setSent(false);setMobileRecovery(false);}}><Text style={s.change}>Change mobile number</Text></Pressable></>
+   :<><View style={s.phoneRow}><View style={s.code}><Text>🇮🇳 +91</Text></View><TextInput value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="98765 43210" placeholderTextColor="#7B8794" style={s.phone}/></View>{accountMode==="login"?<TextInput value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" placeholder="PIN/password (8+ characters)" placeholderTextColor="#7B8794" style={s.input}/>:<><TextInput value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" placeholder="Create PIN/password (8+ characters)" placeholderTextColor="#7B8794" style={s.input}/><TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry autoCapitalize="none" placeholder="Confirm PIN/password" placeholderTextColor="#7B8794" style={s.input}/></>}<Pressable disabled={busy} onPress={accountMode==="signup"?mobileSignup:mobileLogin} style={[s.primary,busy&&s.primaryBusy]}><Text style={s.primaryText}>{busy?(accountMode==="signup"?"Creating account…":"Signing in…"):(accountMode==="signup"?"Create account with mobile":"Sign in with mobile")}</Text></Pressable>{accountMode==="login"&&<Pressable disabled={busy} onPress={startMobileRecovery}><Text style={s.change}>Forgot PIN/password? Verify with OTP</Text></Pressable>}{accountMode==="login"&&<Pressable disabled={busy} onPress={()=>setAccountMode("signup")}><Text style={s.create}>Create a new account</Text></Pressable>}{accountMode==="signup"&&<Pressable onPress={()=>setAccountMode("login")}><Text style={s.change}>Already have an account? Sign in</Text></Pressable>}</>
   ):(
    <><TextInput autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} accessibilityLabel="KAMPRO email address" placeholder="Email address" placeholderTextColor="#7B8794" style={s.input}/><TextInput secureTextEntry value={password} onChangeText={setPassword} accessibilityLabel="KAMPRO password" placeholder="Password" placeholderTextColor="#7B8794" style={s.input}/><Pressable accessibilityRole="button" disabled={busy} onPress={accountMode==="signup"?emailSignup:emailLogin} style={[s.primary,busy&&s.primaryBusy]}><Text style={s.primaryText}>{busy?(accountMode==="signup"?"Creating account…":"Signing in…"):(accountMode==="signup"?"Create account with Email":"Sign in with Email")}</Text></Pressable>{accountMode==="login"&&<Pressable disabled={busy} onPress={()=>setAccountMode("signup")}><Text style={s.create}>Create a new account</Text></Pressable>}{feedback&&<Text accessibilityRole="alert" style={[s.feedback,feedback.kind==="error"?s.feedbackError:s.feedbackSuccess]}>{feedback.text}</Text>}{accountMode==="login"&&<Pressable disabled={busy} onPress={forgotPassword}><Text style={s.change}>{busy?"Please wait…":resetSent?"Send password reset link again":"Forgot password?"}</Text></Pressable> }
    {accountMode==="signup"&&<Pressable onPress={()=>setAccountMode("login")}><Text style={s.change}>Already have an account? Sign in</Text></Pressable>}</>
