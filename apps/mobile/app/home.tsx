@@ -90,6 +90,7 @@ function CurrentLocationBar(){
 }
 
 function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
+ const{width}=useWindowDimensions();
  const{session}=useAuth();
  const {t}=useKamproLanguage();
  const[activeJob,setActiveJob]=useState<any>(null);
