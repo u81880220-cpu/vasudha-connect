@@ -6,12 +6,13 @@ import {useAuth} from "../src/auth/AuthProvider";
 import {VasudhaLogo} from "../src/components/VasudhaLogo";
 import {AppBottomNav} from "../src/components/AppBottomNav";
 import {KamproPage,KamproHeader} from "../src/components/KamproUI";
+import { useKamproLanguage } from "../src/i18n/LanguageProvider";
 
 const steps=["worker_accepted","on_the_way","arrived","work_started","work_completed","customer_confirmed"];
 const labels=["Professional accepted","On the way","Arrived","Work started","Work completed","Customer confirmed"];
 
 export default function Jobs(){
- const{user,mode}=useAuth(); const {created,requestId}=useLocalSearchParams<{created?:string;requestId?:string}>();
+ const{user,mode}=useAuth(); const {t}=useKamproLanguage(); const {created,requestId}=useLocalSearchParams<{created?:string;requestId?:string}>();
  const[jobs,setJobs]=useState<any[]>([]); const[requests,setRequests]=useState<any[]>([]); const[loading,setLoading]=useState(true); const[notice,setNotice]=useState(!!created);
  useEffect(()=>{load()},[user?.id,mode]);
  async function load(){
@@ -53,10 +54,10 @@ export default function Jobs(){
       <View style={s.cardTop}><View style={{flex:1}}><Text style={s.name}>{j.title||"Service job"}</Text><Text style={s.id}>JOB · {String(j.id).slice(0,8).toUpperCase()}</Text><Text style={s.muted}>{isProfessional?"Customer":"Professional"}: {isProfessional?"Customer details in job details": "Assigned professional"}</Text><Text style={s.muted}>Created: {new Date(j.created_at).toLocaleString()}</Text></View></View>
       <View style={[s.badge,j.status==="cancelled"&&s.cancelledBadge]}><View style={[s.badgeDot,j.status==="cancelled"&&s.cancelledDot]}/><Text style={[s.badgeText,j.status==="cancelled"&&s.cancelledText]}>{j.status==="cancelled"?"Cancelled":labels[idx]||j.status}</Text></View><Pressable onPress={()=>router.push({pathname:"/job-details",params:{jobId:j.id}})}><Text style={s.detailsLink}>View Job Details →</Text></Pressable>
       <View style={s.timeline}>{labels.map((x,i)=><View key={x} style={s.row}><View style={s.track}>{i<labels.length-1?<View style={[s.line,i<=idx&&s.lineDone]}/>:null}<View style={[s.dot,i<=idx?s.active:s.inactive]}>{i<=idx?<Text style={s.check}>✓</Text>:null}</View></View><Text style={[s.step,i<=idx?s.done:s.future]}>{x}</Text></View>)}</View>
-      {j.status!=="customer_confirmed"&&j.status!=="cancelled"?<Pressable onPress={()=>router.push({pathname:"/job-tracking",params:{jobId:j.id}})} style={s.trackBtn}><Text style={s.trackText}>Track Job</Text></Pressable>:null}
-      {n&&isProfessional&&steps.indexOf(n)>=0&&steps.indexOf(n)<=4?<Pressable onPress={()=>status(j,n)} style={s.primary}><Text style={s.primaryText}>Mark {labels[steps.indexOf(n)]}</Text></Pressable>:null}{n==="customer_confirmed"&&isCustomer?<Pressable onPress={()=>status(j,n)} style={s.primary}><Text style={s.primaryText}>Confirm work completed</Text></Pressable>:null}
-      {["worker_accepted","on_the_way","arrived"].includes(j.status)&&(isProfessional||isCustomer)?<Pressable onPress={()=>cancel(j)} style={s.cancel}><Text style={s.cancelText}>Cancel Job</Text></Pressable>:null}
-      {isCustomer&&j.status==="customer_confirmed"?<><Pressable onPress={()=>router.push({pathname:"/review",params:{jobId:j.id,professionalId:j.professional_id}})} style={s.secondary}><Text style={s.secondaryText}>Rate Professional</Text></Pressable><Pressable onPress={()=>rehire(j)} style={s.rehire}><Text style={s.rehireText}>↻ Rehire Professional</Text></Pressable></>:null}
+      {j.status!=="customer_confirmed"&&j.status!=="cancelled"?<Pressable onPress={()=>router.push({pathname:"/job-tracking",params:{jobId:j.id}})} style={s.trackBtn}><Text style={s.trackText}>{t("trackJob")}</Text></Pressable>:null}
+      {n&&isProfessional&&steps.indexOf(n)>=0&&steps.indexOf(n)<=4?<Pressable onPress={()=>status(j,n)} style={s.primary}><Text style={s.primaryText}>Mark {labels[steps.indexOf(n)]}</Text></Pressable>:null}{n==="customer_confirmed"&&isCustomer?<Pressable onPress={()=>status(j,n)} style={s.primary}><Text style={s.primaryText}>{t("confirmCompleted")}</Text></Pressable>:null}
+      {["worker_accepted","on_the_way","arrived"].includes(j.status)&&(isProfessional||isCustomer)?<Pressable onPress={()=>cancel(j)} style={s.cancel}><Text style={s.cancelText}>{t("cancelJob")}</Text></Pressable>:null}
+      {isCustomer&&j.status==="customer_confirmed"?<><Pressable onPress={()=>router.push({pathname:"/review",params:{jobId:j.id,professionalId:j.professional_id}})} style={s.secondary}><Text style={s.secondaryText}>{t("rateProfessional")}</Text></Pressable><Pressable onPress={()=>rehire(j)} style={s.rehire}><Text style={s.rehireText}>↻ Rehire Professional</Text></Pressable></>:null}
       {isProfessional&&j.status==="customer_confirmed"?<Pressable onPress={()=>router.push({pathname:"/customer-review",params:{jobId:j.id,customerId:j.customer_id}})} style={s.secondary}><Text style={s.secondaryText}>Rate Customer</Text></Pressable>:null}
       <Pressable onPress={()=>router.push({pathname:"/complaint",params:{jobId:j.id,againstUserId:mode==="customer"?j.professional_id:j.customer_id}})} style={s.problem}><Text style={s.problemText}>Report a Problem</Text></Pressable>
     </View>})}
