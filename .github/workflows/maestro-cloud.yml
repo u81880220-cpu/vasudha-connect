@@ -46,9 +46,9 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" --install "ndk;27.1.12297006"
 
-      - name: Build ARM-compatible debug APK
+      - name: Build installable release APK with bundled JavaScript
         working-directory: apps/mobile/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Verify Maestro workspace
         run: |
@@ -65,7 +65,7 @@ jobs:
         with:
           api-key: ${{ secrets.MAESTRO_API_KEY }}
           project-id: ${{ secrets.MAESTRO_PROJECT_ID }}
-          app-file: apps/mobile/android/app/build/outputs/apk/debug/*.apk
+          app-file: apps/mobile/android/app/build/outputs/apk/release/*.apk
           workspace: .maestro
           device-model: pixel_6
           device-os: android-33
