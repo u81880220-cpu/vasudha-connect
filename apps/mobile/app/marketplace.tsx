@@ -85,10 +85,26 @@ function MarketplaceScreen(){
     setLocationBusy(true);
     setLoading(true);
     try{
-      const places=await Location.geocodeAsync(value);
-      const p=places?.[0];
-      if(!p)throw new Error("Location not found");
-      const coords={latitude:p.latitude,longitude:p.longitude};
+      let coords:Coords|null=null;
+      if(Platform.OS==="web"){
+        // expo-location geocoding is not consistently available on web. Use
+        // OpenStreetMap Nominatim for a manually entered city/area instead.
+        const response=await fetch(
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(value)}`,
+          {headers:{Accept:"application/json"}}
+        );
+        if(!response.ok)throw new Error("Geocoding request failed");
+        const results=await response.json();
+        const p=Array.isArray(results)?results[0]:null;
+        if(p&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))){
+          coords={latitude:Number(p.lat),longitude:Number(p.lon)};
+        }
+      }else{
+        const places=await Location.geocodeAsync(value);
+        const p=places?.[0];
+        if(p)coords={latitude:p.latitude,longitude:p.longitude};
+      }
+      if(!coords)throw new Error("Location not found");
       setUserCoords(coords);
       setLocationLabel(value);
       setManualLocation("");
