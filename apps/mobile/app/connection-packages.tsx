@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Link } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { createConnectionPayment } from "../src/services/payment";
@@ -82,14 +82,9 @@ export default function ConnectionPackages() {
       );
       setCreating(null);
       if (error) throw error;
-      if (Platform.OS === "web") {
-        await openCashfree(data, packageName);
-        return;
-      }
-      Alert.alert(
-        "Payment gateway ready",
-        "The secure Cashfree order was created. Complete checkout in the Cashfree payment screen."
-      );
+      // Use the platform-specific checkout helper on both web and native.
+      // Payment is still credited only by the verified server-side webhook.
+      await openCashfree(data, packageName);
     } catch (e) {
       setCreating(null);
       Alert.alert("Unable to start payment", e instanceof Error ? e.message : "Please try again.");
