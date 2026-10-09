@@ -17,16 +17,28 @@ export default function JobTracking(){
  useEffect(()=>{if(!jobId)return; let active=true; const tick=async()=>{const{data}=await supabase.rpc("get_job_live_location",{p_job_id:jobId});if(active)setLive(data?.[0]||null)}; void tick(); const t=setInterval(tick,10000); return()=>{active=false;clearInterval(t)}},[jobId]);
  async function load(){if(!jobId){setLoading(false);return;}const{data}=await supabase.from("jobs").select("*").eq("id",jobId).maybeSingle();setJob(data);if(data){const{data:pd}=await supabase.rpc("get_job_contact_and_location",{p_job_id:jobId});setPrivateData(pd||{});}setLoading(false);}
  async function openCustomerNavigation(){
-  const rawLat=privateData?.service_location?.latitude;
-  const rawLng=privateData?.service_location?.longitude;
+  const location=privateData?.service_location||{};
+  const rawLat=location.latitude??location.lat??location.coordinates?.latitude;
+  const rawLng=location.longitude??location.lng??location.lon??location.coordinates?.longitude;
   const lat=rawLat==null||rawLat===""?NaN:Number(rawLat);
   const lng=rawLng==null||rawLng===""?NaN:Number(rawLng);
-  if(!Number.isFinite(lat)||!Number.isFinite(lng)||lat < -90||lat > 90||lng < -180||lng > 180||(lat===0&&lng===0)){
-   Alert.alert("Location unavailable","The customer's service address has no valid map coordinates yet. Ask the customer to set their service location, then reopen tracking.");
+  const hasCoordinates=Number.isFinite(lat)&&Number.isFinite(lng)&&lat>=-90&&lat<=90&&lng>=-180&&lng<=180&&!(lat===0&&lng===0);
+  const address=String(location.address||location.full_address||location.formatted_address||"").trim();
+  if(!hasCoordinates&&!address){
+   Alert.alert("Customer location unavailable","No map coordinates or service address were returned for this job. Ask the customer to update their service location, then refresh tracking.");
    return;
   }
-  const url=`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
-  try{await Linking.openURL(url)}catch(e:any){Alert.alert("Navigation unavailable",e?.message||"Could not open maps.");}
+  // Prefer exact coordinates; fall back to the saved address when older jobs
+  // have an address but no geocoded coordinates.
+  const destination=hasCoordinates?String(lat)+","+String(lng):address;
+  const url=hasCoordinates
+   ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`
+   : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(destination)}`;
+  try{
+   await Linking.openURL(url);
+  }catch(e:any){
+   Alert.alert("Navigation unavailable",e?.message||"Could not open Google Maps. Please try again.");
+  }
  }
  async function calculateRoute(){
   const origin={latitude:Number(live?.latitude),longitude:Number(live?.longitude)};
