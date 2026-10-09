@@ -228,9 +228,9 @@ function MarketplaceScreen(){
             <View style={s.avatar}>{item.avatar_url?<Image source={{uri:item.avatar_url}} style={s.avatarImage}/>:<Text>{item.display_name.slice(0,1).toUpperCase()}</Text>}</View>
             <View style={{flex:1}}>
               <Text style={s.name} numberOfLines={1}>{item.display_name}</Text>
-              <Text style={s.headline} numberOfLines={1}>{item.headline||"Verified professional"}</Text>
+              <Text style={s.headline} numberOfLines={1}>{item.headline||"Professional details not added"}</Text>
             </View>
-            <Text style={s.verified}>✓</Text>
+            {item.verification_status==="verified"?<Text style={s.verified}>✓</Text>:null}
           </View>
           <Text style={s.distance}>⌖ {item.distance_km} km away</Text>
           <View style={s.rate}><Text style={s.rateText}>Trust {Math.round(item.trust_score)}/100</Text></View>
@@ -282,7 +282,7 @@ function WebMap({userCoords,items,selection,selectedMapPro,onSelect}:{userCoords
         {worker.avatar_url?<Image source={{uri:worker.avatar_url}} style={s.webMarkerImage}/>:<Text style={s.webMarkerText}>{worker.display_name.slice(0,1).toUpperCase()}</Text>}
       </Pressable>
     )}
-    {selectedMapPro?<View style={s.mapPreview}><View style={{flex:1}}><Text style={s.mapPreviewName}>{selectedMapPro.display_name}</Text><Text style={s.mapPreviewMeta}>{selectedMapPro.headline||"Verified professional"} • {selectedMapPro.distance_km} km</Text><Text style={s.mapPreviewTrust}>Trust {Math.round(selectedMapPro.trust_score)}/100</Text></View><View style={s.mapPreviewActions}><Pressable style={s.mapPreviewSecondary} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:selectedMapPro.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}><Text style={s.mapPreviewSecondaryText}>View Profile</Text></Pressable><Pressable style={s.mapPreviewPrimary} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:selectedMapPro.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}><Text style={s.mapPreviewPrimaryText}>Connect</Text></Pressable></View></View>:null}
+    {selectedMapPro?<View style={s.mapPreview}><View style={{flex:1}}><Text style={s.mapPreviewName}>{selectedMapPro.display_name}</Text><Text style={s.mapPreviewMeta}>{selectedMapPro.headline||"Professional details not added"} • {selectedMapPro.distance_km} km</Text><Text style={s.mapPreviewTrust}>Trust {Math.round(selectedMapPro.trust_score)}/100</Text></View><View style={s.mapPreviewActions}><Pressable style={s.mapPreviewSecondary} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:selectedMapPro.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}><Text style={s.mapPreviewSecondaryText}>View Profile</Text></Pressable><Pressable style={s.mapPreviewPrimary} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:selectedMapPro.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}><Text style={s.mapPreviewPrimaryText}>Connect</Text></Pressable></View></View>:null}
     <View style={s.mapLegend}>
       <Text style={s.mapLegendTitle}>Nearby professionals</Text>
       <Text style={s.mapLegendText}>{items.length} verified professionals found</Text>
@@ -298,7 +298,7 @@ function NativeMap({userCoords,items,selection}:{userCoords:Coords;items:Profess
   const Marker=Maps.Marker;
   const Callout=Maps.Callout;
   return <MapView style={s.map} initialRegion={{...userCoords,latitudeDelta:0.12,longitudeDelta:0.12}} showsUserLocation showsMyLocationButton>
-    {items.map(worker=><Marker key={worker.professional_id} coordinate={{latitude:worker.latitude,longitude:worker.longitude}} title={worker.display_name} description={`${worker.headline||"Verified professional"} • ${worker.distance_km} km away`}>
+    {items.map(worker=><Marker key={worker.professional_id} coordinate={{latitude:worker.latitude,longitude:worker.longitude}} title={worker.display_name} description={`${worker.headline||"Professional details not added"} • ${worker.distance_km} km away`}>
       <View style={s.marker}>{worker.avatar_url?<Image source={{uri:worker.avatar_url}} style={s.markerImage}/>:<Text style={s.markerText}>{worker.display_name.slice(0,1).toUpperCase()}</Text>}</View>
       <Callout onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:worker.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}>
         <View style={s.callout}><Text style={s.calloutName}>{worker.display_name}</Text><Text>{worker.headline||"Verified professional"}</Text><Text>{worker.distance_km} km • Trust {Math.round(worker.trust_score)}/100</Text><Text style={s.calloutLink}>View profile</Text></View>
