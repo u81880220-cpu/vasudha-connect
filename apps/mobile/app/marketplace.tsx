@@ -48,13 +48,13 @@ function MarketplaceScreen(){
   const[locationSuggestions,setLocationSuggestions]=useState<Array<{latitude:number;longitude:number;label:string;shortLabel:string}>>([]);
   const[selectedManualPlace,setSelectedManualPlace]=useState<{latitude:number;longitude:number;label:string;shortLabel:string}|null>(null);
   const[locationBusy,setLocationBusy]=useState(false);
-  const[verifiedOnly,setVerifiedOnly]=useState(true);
-  const[availableOnly,setAvailableOnly]=useState(true);
+  const[verifiedOnly,setVerifiedOnly]=useState(false);
+  const[availableOnly,setAvailableOnly]=useState(false);
   const[minRating,setMinRating]=useState(0);
   const searchedItems=items.filter((item)=>{const q=query.trim().toLowerCase();if(!q)return true;return [item.display_name,item.headline,item.city,item.state,...(item.skills||[]).map((s:any)=>s.name)].filter(Boolean).some((v)=>String(v).toLowerCase().includes(q));});
   const visibleItems=[...searchedItems].filter(x=>(!verifiedOnly||x.verification_status==="verified")&&(!availableOnly||x.is_available)&&(Math.round(x.trust_score)/20)>=minRating).sort((a,b)=>{const tw=Number(marketplaceConfig?.trust_weight??0.5),dw=Number(marketplaceConfig?.distance_weight??0.3),aw=Number(marketplaceConfig?.availability_weight??0.2);const score=(x:any)=>tw*(Number(x.trust_score||0)/100)+dw*(1/(1+Number(x.distance_km||0)))+aw*(x.is_available?1:0);return score(b)-score(a)});
 
-  useEffect(()=>{(async()=>{const{data}=await supabase.rpc("marketplace_configuration");const cfg=data||{};setMarketplaceConfig(cfg);setRadius(Math.min(Number(cfg.default_radius_km||25),Number(cfg.max_radius_km||50)));setVerifiedOnly(cfg.verified_only_default!==false);setAvailableOnly(cfg.available_only_default!==false);setMinRating(Number(cfg.min_rating||0));})();},[]);
+  useEffect(()=>{(async()=>{const{data}=await supabase.rpc("marketplace_configuration");const cfg=data||{};setMarketplaceConfig(cfg);setRadius(Math.min(Number(cfg.default_radius_km||25),Number(cfg.max_radius_km||50)));setVerifiedOnly(cfg.verified_only_default===true);setAvailableOnly(cfg.available_only_default===true);setMinRating(Number(cfg.min_rating||0));})();},[]);
   useEffect(()=>{if(cachedMarketplaceLocation){setUserCoords(cachedMarketplaceLocation.coords);setLocationLabel(cachedMarketplaceLocation.label);setLoading(false);void searchProfessionals(cachedMarketplaceLocation.coords);}else{void requestLocation();}},[]);
   useEffect(()=>{if(userCoords) searchProfessionals(userCoords);},[selection.categoryId,selection.serviceId,selection.subServiceId,radius]);
   useEffect(()=>{
@@ -291,7 +291,7 @@ function WebMap({userCoords,items,selection,selectedMapPro,onSelect}:{userCoords
     {selectedMapPro?<View style={s.mapPreview}><View style={{flex:1}}><Text style={s.mapPreviewName}>{selectedMapPro.display_name}</Text><Text style={s.mapPreviewMeta}>{selectedMapPro.headline||"Professional details not added"} • {selectedMapPro.distance_km} km</Text><Text style={s.mapPreviewTrust}>Trust {Math.round(selectedMapPro.trust_score)}/100</Text></View><View style={s.mapPreviewActions}><Pressable style={s.mapPreviewSecondary} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:selectedMapPro.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}><Text style={s.mapPreviewSecondaryText}>View Profile</Text></Pressable><Pressable style={s.mapPreviewPrimary} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:selectedMapPro.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}><Text style={s.mapPreviewPrimaryText}>Connect</Text></Pressable></View></View>:null}
     <View style={s.mapLegend}>
       <Text style={s.mapLegendTitle}>Nearby professionals</Text>
-      <Text style={s.mapLegendText}>{items.length} verified professionals found</Text>
+      <Text style={s.mapLegendText}>{items.length} professionals found</Text>
     </View>
   </View>;
 }
