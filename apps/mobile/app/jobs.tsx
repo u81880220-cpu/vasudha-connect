@@ -24,7 +24,12 @@ export default function Jobs(){
     if(!re)setRequests(rq||[]);
   } else {
     const{data:rq,error:re}=await supabase.from("service_requests").select("*").eq("professional_id",user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false});
-    if(!re)setRequests(rq||[]);
+    if(!re){
+      const ids=[...new Set((rq||[]).map((x:any)=>x.customer_id).filter(Boolean))];
+      const names:Record<string,string>={};
+      if(ids.length){const{data:profiles}=await supabase.from("profiles").select("id,full_name").in("id",ids);(profiles||[]).forEach((p:any)=>{names[p.id]=p.full_name||"Customer"});}
+      setRequests((rq||[]).map((x:any)=>({...x,customer_name:names[x.customer_id]||"Customer"})));
+    }
   }
   setLoading(false);
  }
@@ -41,10 +46,11 @@ export default function Jobs(){
       <View style={s.cardTop}><View style={{flex:1}}><Text style={s.name}>{r.title||"Service request"}</Text><Text style={s.id}>REQUEST · {String(r.id).slice(0,8).toUpperCase()}</Text></View></View>
       <View style={s.badge}><View style={s.badgeDot}/><Text style={s.badgeText}>Awaiting professional</Text></View>
       <Text style={s.requestService}>Service request submitted</Text>
-      <Text style={s.muted}>Created {new Date(r.created_at).toLocaleString()}</Text>
+      {mode==="professional"?<Text style={s.muted}>Requested by: {r.customer_name||"Customer"}</Text>:null}
+      <Text style={s.muted}>Created: {new Date(r.created_at).toLocaleString()}</Text>
     </View>),
     jobs.map(j=>{const n=nextFor(j),idx=steps.indexOf(j.status);const isProfessional=j.professional_id===user?.id;const isCustomer=j.customer_id===user?.id;return <View key={j.id} style={s.card}>
-      <View style={s.cardTop}><View style={{flex:1}}><Text style={s.name}>{j.title||"Service job"}</Text><Text style={s.id}>JOB · {String(j.id).slice(0,8).toUpperCase()}</Text></View></View>
+      <View style={s.cardTop}><View style={{flex:1}}><Text style={s.name}>{j.title||"Service job"}</Text><Text style={s.id}>JOB · {String(j.id).slice(0,8).toUpperCase()}</Text><Text style={s.muted}>{isProfessional?"Customer":"Professional"}: {isProfessional?"Customer details in job details": "Assigned professional"}</Text><Text style={s.muted}>Created: {new Date(j.created_at).toLocaleString()}</Text></View></View>
       <View style={[s.badge,j.status==="cancelled"&&s.cancelledBadge]}><View style={[s.badgeDot,j.status==="cancelled"&&s.cancelledDot]}/><Text style={[s.badgeText,j.status==="cancelled"&&s.cancelledText]}>{j.status==="cancelled"?"Cancelled":labels[idx]||j.status}</Text></View><Pressable onPress={()=>router.push({pathname:"/job-details",params:{jobId:j.id}})}><Text style={s.detailsLink}>View Job Details →</Text></Pressable>
       <View style={s.timeline}>{labels.map((x,i)=><View key={x} style={s.row}><View style={s.track}>{i<labels.length-1?<View style={[s.line,i<=idx&&s.lineDone]}/>:null}<View style={[s.dot,i<=idx?s.active:s.inactive]}>{i<=idx?<Text style={s.check}>✓</Text>:null}</View></View><Text style={[s.step,i<=idx?s.done:s.future]}>{x}</Text></View>)}</View>
       {j.status!=="customer_confirmed"&&j.status!=="cancelled"?<Pressable onPress={()=>router.push({pathname:"/job-tracking",params:{jobId:j.id}})} style={s.trackBtn}><Text style={s.trackText}>Track Job</Text></Pressable>:null}
