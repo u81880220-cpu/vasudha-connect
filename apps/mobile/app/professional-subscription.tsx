@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
@@ -28,14 +28,29 @@ export default function ProfessionalSubscription(){
   setLoading(false);
  }
  async function openCheckout(data:any,description:string){
-  if(Platform.OS!=="web"||typeof window==="undefined"){Alert.alert("Payment gateway ready","The secure subscription order was created. Native Razorpay checkout will be connected in the mobile build.");return;}
+  if(Platform.OS!=="web"||typeof window==="undefined"){
+   Alert.alert("Cashfree order created","Secure payment order is ready, but native Cashfree SDK checkout must be added and tested before taking payments in the Android app.");
+   return;
+  }
   const w=window as any;
-  const launch=()=>{if(!w.Razorpay){Alert.alert("Payment unavailable","Razorpay checkout could not be loaded.");return;}
-   const checkout=new w.Razorpay({key:data.key_id,amount:data.amount,currency:data.currency,name:"KAMPRO",description,order_id:data.razorpay_order_id,handler:()=>{Alert.alert("Payment submitted","Your subscription will activate after server confirmation.");setTimeout(load,2000)},theme:{color:"#FF4B1F"}});
-   checkout.on("payment.failed",(r:any)=>Alert.alert("Payment failed",r?.error?.description||"Please try again."));checkout.open();
+  const launch=()=>{
+   if(!w.Cashfree){Alert.alert("Payment unavailable","Cashfree checkout could not be loaded.");return;}
+   const cashfree=w.Cashfree({mode:data.environment==="production"?"production":"sandbox"});
+   cashfree.checkout({paymentSessionId:data.payment_session_id,redirectTarget:"_self"}).catch((e:any)=>{
+    Alert.alert("Payment could not be opened",e?.message||"Please try again.");
+   });
   };
-  if(w.Razorpay){launch();return;}
-  try{await new Promise<void>((resolve,reject)=>{const script=document.createElement("script");script.src="https://checkout.razorpay.com/v1/checkout.js";script.onload=()=>resolve();script.onerror=()=>reject(new Error());document.head.appendChild(script)});launch()}catch{Alert.alert("Payment unavailable","Razorpay checkout could not be loaded.")}
+  if(w.Cashfree){launch();return;}
+  try{
+   await new Promise<void>((resolve,reject)=>{
+    const script=document.createElement("script");
+    script.src="https://sdk.cashfree.com/js/v3/cashfree.js";
+    script.onload=()=>resolve();
+    script.onerror=()=>reject(new Error("Cashfree checkout script failed to load."));
+    document.head.appendChild(script);
+   });
+   launch();
+  }catch(e:any){Alert.alert("Payment unavailable",e?.message||"Cashfree checkout could not be loaded.");}
  }
  async function subscribe(planId:string,name:string){
   setCreating(planId);
@@ -56,7 +71,7 @@ export default function ProfessionalSubscription(){
    Alert.alert("QA subscription active","Free test subscription activated for 30 days. No real payment was charged.");
    return;
   }
-  const{data,error}=await supabase.functions.invoke("create-professional-subscription-order",{body:{plan_id:planId}});
+  const{data,error}=await supabase.functions.invoke("create-cashfree-subscription-order",{body:{plan_id:planId}});
   setCreating(null);
   if(error){Alert.alert("Unable to start subscription",error.message);return}
   await openCheckout(data,name);
