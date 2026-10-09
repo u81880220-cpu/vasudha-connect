@@ -30,7 +30,7 @@ export default function JobTracking(){
    Alert.alert("Route unavailable","Live professional location and the service location are both required to calculate an ETA.");return;
   }
   setRouteBusy(true);
-  const {data,error}=await supabase.functions.invoke("google-routes",{body:{origin,destination}});
+  const {data,error}=await supabase.functions.invoke("google-routes",{body:{job_id:jobId}});
   setRouteBusy(false);
   if(error||data?.error){Alert.alert("Unable to calculate route",data?.error||error?.message||"Please try again.");return;}
   setRoute(data);
