@@ -19,7 +19,7 @@ export function AuthProvider({children}:PropsWithChildren){
      if(!mounted)return;
      setSession(data.session);
      setLoading(false);
-     if(data.session){ void loadMode(data.session.user.id); void registerForPushNotifications(data.session.user.id).catch(()=>{}); }
+     if(data.session){ void loadMode(data.session.user.id,data.session.user.user_metadata?.initial_mode); void registerForPushNotifications(data.session.user.id).catch(()=>{}); }
    }).catch(()=>{
      if(mounted)setLoading(false);
    });
@@ -27,7 +27,7 @@ export function AuthProvider({children}:PropsWithChildren){
    const{data:listener}=supabase.auth.onAuthStateChange((_event,next)=>{
      if(!mounted)return;
      setSession(next);
-     if(next){ void loadMode(next.user.id); void registerForPushNotifications(next.user.id).catch(()=>{}); }
+     if(next){ void loadMode(next.user.id,next.user.user_metadata?.initial_mode); void registerForPushNotifications(next.user.id).catch(()=>{}); }
      else setModeState("customer");
      setLoading(false);
    });
@@ -38,7 +38,9 @@ export function AuthProvider({children}:PropsWithChildren){
    };
  },[]);
 
- async function loadMode(userId:string){
+ async function loadMode(userId:string,registeredMode?:unknown){
+   // Registration role is the default after every login. current_mode is only the last in-app switch.
+   if(registeredMode==="professional"||registeredMode==="customer"){setModeState(registeredMode);return;}
    const{data}=await supabase.from("profiles").select("current_mode").eq("id",userId).maybeSingle();
    if(data?.current_mode==="professional")setModeState("professional");
    else setModeState("customer");
