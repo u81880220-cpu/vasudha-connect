@@ -57,7 +57,7 @@ export default function Jobs(){
       <View style={s.cardTop}><View style={{flex:1}}><Text style={s.name}>{r.title||"Service request"}</Text><Text style={s.id}>REQUEST · {String(r.id).slice(0,8).toUpperCase()}</Text></View></View>
       <View style={s.badge}><View style={s.badgeDot}/><Text style={s.badgeText}>{r.status==="submitted"||r.status==="requested"?"Pending professional acceptance":"Request status: "+r.status}</Text></View>
       <Text style={s.requestService}>{mode==="customer"?"Professional: "+(r.professional_name||"Awaiting assignment"):"Requested by: "+(r.customer_name||"Customer")}</Text>
-      {mode==="customer"&&r.professional_id?<Pressable onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:r.professional_id}})}><Text style={s.detailsLink}>View professional profile →</Text></Pressable>:null}
+      {mode==="customer"&&r.professional_id?<><Pressable onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:r.professional_id}})}><Text style={s.detailsLink}>View professional profile →</Text></Pressable><Pressable onPress={async()=>{const{data,error}=await supabase.rpc("get_or_create_conversation",{p_professional_id:r.professional_id});if(error){Alert.alert("Chat unavailable",error.message);return;}router.push({pathname:"/chat",params:{conversationId:data,otherName:r.professional_name||"Professional",professionalId:r.professional_id}})}} style={s.trackBtn}><Text style={s.trackText}>Message Professional</Text></Pressable></>:null}
       {mode==="customer"?<Text style={s.muted}>Your request is saved. The professional has not accepted it yet.</Text>:null}
       <Text style={s.muted}>Created: {new Date(r.created_at).toLocaleString()}</Text>
     </View>),
