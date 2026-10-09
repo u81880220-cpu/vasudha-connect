@@ -28,7 +28,7 @@ export default function Jobs(){
   }
   setLoading(false);
  }
- async function rehire(job:any){const{data:requestId,error}=await supabase.rpc("rehire_professional",{p_job_id:job.id});if(error){Alert.alert("Unable to rehire",error.message);return;}Alert.alert("Rehire request sent","Your previous professional has received a new job request.",[{text:"OK",onPress:load}]);}
+ async function rehire(job:any){if(!job?.professional_id){Alert.alert("Rehire unavailable","This job has no linked professional.");return;}router.push({pathname:"/professional-public",params:{professionalId:job.professional_id}});}
  async function status(job:any,next:string){const{error}=await supabase.rpc("update_job_status",{p_job_id:job.id,p_status:next});if(error)Alert.alert("Status update failed",error.message);else load()}
  async function cancel(job:any){Alert.alert("Cancel this job?","Cancellation is allowed before work starts. If work has already started, use Report a Problem instead.",[{text:"Keep Job",style:"cancel"},{text:"Cancel Job",style:"destructive",onPress:async()=>{const{error}=await supabase.rpc("cancel_job",{p_job_id:job.id,p_reason:"Cancelled by participant"});if(error)Alert.alert("Unable to cancel",error.message);else{Alert.alert("Job cancelled","The other participant has been notified.");load()}}}])}
  function nextFor(j:any){const i=steps.indexOf(j.status);return i>=0&&i<steps.length-1?steps[i+1]:null}
