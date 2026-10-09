@@ -24,7 +24,7 @@ Deno.serve(async (req: Request) => {
     if (!body?.plan_id) return Response.json({ error: "plan_id is required" }, { status: 400 });
     const { data: order, error } = await userClient.rpc("create_professional_subscription_payment_order", { p_plan_id: body.plan_id });
     if (error) throw error;
-    const orderId = "kampro_sub_" + String(order.id).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 40);
+    const orderId = "kampro_sub_" + String(order.id).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 34);
     const phone = String(user.phone || "").replace(/^\+/, "");
     if (!phone) return Response.json({ error: "Add and verify a mobile number before paying." }, { status: 400 });
     const response = await fetch(apiBase + "/orders", {
