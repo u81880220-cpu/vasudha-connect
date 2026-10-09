@@ -19,6 +19,7 @@ type Professional={
 type Coords={latitude:number;longitude:number};
 
 const MAP_HEIGHT=Math.min(Math.max(Math.round(Dimensions.get("window").height*0.30),220),300);
+let cachedMarketplaceLocation:{coords:Coords;label:string;manual:boolean}|null=null;
 
 export default function Marketplace(){ return <MarketplaceErrorBoundary><MarketplaceScreen/></MarketplaceErrorBoundary>; }
 
@@ -38,11 +39,11 @@ function MarketplaceScreen(){
   const[loading,setLoading]=useState(true);
   const searchRequestRef=useRef(0);
   const[searchError,setSearchError]=useState("");
-  const[userCoords,setUserCoords]=useState<Coords|null>(null);
+  const[userCoords,setUserCoords]=useState<Coords|null>(cachedMarketplaceLocation?.coords??null);
   const[radius,setRadius]=useState(25);
   const[filtersOpen,setFiltersOpen]=useState(false);
   const[locationPickerOpen,setLocationPickerOpen]=useState(false);
-  const[locationLabel,setLocationLabel]=useState("Detecting location…");
+  const[locationLabel,setLocationLabel]=useState(cachedMarketplaceLocation?.label??"Detecting location…");
   const[manualLocation,setManualLocation]=useState("");
   const[locationSuggestions,setLocationSuggestions]=useState<Array<{latitude:number;longitude:number;label:string;shortLabel:string}>>([]);
   const[selectedManualPlace,setSelectedManualPlace]=useState<{latitude:number;longitude:number;label:string;shortLabel:string}|null>(null);
@@ -54,7 +55,7 @@ function MarketplaceScreen(){
   const visibleItems=[...searchedItems].filter(x=>(!verifiedOnly||x.verification_status==="verified")&&(!availableOnly||x.is_available)&&(Math.round(x.trust_score)/20)>=minRating).sort((a,b)=>{const tw=Number(marketplaceConfig?.trust_weight??0.5),dw=Number(marketplaceConfig?.distance_weight??0.3),aw=Number(marketplaceConfig?.availability_weight??0.2);const score=(x:any)=>tw*(Number(x.trust_score||0)/100)+dw*(1/(1+Number(x.distance_km||0)))+aw*(x.is_available?1:0);return score(b)-score(a)});
 
   useEffect(()=>{(async()=>{const{data}=await supabase.rpc("marketplace_configuration");const cfg=data||{};setMarketplaceConfig(cfg);setRadius(Math.min(Number(cfg.default_radius_km||25),Number(cfg.max_radius_km||50)));setVerifiedOnly(cfg.verified_only_default!==false);setAvailableOnly(cfg.available_only_default!==false);setMinRating(Number(cfg.min_rating||0));})();},[]);
-  useEffect(()=>{requestLocation();},[]);
+  useEffect(()=>{if(cachedMarketplaceLocation){setUserCoords(cachedMarketplaceLocation.coords);setLocationLabel(cachedMarketplaceLocation.label);setLoading(false);void searchProfessionals(cachedMarketplaceLocation.coords);}else{void requestLocation();}},[]);
   useEffect(()=>{if(userCoords) searchProfessionals(userCoords);},[selection.serviceId,selection.subServiceId,radius]);
   useEffect(()=>{
     const query=manualLocation.trim();
@@ -89,14 +90,18 @@ function MarketplaceScreen(){
         setLoading(false);
         return;
       }
-      const pos=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});
+      let pos=await Location.getLastKnownPositionAsync({maxAge:120000,requiredAccuracy:1500}).catch(()=>null);
+      if(!pos){pos=await Promise.race([Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced}),new Promise<never>((_,reject)=>setTimeout(()=>reject(new Error("Location timed out")),12000))]);}
       const coords={latitude:pos.coords.latitude,longitude:pos.coords.longitude};
       setUserCoords(coords);
-      const places=await Location.reverseGeocodeAsync(coords);
+      cachedMarketplaceLocation={coords,label:"Current location",manual:false};
+      const places=await Location.reverseGeocodeAsync(coords).catch(()=>[]);
       const p=places?.[0];
       const city=p?.city||p?.district||p?.subregion||p?.region||"Current location";
       const state=p?.region&&p.region!==city?p.region:"";
-      setLocationLabel(state?city+", "+state:city);
+      const label=state?city+", "+state:city;
+      setLocationLabel(label);
+      cachedMarketplaceLocation={coords,label,manual:false};
       await searchProfessionals(coords);
     }catch{
       setLocationLabel("Unable to detect location");
@@ -138,6 +143,7 @@ function MarketplaceScreen(){
       if(!coords)throw new Error("Location not found");
       setUserCoords(coords);
       setLocationLabel(resolvedLabel);
+      cachedMarketplaceLocation={coords,label:resolvedLabel,manual:true};
       setManualLocation("");
       setLocationSuggestions([]);
       setSelectedManualPlace(null);
