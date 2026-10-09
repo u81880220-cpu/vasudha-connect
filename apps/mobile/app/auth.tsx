@@ -15,7 +15,7 @@ export default function AuthScreen(){
  const [phone,setPhone]=useState(""); const [otp,setOtp]=useState("");
  const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [fullName,setFullName]=useState("");
  const [accountMode,setAccountMode]=useState<"login"|"signup">("login");
- const [sent,setSent]=useState(false); const [busy,setBusy]=useState(false);
+ const [sent,setSent]=useState(false); const [busy,setBusy]=useState(false); const [resetSent,setResetSent]=useState(false);
 
  async function sendOtp(){
   if(accountMode==="signup"&&fullName.trim().length<2)return Alert.alert("Enter your name","Please enter your full name before creating your account.");
@@ -39,6 +39,13 @@ export default function AuthScreen(){
   catch(e){Alert.alert("Email sign in failed",e instanceof Error?e.message:"Please try again.");}
   finally{setBusy(false);}
  }
+ async function forgotPassword(){
+  if(!email.trim()||!email.includes("@"))return Alert.alert("Enter your email","Enter the email address linked to your KAMPRO account first.");
+  setBusy(true);
+  try{const{error}=await supabase.auth.resetPasswordForEmail(email.trim(),{redirectTo:getAuthRedirect()+"?next=/auth/reset-password"});if(error)throw error;setResetSent(true);Alert.alert("Check your email","If an account exists for this address, Supabase will send a password-reset link. Open it on this device or browser to choose a new password.");}
+  catch(e){Alert.alert("Unable to send reset link",e instanceof Error?e.message:"Please try again.");}
+  finally{setBusy(false);}
+ }
  async function emailSignup(){
   if(fullName.trim().length<2)return Alert.alert("Enter your name","Please enter your full name.");
   if(!email.includes("@")||password.length<6)return Alert.alert("Check details","Enter a valid email and a password of at least 6 characters.");
@@ -52,7 +59,8 @@ export default function AuthScreen(){
   try{
    const{data,error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo:getAuthRedirect(),skipBrowserRedirect:Platform.OS==="web"}});
    if(error)throw error;
-   if(Platform.OS==="web"&&data.url)window.location.assign(data.url);
+   if(!data.url)throw new Error("Google sign-in did not return an authorization URL. Enable Google under Supabase Dashboard → Authentication → Sign In / Providers and add its OAuth client credentials.");
+   if(Platform.OS==="web")window.location.assign(data.url);
   }catch(e){Alert.alert("Google sign in unavailable",e instanceof Error?e.message:"Please configure Google in Supabase Auth.");}
   finally{setBusy(false);}
  }
@@ -71,7 +79,7 @@ export default function AuthScreen(){
    <Pressable disabled={busy} onPress={sendOtp} style={s.primary}><Text style={s.primaryText}>{busy?"Sending…":"Send OTP"}</Text></Pressable></>
    :<><Text style={s.otpLabel}>Enter OTP sent to +91 {phone}</Text><TextInput value={otp} onChangeText={setOtp} keyboardType="number-pad" maxLength={6} placeholder="••••••" placeholderTextColor="#7B8794" style={s.otp}/><Pressable disabled={busy} onPress={verifyOtp} style={s.primary}><Text style={s.primaryText}>{busy?"Verifying…":"Verify & Continue"}</Text></Pressable><Pressable onPress={()=>setSent(false)}><Text style={s.change}>Change mobile number</Text></Pressable></>
   ):(
-   <><TextInput autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} accessibilityLabel="KAMPRO email address" placeholder="Email address" placeholderTextColor="#7B8794" style={s.input}/><TextInput secureTextEntry value={password} onChangeText={setPassword} accessibilityLabel="KAMPRO password" placeholder="Password" placeholderTextColor="#7B8794" style={s.input}/><Pressable disabled={busy} onPress={emailLogin} style={s.primary}><Text style={s.primaryText}>{busy?"Signing in…":"Sign in with Email"}</Text></Pressable><Pressable disabled={busy} onPress={accountMode==="signup"?emailSignup:()=>setAccountMode("signup")}><Text style={s.create}>{accountMode==="signup"?"Create account with Email":"Create a new account"}</Text></Pressable>
+   <><TextInput autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} accessibilityLabel="KAMPRO email address" placeholder="Email address" placeholderTextColor="#7B8794" style={s.input}/><TextInput secureTextEntry value={password} onChangeText={setPassword} accessibilityLabel="KAMPRO password" placeholder="Password" placeholderTextColor="#7B8794" style={s.input}/><Pressable disabled={busy} onPress={emailLogin} style={s.primary}><Text style={s.primaryText}>{busy?"Signing in…":"Sign in with Email"}</Text></Pressable><Pressable disabled={busy} onPress={accountMode==="signup"?emailSignup:()=>setAccountMode("signup")}><Text style={s.create}>{accountMode==="signup"?"Create account with Email":"Create a new account"}</Text></Pressable>{accountMode==="login"&&<Pressable disabled={busy} onPress={forgotPassword}><Text style={s.change}>{busy?"Please wait…":resetSent?"Send password reset link again":"Forgot password?"}</Text></Pressable> }
    {accountMode==="signup"&&<Pressable onPress={()=>setAccountMode("login")}><Text style={s.change}>Already have an account? Sign in</Text></Pressable>}</>
   )}
   <View style={s.or}><View style={s.line}/><Text style={s.orText}>or</Text><View style={s.line}/></View>
