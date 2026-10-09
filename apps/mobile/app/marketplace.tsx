@@ -1,6 +1,6 @@
 import * as Location from "expo-location";
 import React,{ useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Dimensions, FlatList, Image, Modal, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
@@ -171,7 +171,7 @@ function MarketplaceScreen(){
   }
 
   return <SafeAreaView style={s.safe} edges={["top"]}>
-    <View style={s.container}>
+    <ScrollView style={s.container} contentContainerStyle={{paddingBottom:18}} showsVerticalScrollIndicator={false} nestedScrollEnabled>
       <View style={s.header}>
         <VasudhaLogo compact/>
         <View style={s.headerText}>
@@ -220,14 +220,8 @@ function MarketplaceScreen(){
         <Text style={s.listHint}>{visibleItems.length} available</Text>
       </View>
 
-      <FlatList
-        style={{flex:1}}
-        showsVerticalScrollIndicator={false}
-        data={visibleItems}
-        keyExtractor={x=>x.professional_id}
-        contentContainerStyle={s.workerRow}
-        ListEmptyComponent={!loading?(searchError?<View style={s.empty}><Text style={s.empty}>{searchError}</Text><Pressable style={s.locationButton} onPress={requestLocation}><Text style={s.locationButtonText}>Try again</Text></Pressable></View>:<Text style={s.empty}>No professionals found in this area.</Text>):null}
-        renderItem={({item})=><Pressable style={s.card} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:item.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}>
+      <View style={s.workerRow}>
+        {visibleItems.map(item=><Pressable key={item.professional_id} style={s.card} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:item.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}>
           <View style={s.cardTop}>
             <View style={s.avatar}>{item.avatar_url?<Image source={{uri:item.avatar_url}} style={s.avatarImage}/>:<Text>{item.display_name.slice(0,1).toUpperCase()}</Text>}</View>
             <View style={{flex:1}}>
@@ -239,9 +233,10 @@ function MarketplaceScreen(){
           <Text style={s.distance}>⌖ {item.distance_km} km away</Text>
           <View style={s.rate}><Text style={s.rateText}>Trust {Math.round(item.trust_score)}/100</Text></View>
           <Text style={s.view}>View profile →</Text>
-        </Pressable>}
-      />
-    </View>
+        </Pressable>)}
+        {!loading&&visibleItems.length===0?(searchError?<View style={s.empty}><Text style={s.empty}>{searchError}</Text><Pressable style={s.locationButton} onPress={requestLocation}><Text style={s.locationButtonText}>Try again</Text></Pressable></View>:<Text style={s.empty}>No professionals found in this area.</Text>):null}
+      </View>
+    </ScrollView>
 <Modal visible={locationPickerOpen} transparent animationType="slide" onRequestClose={()=>setLocationPickerOpen(false)}>
         <View style={s.modalBackdrop}>
           <View style={s.filterSheet}>
