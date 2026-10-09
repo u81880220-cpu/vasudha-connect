@@ -1,17 +1,46 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
+const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 const googleKey = Deno.env.get("GOOGLE_MAPS_API_KEY") || "";
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
   try {
     if (!googleKey) return Response.json({ error: "Google Maps routing is not configured on the server." }, { status: 503 });
+    const authorization = req.headers.get("Authorization");
+    if (!authorization) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    const userClient = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authorization } } });
+    const { data: { user } } = await userClient.auth.getUser();
+    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
     const body = await req.json();
-    const origin = body?.origin;
-    const destination = body?.destination;
+    if (!body?.job_id) return Response.json({ error: "job_id is required" }, { status: 400 });
+
+    const { data: job, error: jobError } = await userClient.from("jobs")
+      .select("id,customer_id,professional_id,status")
+      .eq("id", body.job_id).maybeSingle();
+    if (jobError) throw jobError;
+    if (!job || (job.customer_id !== user.id && job.professional_id !== user.id)) {
+      return Response.json({ error: "Job not found or access denied." }, { status: 404 });
+    }
+    if (!["worker_accepted", "on_the_way", "arrived", "work_started"].includes(job.status)) {
+      return Response.json({ error: "Route ETA is available only while the job is active." }, { status: 409 });
+    }
+    const [{ data: liveRows, error: liveError }, { data: privateData, error: locationError }] = await Promise.all([
+      userClient.rpc("get_job_live_location", { p_job_id: job.id }),
+      userClient.rpc("get_job_contact_and_location", { p_job_id: job.id })
+    ]);
+    if (liveError) throw liveError;
+    if (locationError) throw locationError;
+    const origin = liveRows?.[0];
+    const destination = privateData?.service_location;
     const valid = (p: any) => p && Number.isFinite(Number(p.latitude)) && Number.isFinite(Number(p.longitude)) &&
       Math.abs(Number(p.latitude)) <= 90 && Math.abs(Number(p.longitude)) <= 180;
-    if (!valid(origin) || !valid(destination)) return Response.json({ error: "Valid origin and destination coordinates are required." }, { status: 400 });
+    if (!valid(origin) || !valid(destination)) {
+      return Response.json({ error: "Professional live location or service location is not available yet." }, { status: 409 });
+    }
+
     const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Goog-Api-Key": googleKey, "X-Goog-FieldMask": "routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline" },
