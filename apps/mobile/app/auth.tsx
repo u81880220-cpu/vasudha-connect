@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase,getAuthRedirect } from "../src/lib/supabase";
@@ -15,8 +15,10 @@ export default function AuthScreen(){
  const [phone,setPhone]=useState(""); const [otp,setOtp]=useState("");
  const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [fullName,setFullName]=useState("");
  const [accountMode,setAccountMode]=useState<"login"|"signup">("login");
- const [sent,setSent]=useState(false); const [busy,setBusy]=useState(false); const [resetSent,setResetSent]=useState(false);
+ const [sent,setSent]=useState(false); const [busy,setBusy]=useState(false); const [resetSent,setResetSent]=useState(false); const [confirmPassword,setConfirmPassword]=useState(""); const isReset=params.mode==="reset-password";
 
+ useEffect(()=>{const {data}=supabase.auth.onAuthStateChange((event,session)=>{if(event==="SIGNED_IN"&&session&&!isReset)router.replace("/home");});return()=>data.subscription.unsubscribe();},[isReset]);
+ async function updatePassword(){if(password.length<8)return Alert.alert("Password too short","Use at least 8 characters.");if(password!==confirmPassword)return Alert.alert("Passwords do not match","Enter the same password in both fields.");setBusy(true);try{const{error}=await supabase.auth.updateUser({password});if(error)throw error;Alert.alert("Password updated","Your password has been changed.");router.replace("/home");}catch(e){Alert.alert("Unable to update password",e instanceof Error?e.message:"Please request a new reset link.");}finally{setBusy(false);}}
  async function sendOtp(){
   if(accountMode==="signup"&&fullName.trim().length<2)return Alert.alert("Enter your name","Please enter your full name before creating your account.");
   if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
@@ -42,7 +44,7 @@ export default function AuthScreen(){
  async function forgotPassword(){
   if(!email.trim()||!email.includes("@"))return Alert.alert("Enter your email","Enter the email address linked to your KAMPRO account first.");
   setBusy(true);
-  try{const{error}=await supabase.auth.resetPasswordForEmail(email.trim(),{redirectTo:getAuthRedirect()+"?next=/auth/reset-password"});if(error)throw error;setResetSent(true);Alert.alert("Check your email","If an account exists for this address, Supabase will send a password-reset link. Open it on this device or browser to choose a new password.");}
+  try{const{error}=await supabase.auth.resetPasswordForEmail(email.trim(),{redirectTo:getAuthRedirect()+"?mode=reset-password"});if(error)throw error;setResetSent(true);Alert.alert("Check your email","If an account exists for this address, Supabase will send a password-reset link. Open it on this device or browser to choose a new password.");}
   catch(e){Alert.alert("Unable to send reset link",e instanceof Error?e.message:"Please try again.");}
   finally{setBusy(false);}
  }
@@ -65,6 +67,7 @@ export default function AuthScreen(){
   finally{setBusy(false);}
  }
 
+ if(isReset)return <SafeAreaView style={s.safe}><KeyboardAvoidingView style={s.flex} behavior={Platform.OS==="ios"?"padding":"height"}><View style={s.container}><VasudhaLogo/><Text style={s.heading}>Reset your password</Text><Text style={s.sub}>Choose a new password for your KAMPRO account.</Text><TextInput value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" placeholder="New password (8+ characters)" placeholderTextColor="#7B8794" style={s.input}/><TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry autoCapitalize="none" placeholder="Confirm new password" placeholderTextColor="#7B8794" style={s.input}/><Pressable disabled={busy} onPress={updatePassword} style={s.primary}><Text style={s.primaryText}>{busy?"Updating…":"Update password"}</Text></Pressable></View></KeyboardAvoidingView></SafeAreaView>;
  return <SafeAreaView style={s.safe}><KeyboardAvoidingView style={s.flex} behavior={Platform.OS==="ios"?"padding":"height"}><View style={s.container}>
   <VasudhaLogo/>
   <Text style={s.heading}>Welcome Back</Text>
