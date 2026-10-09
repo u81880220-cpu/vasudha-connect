@@ -7,6 +7,8 @@ import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { AppBottomNav } from "../src/components/AppBottomNav";
 import { ServicePicker, ServiceSelection } from "../src/components/ServicePicker";
+import { LanguageSwitch } from "../src/components/LanguageSwitch";
+import { useKamproLanguage } from "../src/i18n/LanguageProvider";
 
 type Professional={
   professional_id:string; display_name:string; headline:string|null; city:string|null; state:string|null;
@@ -27,6 +29,7 @@ class MarketplaceErrorBoundary extends React.Component<any,{error:Error|null}>{
 }
 
 function MarketplaceScreen(){
+  const {t}=useKamproLanguage();
   const[marketplaceConfig,setMarketplaceConfig]=useState<any>(null);
   const[selection,setSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:null,serviceName:null,subServiceId:null,subServiceName:null});
   const[query,setQuery]=useState("");
@@ -172,33 +175,33 @@ function MarketplaceScreen(){
       <View style={s.header}>
         <VasudhaLogo compact/>
         <View style={s.headerText}>
-          <Text style={s.title}>Find Skills Around You</Text>
+          <Text style={s.title}>{t("findTrustedProfessionals")} {t("aroundYou")}</Text>
           <Text style={s.subtitle}>{items.length} professionals nearby</Text>
         </View>
-        <View style={s.headerActions}><Pressable style={s.filterButton} onPress={()=>setFiltersOpen(true)}><Text style={s.filterButtonText}>☷</Text></Pressable><Pressable style={s.refresh} onPress={requestLocation}><Text style={s.refreshText}>↻</Text></Pressable></View>
+        <View style={s.headerActions}><LanguageSwitch/><Pressable style={s.filterButton} onPress={()=>setFiltersOpen(true)}><Text style={s.filterButtonText}>☷</Text></Pressable><Pressable style={s.refresh} onPress={requestLocation}><Text style={s.refreshText}>↻</Text></Pressable></View>
       </View>
 
       <View style={s.locationBar}>
         <View style={s.locationPin}><Text style={s.locationPinText}>⌖</Text></View>
         <View style={{flex:1}}>
-          <Text style={s.locationLabel}>Your location (Auto-detected)</Text>
+          <Text style={s.locationLabel}>{t("currentLocation")}</Text>
           <Text style={s.locationValue} numberOfLines={1}>{locationLabel}</Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="Change location" style={s.locationGps} onPress={requestLocation} disabled={locationBusy}>
           <Text style={s.locationGpsText}>⌾</Text>
         </Pressable>
         <Pressable accessibilityRole="button" accessibilityLabel="Change location manually" style={s.changeLocation} onPress={()=>setLocationPickerOpen(true)}>
-          <Text style={s.changeLocationText}>Change⌄</Text>
+          <Text style={s.changeLocationText}>{t("changeLocation")}⌄</Text>
         </Pressable>
       </View>
 
-      <View style={s.searchBox}><Text style={s.searchIcon}>⌕</Text><TextInput value={query} onChangeText={setQuery} placeholder="Search a Pro or skill" placeholderTextColor="#8B93A1" style={s.searchInput}/>{query?<Pressable onPress={()=>setQuery("")}><Text style={s.clear}>×</Text></Pressable>:null}</View>
+      <View style={s.searchBox}><Text style={s.searchIcon}>⌕</Text><TextInput value={query} onChangeText={setQuery} placeholder={t("searchProfessionals")} placeholderTextColor="#8B93A1" style={s.searchInput}/>{query?<Pressable onPress={()=>setQuery("")}><Text style={s.clear}>×</Text></Pressable>:null}</View>
       <View style={{paddingHorizontal:14,paddingTop:10}}>
-        <ServicePicker value={selection} optionalSubService onChange={setSelection} title="Filter by service"/>
+        <ServicePicker value={selection} optionalSubService onChange={setSelection} title={t("chooseService")}/>
       </View>
 
       <View style={s.radiusRow}>
-        <Text style={s.label}>Nearby</Text>
+        <Text style={s.label}>{t("distance")}</Text>
         {[5,10,25,50].filter(x=>x<=Number(marketplaceConfig?.max_radius_km||50)).map(x=><Pressable key={x} onPress={()=>setRadius(x)} style={[s.radius,radius===x&&s.radiusSelected]}>
           <Text style={radius===x?s.radiusTextSelected:s.radiusText}>{x} km</Text>
         </Pressable>)}
