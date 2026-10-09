@@ -3,6 +3,7 @@ import { Alert, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text,
 import { Link } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { createConnectionPayment } from "../src/services/payment";
+import { startCashfreeCheckout } from "../src/lib/cashfree-checkout";
 import { KAMPRO } from "../src/components/kamproTheme";
 
 type P = {
@@ -47,77 +48,20 @@ export default function ConnectionPackages() {
     setLoading(false);
   }
 
-  async function openRazorpayWeb(data: any, packageName: string) {
-    if (Platform.OS !== "web" || typeof window === "undefined") {
-      return false;
+  async function openCashfree(data: any, packageName: string) {
+    if (!data?.payment_session_id || !data?.cashfree_order_id) {
+      Alert.alert("Payment unavailable", "Cashfree did not return a valid payment session. No payment was taken.");
+      return;
     }
-
-    const browserWindow = window as any;
-
-    const launch = () => {
-      if (!browserWindow.Razorpay) {
-        Alert.alert(
-          "Payment unavailable",
-          "Razorpay checkout could not be loaded."
-        );
-        return;
-      }
-
-      const checkout = new browserWindow.Razorpay({
-        key: data.key_id,
-        amount: data.amount,
-        currency: data.currency,
-        name: "KAMPRO",
-        description: packageName,
-        order_id: data.razorpay_order_id,
-        theme: { color: "#FF4B1F" },
-        handler: () => {
-          Alert.alert(
-            "Payment submitted",
-            "Payment was received by Razorpay. Credits will appear after server confirmation."
-          );
-          setTimeout(load, 2000);
-        },
-      });
-
-      checkout.on("payment.failed", (result: any) => {
-        Alert.alert(
-          "Payment failed",
-          result?.error?.description || "Please try again."
-        );
-      });
-
-      checkout.open();
-    };
-
-    if (browserWindow.Razorpay) {
-      launch();
-      return true;
-    }
-
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const script = document.createElement("script");
-        script.src = "https://checkout.razorpay.com/v1/checkout.js";
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error("Razorpay script failed to load"));
-        document.head.appendChild(script);
-      });
-
-      launch();
-    } catch {
-      Alert.alert(
-        "Payment unavailable",
-        "Razorpay checkout could not be loaded."
-      );
-    }
-
-    return true;
+    startCashfreeCheckout(data, packageName, () => {
+      Alert.alert("Payment submitted", "Connection credits will be added only after Cashfree confirms the payment on the server.");
+      void load();
+    }, (message: string) => Alert.alert("Payment not completed", message));
   }
 
   async function startPayment(code: string, packageName: string) {
     setCreating(code);
-    const provider = (process.env.EXPO_PUBLIC_PAYMENT_PROVIDER || "test") as "test" | "razorpay";
+    const provider = (process.env.EXPO_PUBLIC_PAYMENT_PROVIDER || "test") as "test" | "cashfree";
 
     try {
       if (provider === "test") {
@@ -133,18 +77,18 @@ export default function ConnectionPackages() {
       }
 
       const { data, error } = await supabase.functions.invoke(
-        "create-razorpay-order",
+        "create-cashfree-order",
         { body: { package_code: code } }
       );
       setCreating(null);
       if (error) throw error;
       if (Platform.OS === "web") {
-        await openRazorpayWeb(data, packageName);
+        await openCashfree(data, packageName);
         return;
       }
       Alert.alert(
         "Payment gateway ready",
-        "The secure payment order was created. Native Razorpay checkout will be connected in the mobile build."
+        "The secure Cashfree order was created. Complete checkout in the Cashfree payment screen."
       );
     } catch (e) {
       setCreating(null);
