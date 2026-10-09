@@ -41,6 +41,8 @@ function MarketplaceScreen(){
   const[locationPickerOpen,setLocationPickerOpen]=useState(false);
   const[locationLabel,setLocationLabel]=useState("Detecting location…");
   const[manualLocation,setManualLocation]=useState("");
+  const[locationSuggestions,setLocationSuggestions]=useState<Array<{latitude:number;longitude:number;label:string;shortLabel:string}>>([]);
+  const[selectedManualPlace,setSelectedManualPlace]=useState<{latitude:number;longitude:number;label:string;shortLabel:string}|null>(null);
   const[locationBusy,setLocationBusy]=useState(false);
   const[verifiedOnly,setVerifiedOnly]=useState(true);
   const[availableOnly,setAvailableOnly]=useState(true);
@@ -51,6 +53,28 @@ function MarketplaceScreen(){
   useEffect(()=>{(async()=>{const{data}=await supabase.rpc("marketplace_configuration");const cfg=data||{};setMarketplaceConfig(cfg);setRadius(Math.min(Number(cfg.default_radius_km||25),Number(cfg.max_radius_km||50)));setVerifiedOnly(cfg.verified_only_default!==false);setAvailableOnly(cfg.available_only_default!==false);setMinRating(Number(cfg.min_rating||0));})();},[]);
   useEffect(()=>{requestLocation();},[]);
   useEffect(()=>{if(userCoords) searchProfessionals(userCoords);},[selection.serviceId,selection.subServiceId,radius]);
+  useEffect(()=>{
+    const query=manualLocation.trim();
+    if(query.length<3){setLocationSuggestions([]);return;}
+    if(selectedManualPlace?.shortLabel===query)return;
+    const timer=setTimeout(async()=>{
+      try{
+        const response=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&countrycodes=in&q=${encodeURIComponent(query)}`,{headers:{Accept:"application/json"}});
+        if(!response.ok)throw new Error("Location search failed");
+        const results=await response.json();
+        const suggestions=(Array.isArray(results)?results:[]).filter((p:any)=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))).map((p:any)=>{
+          const a=p.address||{};
+          const locality=a.city||a.town||a.village||a.suburb||a.county||a.state_district||p.name||query;
+          const state=a.state||a.region||"";
+          const country=a.country||"India";
+          const shortLabel=[locality,state,country].filter(Boolean).join(", ");
+          return {latitude:Number(p.lat),longitude:Number(p.lon),label:String(p.display_name||shortLabel),shortLabel};
+        });
+        setLocationSuggestions(suggestions);
+      }catch{setLocationSuggestions([]);}
+    },450);
+    return ()=>clearTimeout(timer);
+  },[manualLocation]);
 
   async function requestLocation(){
     setLoading(true);
@@ -86,11 +110,13 @@ function MarketplaceScreen(){
     setLoading(true);
     try{
       let coords:Coords|null=null;
-      if(Platform.OS==="web"){
-        // expo-location geocoding is not consistently available on web. Use
-        // OpenStreetMap Nominatim for a manually entered city/area instead.
+      let resolvedLabel=value;
+      if(selectedManualPlace){
+        coords={latitude:selectedManualPlace.latitude,longitude:selectedManualPlace.longitude};
+        resolvedLabel=selectedManualPlace.shortLabel;
+      }else if(Platform.OS==="web"){
         const response=await fetch(
-          `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(value)}`,
+          `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=in&q=${encodeURIComponent(value)}`,
           {headers:{Accept:"application/json"}}
         );
         if(!response.ok)throw new Error("Geocoding request failed");
@@ -98,6 +124,8 @@ function MarketplaceScreen(){
         const p=Array.isArray(results)?results[0]:null;
         if(p&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))){
           coords={latitude:Number(p.lat),longitude:Number(p.lon)};
+          const a=p.address||{};
+          resolvedLabel=[a.city||a.town||a.village||a.suburb||a.county||p.name,a.state||a.region,"India"].filter(Boolean).join(", ");
         }
       }else{
         const places=await Location.geocodeAsync(value);
@@ -106,8 +134,10 @@ function MarketplaceScreen(){
       }
       if(!coords)throw new Error("Location not found");
       setUserCoords(coords);
-      setLocationLabel(value);
+      setLocationLabel(resolvedLabel);
       setManualLocation("");
+      setLocationSuggestions([]);
+      setSelectedManualPlace(null);
       setLocationPickerOpen(false);
       await searchProfessionals(coords);
     }catch{
@@ -217,7 +247,8 @@ function MarketplaceScreen(){
             <Pressable style={s.locationCurrentButton} onPress={()=>{setLocationPickerOpen(false);void requestLocation();}}>
               <Text style={s.locationCurrentButtonText}>⌖  Use current GPS location</Text>
             </Pressable>
-            <TextInput value={manualLocation} onChangeText={setManualLocation} placeholder="Enter city or area" placeholderTextColor="#8B93A1" style={s.manualLocationInput}/>
+            <TextInput value={manualLocation} onChangeText={(value)=>{setManualLocation(value);setSelectedManualPlace(null);}} placeholder="Enter city or area" placeholderTextColor="#8B93A1" style={s.manualLocationInput}/>
+            {locationSuggestions.length>0?<View style={s.locationSuggestions}>{locationSuggestions.map((place,i)=><Pressable key={`${place.latitude}-${place.longitude}-${i}`} style={s.locationSuggestion} onPress={()=>{setSelectedManualPlace(place);setManualLocation(place.shortLabel);setLocationSuggestions([]);}}><Text style={s.locationSuggestionTitle}>{place.shortLabel}</Text><Text style={s.locationSuggestionDetail} numberOfLines={2}>{place.label}</Text></Pressable>)}</View>:null}
             <Pressable style={s.apply} onPress={changeLocationManually} disabled={locationBusy}><Text style={s.applyText}>{locationBusy?"Finding…":"Use this location"}</Text></Pressable>
           </View>
         </View>
@@ -277,7 +308,7 @@ function NativeMap({userCoords,items,selection}:{userCoords:Coords;items:Profess
 }
 
 const s=StyleSheet.create({
-  locationBar:{marginHorizontal:14,marginTop:10,minHeight:58,borderWidth:1,borderColor:"#DCE8F7",borderRadius:14,backgroundColor:"#F4F8FE",flexDirection:"row",alignItems:"center",paddingHorizontal:10,gap:8},locationPin:{width:30,height:30,borderRadius:15,backgroundColor:"#E8F0FC",alignItems:"center",justifyContent:"center"},locationPinText:{fontSize:17,color:"#365D8D"},locationLabel:{fontSize:9,color:"#6B7280"},locationValue:{fontSize:11,fontWeight:"800",color:"#10233F",marginTop:1},locationGps:{width:32,height:32,borderRadius:16,backgroundColor:"#E8F0FC",alignItems:"center",justifyContent:"center"},locationGpsText:{fontSize:18,color:"#2F80ED"},changeLocation:{borderWidth:1,borderColor:"#FF4B1F",borderRadius:12,paddingHorizontal:10,paddingVertical:7,backgroundColor:"#fff"},changeLocationText:{fontSize:11,fontWeight:"800",color:"#FF4B1F"},locationCurrentButton:{height:48,borderRadius:12,borderWidth:1,borderColor:"#DCE8F7",backgroundColor:"#F4F8FE",alignItems:"center",justifyContent:"center",marginTop:16},locationCurrentButtonText:{fontWeight:"800",color:"#10233F"},manualLocationInput:{height:50,borderWidth:1,borderColor:"#E7EAF0",borderRadius:12,paddingHorizontal:14,fontSize:15,color:"#172033",marginTop:12},
+  locationBar:{marginHorizontal:14,marginTop:10,minHeight:58,borderWidth:1,borderColor:"#DCE8F7",borderRadius:14,backgroundColor:"#F4F8FE",flexDirection:"row",alignItems:"center",paddingHorizontal:10,gap:8},locationPin:{width:30,height:30,borderRadius:15,backgroundColor:"#E8F0FC",alignItems:"center",justifyContent:"center"},locationPinText:{fontSize:17,color:"#365D8D"},locationLabel:{fontSize:9,color:"#6B7280"},locationValue:{fontSize:11,fontWeight:"800",color:"#10233F",marginTop:1},locationGps:{width:32,height:32,borderRadius:16,backgroundColor:"#E8F0FC",alignItems:"center",justifyContent:"center"},locationGpsText:{fontSize:18,color:"#2F80ED"},changeLocation:{borderWidth:1,borderColor:"#FF4B1F",borderRadius:12,paddingHorizontal:10,paddingVertical:7,backgroundColor:"#fff"},changeLocationText:{fontSize:11,fontWeight:"800",color:"#FF4B1F"},locationCurrentButton:{height:48,borderRadius:12,borderWidth:1,borderColor:"#DCE8F7",backgroundColor:"#F4F8FE",alignItems:"center",justifyContent:"center",marginTop:16},locationCurrentButtonText:{fontWeight:"800",color:"#10233F"},manualLocationInput:{height:50,borderWidth:1,borderColor:"#E7EAF0",borderRadius:12,paddingHorizontal:14,fontSize:15,color:"#172033",marginTop:12},locationSuggestions:{marginTop:6,borderWidth:1,borderColor:"#E7EAF0",borderRadius:12,backgroundColor:"#fff",overflow:"hidden"},locationSuggestion:{paddingHorizontal:12,paddingVertical:10,borderBottomWidth:1,borderBottomColor:"#EEF2F6"},locationSuggestionTitle:{fontSize:14,fontWeight:"800",color:"#10233F"},locationSuggestionDetail:{fontSize:11,color:"#6B7280",marginTop:3},
   safe:{flex:1,backgroundColor:"#fff"}, container:{flex:1}, header:{paddingHorizontal:14,paddingTop:8,flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:10},headerText:{flex:1},headerActions:{flexDirection:"row",alignItems:"center",gap:8},filterButton:{width:40,height:40,borderRadius:20,backgroundColor:"#f1f5f4",alignItems:"center",justifyContent:"center"},filterButtonText:{fontSize:21,color:"#FF4B1F"},
   title:{fontSize:22,fontWeight:"900",color:"#10233F"},subtitle:{marginTop:2,color:"#6B7280"},refresh:{width:42,height:42,borderRadius:21,backgroundColor:"#FFF0EA",borderWidth:1,borderColor:"#FFD3C2",alignItems:"center",justifyContent:"center"},refreshText:{fontSize:25,fontWeight:"900",color:"#D93812",lineHeight:29},
   skills:{paddingHorizontal:14,paddingVertical:10,gap:8},skill:{paddingHorizontal:12,paddingVertical:7,borderRadius:16,backgroundColor:"#f3f5f5",alignItems:"center",minWidth:66},skillSelected:{backgroundColor:"#FF4B1F"},skillText:{fontWeight:"700",color:"#10233F"},skillTextSelected:{color:"#fff"},
