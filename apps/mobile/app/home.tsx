@@ -152,7 +152,10 @@ function ProfessionalHome(){
    const rating=rv.length?rv.reduce((sum:number,x:any)=>sum+(Number(x.punctuality)+Number(x.work_quality)+Number(x.professional_behaviour)+Number(x.communication)+Number(x.value_for_money)+Number(x.reliability)+Number(x.safety_care))/7,0)/rv.length:null;
    setProfessionalName(userProfile?.full_name?.trim()||"");
    setAvatarUrl(userProfile?.avatar_url||null);
-   setIncomingJobs(incoming||[]);
+   const customerIds=[...new Set((incoming||[]).map((x:any)=>x.customer_id).filter(Boolean))];
+   const customerNames:Record<string,string>={};
+   if(customerIds.length){const{data:customerProfiles}=await supabase.from("profiles").select("id,full_name").in("id",customerIds);(customerProfiles||[]).forEach((p:any)=>{customerNames[p.id]=p.full_name||"Customer"});}
+   setIncomingJobs((incoming||[]).map((x:any)=>({...x,customer_name:customerNames[x.customer_id]||"Customer"})));
    setStats({trust:Number(profile?.trust_score||0),verified:profile?.verification_status==="verified",available:!!profile?.is_available,requests:(incoming||[]).length,connections:(connections||[]).length,rating,completion:allJobs.length?Math.round(done/allJobs.length*100):0});
   })();
   return()=>{active=false};
@@ -172,7 +175,7 @@ function ProfessionalHome(){
   <View style={s.statHero}><Text style={s.statLabel}>Professional Trust</Text><Text style={s.statValue}>{Math.round(stats.trust)} <Text style={s.statSmall}>/ 100</Text></Text><Text style={s.meta}>{stats.verified?"✓ Verified":"Verification pending"}</Text></View>
   <View style={s.grid}><View style={s.metric}><Text style={s.metricNumber}>{stats.rating==null?"—":stats.rating.toFixed(1)+"★"}</Text><Text style={s.metricLabel} numberOfLines={1} adjustsFontSizeToFit>Rating</Text></View><View style={s.metric}><Text style={s.metricNumber}>{stats.completion}%</Text><Text style={s.metricLabel} numberOfLines={1} adjustsFontSizeToFit>Completion</Text></View><Link href="/connections" asChild><Pressable style={s.metric}><Text style={s.metricNumber}>{stats.connections}</Text><Text style={s.metricLabel} numberOfLines={1} adjustsFontSizeToFit>Connections</Text></Pressable></Link></View>
   <Link href="/jobs" asChild><Pressable style={s.requestCard}><View style={{flex:1}}><Text style={s.requestTitle}>Incoming job requests</Text><Text style={s.meta}>{stats.requests?stats.requests+" request"+(stats.requests===1?"":"s")+" waiting for your response":"No pending requests right now"}</Text></View><Text style={s.view}>View All →</Text></Pressable></Link>
-  {incomingJobs.map(r=><Pressable key={r.id} onPress={()=>router.push("/jobs")} style={s.requestCard}><View style={{flex:1}}><Text style={s.requestTitle}>{r.title||"New service request"}</Text><Text style={s.meta}>Customer: {r.customer_id? "View request details": "Customer details unavailable"}</Text><Text style={s.meta}>Received {new Date(r.created_at).toLocaleString()} · {r.status}</Text></View><Text style={s.view}>Open →</Text></Pressable>)}
+  {incomingJobs.map(r=><Pressable key={r.id} onPress={()=>router.push("/jobs")} style={s.requestCard}><View style={{flex:1}}><Text style={s.requestTitle}>{r.title||"New service request"}</Text><Text style={s.meta}>Customer: {r.customer_name||"Customer"}</Text><Text style={s.meta}>Received {new Date(r.created_at).toLocaleString()} · {r.status}</Text></View><Text style={s.view}>Open →</Text></Pressable>)}
   <Link href="/professional-profile" asChild><Pressable style={s.primary}><Text style={s.primaryText}>Manage professional profile</Text></Pressable></Link>
   <Text style={s.section}>Quick actions</Text>
   <View style={s.grid}><Link href="/professional-verification" asChild><Pressable style={s.action}><Text style={s.actionIcon}>✓</Text><Text style={s.actionText}>Verification</Text></Pressable></Link><Link href="/professional-profile" asChild><Pressable style={s.action}><Text style={s.actionIcon}>⌂</Text><Text style={s.actionText}>Services & area</Text></Pressable></Link></View>
