@@ -7,6 +7,14 @@ const STORAGE_KEY = "kampro-language-v1";
 
 const messages = {
   en: {
+    myProfessionalProfile: "My Professional Profile",
+    myCustomerProfile: "My Customer Profile",
+    professionalReputationSubtitle: "Your reputation and professional performance on KAMPRO.",
+    customerProfileSubtitle: "Your profile helps professionals understand who they are working with.",
+    trustScore: "Trust score",
+    completedJobs: "Completed jobs",
+    totalJobs: "Total jobs",
+    myProfessionalProfileHindiPlaceholder: "My Professional Profile",
     welcomeBack: "Welcome Back",
     createAccount: "Create your KAMPRO account",
     signInContinue: "Sign in to continue",
@@ -107,6 +115,14 @@ const messages = {
     languageSettings: "Language / भाषा",
   },
   hi: {
+    myProfessionalProfile: "मेरी प्रोफ़ेशनल प्रोफ़ाइल",
+    myCustomerProfile: "मेरी ग्राहक प्रोफ़ाइल",
+    professionalReputationSubtitle: "KAMPRO पर आपकी प्रतिष्ठा और पेशेवर प्रदर्शन।",
+    customerProfileSubtitle: "आपकी प्रोफ़ाइल से प्रोफ़ेशनल को आपके बारे में जानने में मदद मिलती है।",
+    trustScore: "विश्वास स्कोर",
+    completedJobs: "पूरे किए गए काम",
+    totalJobs: "कुल काम",
+    myProfessionalProfileHindiPlaceholder: "मेरी प्रोफ़ेशनल प्रोफ़ाइल",
     welcomeBack: "वापसी पर स्वागत है",
     createAccount: "अपना KAMPRO खाता बनाएँ",
     signInContinue: "आगे बढ़ने के लिए साइन इन करें",
