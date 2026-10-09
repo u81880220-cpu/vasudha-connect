@@ -11,12 +11,24 @@ env:
 ---
 - launchApp:
     clearState: true
+- extendedWaitUntil:
+    visible: "Get Started"
+    timeout: 20000
 - tapOn: "Get Started"
+- extendedWaitUntil:
+    visible: "I am a professional"
+    timeout: 10000
 - tapOn: "I am a professional"
+- extendedWaitUntil:
+    visible: "Welcome Back"
+    timeout: 10000
 - tapOn: "Email address"
 - inputText: ${PROFESSIONAL_EMAIL}
 - tapOn: "Password"
 - inputText: ${PROFESSIONAL_PASSWORD}
+- hideKeyboard
 - tapOn: "Sign in with Email"
-- assertVisible: "Switch to Customer mode"
+- extendedWaitUntil:
+    visible: "Switch to Customer mode"
+    timeout: 30000
 - takeScreenshot: professional-home
