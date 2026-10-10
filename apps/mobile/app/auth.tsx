@@ -100,12 +100,21 @@ export default function AuthScreen(){
  }
  async function emailSignup(){
   setFeedback(null);
-  if(fullName.trim().length<2){setFeedback({kind:"error",text:"Enter your full name before creating an account."});return;}
-  if(!email.trim()||!/^\S+@\S+\.\S+$/.test(email.trim())){setFeedback({kind:"error",text:"Please enter a valid email address."});return;}
-  if(password.length<8){setFeedback({kind:"error",text:"Password must be at least 8 characters long."});return;}
+  if(fullName.trim().length<2){const message="Enter your full name before creating an account.";setFeedback({kind:"error",text:message});Alert.alert("Name required",message);return;}
+  if(!email.trim()||!/^\\S+@\\S+\\.\\S+$/.test(email.trim())){const message="Please enter a valid email address.";setFeedback({kind:"error",text:message});Alert.alert("Check your email",message);return;}
+  if(password.length<8){const message="Password must be at least 8 characters long.";setFeedback({kind:"error",text:message});Alert.alert("Password too short",message);return;}
   setBusy(true);
-  try{const{data,error}=await supabase.auth.signUp({email:email.trim(),password,options:{data:{initial_mode:mode,full_name:fullName.trim()},emailRedirectTo:getAuthRedirect()}});if(error)throw error;if(data.session)router.replace("/home");else setFeedback({kind:"success",text:"Registration request accepted. Check your inbox and spam folder for the confirmation email. If you already have an account, please sign in or use Forgot password."});}
-  catch(e){setFeedback({kind:"error",text:friendlyAuthError(e,"signup")});}
+  try{
+   const{data,error}=await supabase.auth.signUp({email:email.trim(),password,options:{data:{initial_mode:mode,full_name:fullName.trim()},emailRedirectTo:getAuthRedirect()}});
+   if(error)throw error;
+   if(data.session){Alert.alert("Account created","Your KAMPRO account has been created successfully.");router.replace("/home");}
+   else{
+    const message="Registration request accepted. Please check your inbox and spam folder for the KAMPRO confirmation email before signing in. If you already have an account, please sign in or use Forgot password.";
+    setFeedback({kind:"success",text:message});
+    Alert.alert("Check your email",message);
+   }
+  }
+  catch(e){const message=friendlyAuthError(e,"signup");setFeedback({kind:"error",text:message});Alert.alert("Couldn’t create account",message);}
   finally{setBusy(false);}
  }
  async function google(){
