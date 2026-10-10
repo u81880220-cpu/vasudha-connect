@@ -1,5 +1,5 @@
 import {useEffect,useState} from "react";
-import {Alert,Pressable,ScrollView,StyleSheet,Switch,Text,TextInput,View} from "react-native";
+import {Alert,Pressable,ScrollView,StyleSheet,Text,TextInput,View} from "react-native";
 import {SafeAreaView} from "react-native-safe-area-context";
 import * as Location from "expo-location";
 import {Link,router} from "expo-router";
@@ -39,7 +39,8 @@ export default function ProfessionalProfile(){
  async function save(){
   let coords=baseLocation;
   if(!coords){try{const perm=await Location.requestForegroundPermissionsAsync();if(perm.status==="granted"){const pos=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});coords={latitude:pos.coords.latitude,longitude:pos.coords.longitude};setBaseLocation(coords);}}catch{}}
-  const{error}=await supabase.rpc("update_professional_profile",{p_headline:p.headline?.trim()||null,p_about:p.about?.trim()||null,p_years_experience:Number(p.years_experience)||0,p_service_radius_km:Number(p.service_radius_km)||10,p_is_available:!!p.is_available,p_base_latitude:coords?.latitude??null,p_base_longitude:coords?.longitude??null});
+  const {data:currentAvailability}=await supabase.from("professional_profiles").select("is_available").eq("user_id",uid).maybeSingle();
+  const{error}=await supabase.rpc("update_professional_profile",{p_headline:p.headline?.trim()||null,p_about:p.about?.trim()||null,p_years_experience:Number(p.years_experience)||0,p_service_radius_km:Number(p.service_radius_km)||10,p_is_available:!!currentAvailability?.is_available,p_base_latitude:coords?.latitude??null,p_base_longitude:coords?.longitude??null});
   if(error)return Alert.alert("Save failed",error.message);
   if(coords){const{error:locationError}=await supabase.rpc("update_professional_marketplace_location",{p_latitude:coords.latitude,p_longitude:coords.longitude});if(locationError)Alert.alert("Location not refreshed","Your profile was saved, but live marketplace location could not be refreshed: "+locationError.message);}
   const {error:phoneError}=await supabase.from("user_contact_details").upsert({user_id:uid,phone:pPhone(phone),phone_2:phone2.trim()||null,updated_at:new Date().toISOString()});
@@ -70,7 +71,7 @@ export default function ProfessionalProfile(){
     <Text style={s.l}>Professional headline</Text><TextInput style={s.i} placeholder="e.g. Experienced Electrician" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={p.headline||""} onChangeText={v=>setP({...p,headline:v})}/>
     <Text style={s.l}>About your work</Text><TextInput style={[s.i,s.big]} placeholder="Tell customers about your experience and services" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={p.about||""} onChangeText={v=>setP({...p,about:v})} multiline/>
     <View style={s.inline}><View style={s.half}><Text style={s.l}>Experience</Text><TextInput style={s.i} keyboardType="number-pad" value={p.years_experience} onChangeText={v=>setP({...p,years_experience:v})}/></View><View style={s.half}><Text style={s.l}>Service radius</Text><TextInput style={s.i} keyboardType="number-pad" value={p.service_radius_km} onChangeText={v=>setP({...p,service_radius_km:v})}/></View></View>
-    <View style={s.av}><View><Text style={s.bold}>Available for new work</Text><Text style={s.muted}>Customers can see your availability.</Text></View><Switch value={!!p.is_available} onValueChange={async v=>{const previous=!!p.is_available;setP((old:any)=>({...old,is_available:v}));const{error}=await supabase.rpc("update_professional_profile",{p_headline:p.headline?.trim()||null,p_about:p.about?.trim()||null,p_years_experience:Number(p.years_experience)||0,p_service_radius_km:Number(p.service_radius_km)||10,p_is_available:v,p_base_latitude:baseLocation?.latitude??null,p_base_longitude:baseLocation?.longitude??null});if(error){setP((old:any)=>({...old,is_available:previous}));Alert.alert("Availability not saved",error.message+" Please try again.");}else{setP((old:any)=>({...old,is_available:v}));}}}/></View>
+    <View style={s.av}><View><Text style={s.bold}>Availability is managed from Home</Text><Text style={s.muted}>Use the Available for Work switch on your Home screen to change whether customers can find you.</Text></View></View>
     <Pressable style={s.p} onPress={save}><Text style={s.pt}>Save profile</Text></Pressable>
    </View>
    <Text style={s.section}>Services you provide</Text>
