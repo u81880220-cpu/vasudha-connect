@@ -101,7 +101,7 @@ export default function AuthScreen(){
  async function emailSignup(){
   setFeedback(null);
   if(fullName.trim().length<2){const message="Enter your full name before creating an account.";setFeedback({kind:"error",text:message});Alert.alert("Name required",message);return;}
-  if(!email.trim()||!/^\\S+@\\S+\\.\\S+$/.test(email.trim())){const message="Please enter a valid email address.";setFeedback({kind:"error",text:message});Alert.alert("Check your email",message);return;}
+  if(!email.trim()||!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())){const message="Please enter a valid email address.";setFeedback({kind:"error",text:message});Alert.alert("Check your email",message);return;}
   if(password.length<8){const message="Password must be at least 8 characters long.";setFeedback({kind:"error",text:message});Alert.alert("Password too short",message);return;}
   setBusy(true);
   try{
