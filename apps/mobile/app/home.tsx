@@ -95,12 +95,12 @@ function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
  const {t}=useKamproLanguage();
  const[activeJob,setActiveJob]=useState<any>(null);
  const[recentRequests,setRecentRequests]=useState<any[]>([]);
- useEffect(()=>{if(!session?.user.id)return;let active=true;(async()=>{const[{data:jobs},{data:requests}]=await Promise.all([supabase.from("jobs").select("id,title,status,created_at,updated_at,professional_id").eq("customer_id",session.user.id).in("status",["worker_accepted","on_the_way","arrived","work_started"]).order("created_at",{ascending:false}).limit(3),supabase.from("service_requests").select("id,title,status,created_at,professional_id").eq("customer_id",session.user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false}).limit(3)]);if(active){setActiveJob(jobs?.[0]||null);setRecentRequests(requests||[])}})();return()=>{active=false}},[session?.user.id]);
+ useEffect(()=>{if(!session?.user.id)return;let active=true;(async()=>{const[{data:jobs},{data:requests}]=await Promise.all([supabase.from("jobs").select("id,title,status,created_at,updated_at,professional_id").eq("customer_id",session.user.id).in("status",["worker_accepted","on_the_way","arrived","work_started"]).order("created_at",{ascending:false}).limit(3),supabase.from("service_requests").select("id,title,description,preferred_date,preferred_time,location_text,status,created_at,professional_id").eq("customer_id",session.user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false}).limit(3)]);if(active){setActiveJob(jobs?.[0]||null);setRecentRequests(requests||[])}})();return()=>{active=false}},[session?.user.id]);
  return <View>
   <View style={s.customerIdentity}><View style={s.customerPhoto}>{avatarUrl?<Image source={{uri:avatarUrl}} style={s.customerPhotoImage}/>:<Text style={s.customerInitial}>{name?.slice(0,1).toUpperCase()||"C"}</Text>}</View><Text style={[s.greeting,s.customerGreeting]} numberOfLines={1} ellipsizeMode="tail">{t("goodMorning")}{name ? ", "+name : ""} 👋</Text></View>
   <CurrentLocationBar/>
   {activeJob?<Pressable onPress={()=>router.push({pathname:"/job-tracking",params:{jobId:activeJob.id}})} style={s.activeJobHero}><View style={s.activeJobIcon}><Text>📍</Text></View><View style={{flex:1}}><Text style={s.activeJobTitle}>Active job · Track now</Text><Text style={s.name}>{activeJob.title||"Professional service"}</Text><Text style={s.meta}>Status: {String(activeJob.status||"on_the_way").replaceAll("_"," ")} · Created {new Date(activeJob.created_at||activeJob.updated_at).toLocaleString()}</Text></View><Text style={s.view}>Track →</Text></Pressable>:null}
-  {recentRequests.map(r=><Pressable key={r.id} onPress={()=>router.push("/jobs")} style={s.activeJobHero}><View style={s.activeJobIcon}><Text>🧰</Text></View><View style={{flex:1}}><Text style={s.activeJobTitle}>Job request sent</Text><Text style={s.name}>{r.title||"Professional service"}</Text><Text style={s.meta}>Created {new Date(r.created_at).toLocaleString()} · Status: {r.status}</Text></View><Text style={s.view}>View →</Text></Pressable>)}
+  {recentRequests.map(r=><Pressable key={r.id} onPress={()=>router.push({pathname:"/jobs",params:{requestId:String(r.id)}})} style={s.activeJobHero}><View style={s.activeJobIcon}><Text>🧰</Text></View><View style={{flex:1}}><Text style={s.activeJobTitle}>Job request sent</Text><Text style={s.name}>{r.title||"Professional service"}</Text><Text style={s.meta}>Created {new Date(r.created_at).toLocaleString()} · Status: {r.status}</Text></View><Text style={s.view}>View →</Text></Pressable>)}
   <Text style={[s.heading,{fontSize:width<360?20:width<400?22:24,lineHeight:width<360?28:width<400?31:35}]}>{t("findTrustedProfessionals")}</Text><Text style={[s.heading,{fontSize:width<360?20:width<400?22:24,lineHeight:width<360?28:width<400?31:35}]}>{t("aroundYou")}</Text>
   <Pressable accessibilityRole="button" accessibilityLabel="Search for services" onPress={()=>router.push("/marketplace")} style={s.search}><Text style={s.searchIcon}>⌕</Text><Text style={s.searchText}>{t("searchServices")}</Text></Pressable>
   <Text style={s.section}>{t("popularServices")}</Text>
@@ -168,6 +168,23 @@ function ProfessionalHome(){
    setStats({trust:Number(profile?.trust_score||0),verified:profile?.verification_status==="verified",available:!!profile?.is_available,requests:(incoming||[]).length,connections:(connections||[]).length,rating,completion:allJobs.length?Math.round(done/allJobs.length*100):0});
   })();
   return()=>{active=false};
+ },[session?.user.id]);
+ useEffect(()=>{
+  if(!session?.user.id)return;
+  let active=true;
+  async function refreshIncoming(){
+   const{data:incoming}=await supabase.from("service_requests").select("id,title,status,created_at,customer_id").eq("professional_id",session!.user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false}).limit(5);
+   if(!active)return;
+   const ids=[...new Set((incoming||[]).map((x:any)=>x.customer_id).filter(Boolean))];
+   const names:Record<string,string>={};
+   if(ids.length){const{data:profiles}=await supabase.from("profiles").select("id,full_name").in("id",ids);(profiles||[]).forEach((p:any)=>{names[p.id]=p.full_name||"Customer"});}
+   if(!active)return;
+   setIncomingJobs((incoming||[]).map((x:any)=>({...x,customer_name:names[x.customer_id]||"Customer"})));
+   setStats(x=>({...x,requests:(incoming||[]).length}));
+  }
+  const channel=supabase.channel("home-service-requests-"+session.user.id).on("postgres_changes",{event:"*",schema:"public",table:"service_requests",filter:"professional_id=eq."+session.user.id},()=>{void refreshIncoming()}).subscribe();
+  const interval=setInterval(()=>{void refreshIncoming()},15000);
+  return()=>{active=false;clearInterval(interval);void supabase.removeChannel(channel)};
  },[session?.user.id]);
  useEffect(()=>{
   if(!session?.user.id||!stats.available)return;
