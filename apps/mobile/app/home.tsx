@@ -95,7 +95,28 @@ function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
  const {t}=useKamproLanguage();
  const[activeJob,setActiveJob]=useState<any>(null);
  const[recentRequests,setRecentRequests]=useState<any[]>([]);
- useEffect(()=>{if(!session?.user.id)return;let active=true;(async()=>{const[{data:jobs},{data:requests}]=await Promise.all([supabase.from("jobs").select("id,title,status,created_at,updated_at,professional_id").eq("customer_id",session.user.id).in("status",["worker_accepted","on_the_way","arrived","work_started"]).order("created_at",{ascending:false}).limit(3),supabase.from("service_requests").select("id,title,description,preferred_date,preferred_time,location_text,status,created_at,professional_id").eq("customer_id",session.user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false}).limit(3)]);if(active){setActiveJob(jobs?.[0]||null);setRecentRequests(requests||[])}})();return()=>{active=false}},[session?.user.id]);
+ useEffect(()=>{
+  if(!session?.user.id)return;
+  let active=true;
+  async function refreshHomeItems(){
+   const[{data:jobs,error:jobsError},{data:requests,error:requestsError}]=await Promise.all([
+    supabase.from("jobs").select("id,title,status,created_at,updated_at,professional_id").eq("customer_id",session!.user.id).in("status",["worker_accepted","on_the_way","arrived","work_started"]).order("created_at",{ascending:false}).limit(3),
+    supabase.from("service_requests").select("id,title,description,preferred_date,preferred_time,location_text,status,created_at,professional_id").eq("customer_id",session!.user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false}).limit(3)
+   ]);
+   if(!active)return;
+   if(!jobsError)setActiveJob(jobs?.[0]||null);
+   if(!requestsError)setRecentRequests(requests||[]);
+  }
+  void refreshHomeItems();
+  // Home can remain mounted while the user cancels a job on another screen.
+  // Refresh on database changes and periodically so stale request banners disappear.
+  const channel=supabase.channel("customer-home-job-lifecycle-"+session.user.id)
+   .on("postgres_changes",{event:"*",schema:"public",table:"jobs",filter:"customer_id=eq."+session.user.id},()=>{void refreshHomeItems()})
+   .on("postgres_changes",{event:"*",schema:"public",table:"service_requests",filter:"customer_id=eq."+session.user.id},()=>{void refreshHomeItems()})
+   .subscribe();
+  const interval=setInterval(()=>{void refreshHomeItems()},10000);
+  return()=>{active=false;clearInterval(interval);void supabase.removeChannel(channel)};
+ },[session?.user.id]);
  return <View>
   <View style={s.customerIdentity}><View style={s.customerPhoto}>{avatarUrl?<Image source={{uri:avatarUrl}} style={s.customerPhotoImage}/>:<Text style={s.customerInitial}>{name?.slice(0,1).toUpperCase()||"C"}</Text>}</View><Text style={[s.greeting,s.customerGreeting]} numberOfLines={1} ellipsizeMode="tail">{t("goodMorning")}{name ? ", "+name : ""} 👋</Text></View>
   <CurrentLocationBar/>
