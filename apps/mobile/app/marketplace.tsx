@@ -48,6 +48,7 @@ function MarketplaceScreen(){
   const[locationSuggestions,setLocationSuggestions]=useState<Array<{latitude:number;longitude:number;label:string;shortLabel:string}>>([]);
   const[selectedManualPlace,setSelectedManualPlace]=useState<{latitude:number;longitude:number;label:string;shortLabel:string}|null>(null);
   const[locationBusy,setLocationBusy]=useState(false);
+  const[locationError,setLocationError]=useState("");
   const[verifiedOnly,setVerifiedOnly]=useState(false);
   const[availableOnly,setAvailableOnly]=useState(false);
   const[minRating,setMinRating]=useState(0);
@@ -113,7 +114,9 @@ function MarketplaceScreen(){
 
   async function changeLocationManually(){
     const value=manualLocation.trim();
-    if(!value||locationBusy)return;
+    if(locationBusy)return;
+    if(value.length<3){setLocationError("Enter a full city or area name (at least 3 characters).");return;}
+    setLocationError("");
     setLocationBusy(true);
     setLoading(true);
     try{
@@ -141,6 +144,7 @@ function MarketplaceScreen(){
         if(p)coords={latitude:p.latitude,longitude:p.longitude};
       }
       if(!coords)throw new Error("Location not found");
+      setLocationError("");
       setUserCoords(coords);
       setLocationLabel(resolvedLabel);
       cachedMarketplaceLocation={coords,label:resolvedLabel,manual:true};
@@ -149,8 +153,8 @@ function MarketplaceScreen(){
       setSelectedManualPlace(null);
       setLocationPickerOpen(false);
       await searchProfessionals(coords);
-    }catch{
-      setSearchError("We couldn't find that location. Try a city or area name.");
+    }catch(error){
+      setLocationError(error instanceof Error && error.message==="Location not found" ? "Location not found. Enter a full place name and select a matching suggestion." : "Could not resolve this location. Check the spelling or select a suggestion.");
       setLoading(false);
     }finally{
       setLocationBusy(false);
@@ -253,8 +257,9 @@ function MarketplaceScreen(){
             <Pressable style={s.locationCurrentButton} onPress={()=>{setLocationPickerOpen(false);void requestLocation();}}>
               <Text style={s.locationCurrentButtonText}>⌖  Use current GPS location</Text>
             </Pressable>
-            <TextInput value={manualLocation} onChangeText={(value)=>{setManualLocation(value);setSelectedManualPlace(null);}} placeholder="Enter city or area" placeholderTextColor="#8B93A1" style={s.manualLocationInput}/>
-            {locationSuggestions.length>0?<View style={s.locationSuggestions}>{locationSuggestions.map((place,i)=><Pressable key={`${place.latitude}-${place.longitude}-${i}`} style={s.locationSuggestion} onPress={()=>{setSelectedManualPlace(place);setManualLocation(place.shortLabel);setLocationSuggestions([]);}}><Text style={s.locationSuggestionTitle}>{place.shortLabel}</Text><Text style={s.locationSuggestionDetail} numberOfLines={2}>{place.label}</Text></Pressable>)}</View>:null}
+            <TextInput value={manualLocation} onChangeText={(value)=>{setManualLocation(value);setSelectedManualPlace(null);setLocationError("");}} placeholder="Enter city or area (e.g. Raebareli, Uttar Pradesh)" placeholderTextColor="#8B93A1" style={s.manualLocationInput}/>
+            {locationError?<Text accessibilityRole="alert" style={s.locationError}>{locationError}</Text>:null}
+            {locationSuggestions.length>0?<View style={s.locationSuggestions}>{locationSuggestions.map((place,i)=><Pressable key={`${place.latitude}-${place.longitude}-${i}`} style={s.locationSuggestion} onPress={()=>{setSelectedManualPlace(place);setManualLocation(place.shortLabel);setLocationSuggestions([]);setLocationError("");}}><Text style={s.locationSuggestionTitle}>{place.shortLabel}</Text><Text style={s.locationSuggestionDetail} numberOfLines={2}>{place.label}</Text></Pressable>)}</View>:null}
             <Pressable style={s.apply} onPress={changeLocationManually} disabled={locationBusy}><Text style={s.applyText}>{locationBusy?"Finding…":"Use this location"}</Text></Pressable>
           </View>
         </View>
@@ -314,7 +319,7 @@ function NativeMap({userCoords,items,selection}:{userCoords:Coords;items:Profess
 }
 
 const s=StyleSheet.create({
-  locationBar:{marginHorizontal:14,marginTop:10,minHeight:58,borderWidth:1,borderColor:"#DCE8F7",borderRadius:14,backgroundColor:"#F4F8FE",flexDirection:"row",alignItems:"center",paddingHorizontal:10,gap:8},locationPin:{width:30,height:30,borderRadius:15,backgroundColor:"#E8F0FC",alignItems:"center",justifyContent:"center"},locationPinText:{fontSize:17,color:"#365D8D"},locationLabel:{fontSize:9,color:"#6B7280"},locationValue:{fontSize:11,fontWeight:"800",color:"#10233F",marginTop:1},locationGps:{width:32,height:32,borderRadius:16,backgroundColor:"#E8F0FC",alignItems:"center",justifyContent:"center"},locationGpsText:{fontSize:18,color:"#2F80ED"},changeLocation:{borderWidth:1,borderColor:"#FF4B1F",borderRadius:12,paddingHorizontal:10,paddingVertical:7,backgroundColor:"#fff"},changeLocationText:{fontSize:11,fontWeight:"800",color:"#FF4B1F"},locationCurrentButton:{height:48,borderRadius:12,borderWidth:1,borderColor:"#DCE8F7",backgroundColor:"#F4F8FE",alignItems:"center",justifyContent:"center",marginTop:16},locationCurrentButtonText:{fontWeight:"800",color:"#10233F"},manualLocationInput:{height:50,borderWidth:1,borderColor:"#E7EAF0",borderRadius:12,paddingHorizontal:14,fontSize:15,color:"#172033",marginTop:12},locationSuggestions:{marginTop:6,borderWidth:1,borderColor:"#E7EAF0",borderRadius:12,backgroundColor:"#fff",overflow:"hidden"},locationSuggestion:{paddingHorizontal:12,paddingVertical:10,borderBottomWidth:1,borderBottomColor:"#EEF2F6"},locationSuggestionTitle:{fontSize:14,fontWeight:"800",color:"#10233F"},locationSuggestionDetail:{fontSize:11,color:"#6B7280",marginTop:3},
+  locationBar:{marginHorizontal:14,marginTop:10,minHeight:58,borderWidth:1,borderColor:"#DCE8F7",borderRadius:14,backgroundColor:"#F4F8FE",flexDirection:"row",alignItems:"center",paddingHorizontal:10,gap:8},locationPin:{width:30,height:30,borderRadius:15,backgroundColor:"#E8F0FC",alignItems:"center",justifyContent:"center"},locationPinText:{fontSize:17,color:"#365D8D"},locationLabel:{fontSize:9,color:"#6B7280"},locationValue:{fontSize:11,fontWeight:"800",color:"#10233F",marginTop:1},locationGps:{width:32,height:32,borderRadius:16,backgroundColor:"#E8F0FC",alignItems:"center",justifyContent:"center"},locationGpsText:{fontSize:18,color:"#2F80ED"},changeLocation:{borderWidth:1,borderColor:"#FF4B1F",borderRadius:12,paddingHorizontal:10,paddingVertical:7,backgroundColor:"#fff"},changeLocationText:{fontSize:11,fontWeight:"800",color:"#FF4B1F"},locationCurrentButton:{height:48,borderRadius:12,borderWidth:1,borderColor:"#DCE8F7",backgroundColor:"#F4F8FE",alignItems:"center",justifyContent:"center",marginTop:16},locationCurrentButtonText:{fontWeight:"800",color:"#10233F"},manualLocationInput:{height:50,borderWidth:1,borderColor:"#E7EAF0",borderRadius:12,paddingHorizontal:14,fontSize:15,color:"#172033",marginTop:12},locationSuggestions:{marginTop:6,borderWidth:1,borderColor:"#E7EAF0",borderRadius:12,backgroundColor:"#fff",overflow:"hidden"},locationError:{marginTop:8,color:"#B42318",fontSize:12,fontWeight:"700"},locationSuggestion:{paddingHorizontal:12,paddingVertical:10,borderBottomWidth:1,borderBottomColor:"#EEF2F6"},locationSuggestionTitle:{fontSize:14,fontWeight:"800",color:"#10233F"},locationSuggestionDetail:{fontSize:11,color:"#6B7280",marginTop:3},
   safe:{flex:1,backgroundColor:"#fff"}, container:{flex:1}, header:{paddingHorizontal:14,paddingTop:8,gap:8},brandRow:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",gap:8,minWidth:0},headerText:{width:"100%",minWidth:0,paddingTop:4},headerActions:{flexDirection:"row",alignItems:"center",gap:6,flexShrink:0},filterButton:{width:40,height:40,borderRadius:20,backgroundColor:"#f1f5f4",alignItems:"center",justifyContent:"center"},filterButtonText:{fontSize:21,color:"#FF4B1F"},
   title:{fontSize:20,fontWeight:"900",color:"#10233F",lineHeight:26,flexShrink:1},subtitle:{marginTop:2,color:"#6B7280",fontSize:12,lineHeight:17},refresh:{width:42,height:42,borderRadius:21,backgroundColor:"#FFF0EA",borderWidth:1,borderColor:"#FFD3C2",alignItems:"center",justifyContent:"center"},refreshText:{fontSize:25,fontWeight:"900",color:"#D93812",lineHeight:29},
   skills:{paddingHorizontal:14,paddingVertical:10,gap:8},skill:{paddingHorizontal:12,paddingVertical:7,borderRadius:16,backgroundColor:"#f3f5f5",alignItems:"center",minWidth:66},skillSelected:{backgroundColor:"#FF4B1F"},skillText:{fontWeight:"700",color:"#10233F"},skillTextSelected:{color:"#fff"},
