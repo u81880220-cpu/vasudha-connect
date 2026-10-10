@@ -98,9 +98,9 @@ export default function ProfessionalVerification() {
     <Text style={s.title}>Professional Verification</Text>
     <Text style={s.sub}>Build trust before customers connect with you.</Text>
     <View style={s.score}><Text style={s.scoreTitle}>Profile completeness</Text><Text style={s.scoreValue}>{completeness}%</Text><Text style={s.muted}>Complete your professional details and submit verification.</Text></View>
-    <Text style={s.label}>Headline</Text><TextInput style={s.input} value={headline} onChangeText={setHeadline} placeholder="Experienced electrician" placeholderTextColor="#6B7280" selectionColor="#FF4B1F"/>
+    <Text style={s.label}>Headline</Text><TextInput style={s.input} value={headline} onChangeText={setHeadline} placeholder="Experienced electrician" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" placeholderTextColor="#6B7280" selectionColor="#FF4B1F"/>
     <Text style={s.label}>About</Text><TextInput style={[s.input, s.multi]} value={about} onChangeText={setAbout} placeholder="Experience, services and strengths" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" multiline/>
-    <Text style={s.label}>Experience</Text><TextInput style={s.input} value={years} onChangeText={setYears} keyboardType="number-pad" placeholderTextColor="#6B7280" selectionColor="#FF4B1F"/>
+    <Text style={s.label}>Experience</Text><TextInput style={s.input} value={years} onChangeText={setYears} keyboardType="number-pad" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" placeholderTextColor="#6B7280" selectionColor="#FF4B1F"/>
     <Pressable onPress={saveProfile} style={s.save}><Text style={s.saveText}>Save professional details</Text></Pressable>
     <View style={s.status}><Text style={s.label}>Verification status</Text><Text style={s.badge}>{status.toUpperCase()}</Text></View>
     {docs.length > 0 ? <View style={s.docs}><Text style={s.label}>Submission history</Text>{docs.map(d => <View key={d.id} style={s.doc}><Text style={s.docTitle}>{d.document_type} · {String(d.status).toUpperCase()}</Text>{d.reviewer_note ? <Text style={s.muted}>{d.reviewer_note}</Text> : null}</View>)}</View> : null}
