@@ -173,11 +173,13 @@ function ProfessionalHome(){
   if(!session?.user.id||!stats.available)return;
   let active=true;
   let updating=false;
+  let permissionRequested=false;
   async function refreshProfessionalLocation(){
    if(!active||updating||AppState.currentState!=="active")return;
    updating=true;
    try{
-    const permission=await Location.getForegroundPermissionsAsync();
+    const permission=permissionRequested?await Location.getForegroundPermissionsAsync():await Location.requestForegroundPermissionsAsync();
+    permissionRequested=true;
     if(permission.status!=="granted"){
      if(active)setLocationStatus("GPS permission is off · using saved service area");
      return;
