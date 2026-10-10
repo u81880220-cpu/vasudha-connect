@@ -17,7 +17,7 @@ export default function ServiceRequest(){
  const subServiceName=first(raw.subServiceName)||"";
  const [selection,setSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:serviceId||null,serviceName:serviceName||null,subServiceId:subServiceId||null,subServiceName:subServiceName||null});
  const [loadingSelection,setLoadingSelection]=useState(!!serviceId);
- const [title,setTitle]=useState(""); const [description,setDescription]=useState(""); const [date,setDate]=useState(""); const [time,setTime]=useState(""); const [location,setLocation]=useState(""); const [busy,setBusy]=useState(false);
+ const [title,setTitle]=useState(""); const [description,setDescription]=useState(""); const [date,setDate]=useState(""); const [time,setTime]=useState(""); const [location,setLocation]=useState(""); const [busy,setBusy]=useState(false); const [submitMessage,setSubmitMessage]=useState("");
 
  useEffect(()=>{resolveSelection();},[serviceId,subServiceId]);
 
@@ -44,14 +44,52 @@ export default function ServiceRequest(){
  }
 
  async function submit(){
-  if(!professionalId||!selection.serviceId){Alert.alert("Choose a service","Select the service you want from the professional. The remaining job details are optional.");return;}
+  if(busy)return;
+  setSubmitMessage("");
+  if(!professionalId){
+   setSubmitMessage("This request is not linked to a professional. Go back to Find Professionals, open a professional profile, and choose Create Job from that profile.");
+   return;
+  }
+  if(loadingSelection){
+   setSubmitMessage("Please wait while the selected service loads.");
+   return;
+  }
+  if(!selection.serviceId){
+   setSubmitMessage("Please choose a service before creating this job.");
+   return;
+  }
   setBusy(true);
-  let latitude:null|number=null, longitude:null|number=null;
-  try{if(location.trim()&&await Location.hasServicesEnabledAsync()){const perm=await Location.requestForegroundPermissionsAsync();if(perm.status==="granted"){const places=await Location.geocodeAsync(location.trim());if(places[0]){latitude=places[0].latitude;longitude=places[0].longitude;}}}}catch{}
-  const {data:requestId,error}=await supabase.rpc("create_service_request",{p_professional_id:professionalId,p_service_id:selection.serviceId,p_sub_service_id:selection.subServiceId||null,p_title:title.trim()||null,p_description:description.trim()||null,p_preferred_date:date||null,p_preferred_time:time.trim()||null,p_location_text:location.trim()||null,p_location_latitude:latitude,p_location_longitude:longitude});
-  setBusy(false);
-  if(error)Alert.alert("Request failed",error.message);
-  else router.replace({pathname:"/jobs",params:{created:"1",requestId:String(requestId||"")}});
+  try{
+   let latitude:null|number=null, longitude:null|number=null;
+   try{
+    if(location.trim()&&await Location.hasServicesEnabledAsync()){
+     const perm=await Location.requestForegroundPermissionsAsync();
+     if(perm.status==="granted"){
+      const places=await Location.geocodeAsync(location.trim());
+      if(places[0]){latitude=places[0].latitude;longitude=places[0].longitude;}
+     }
+    }
+   }catch{}
+   const {data:requestId,error}=await supabase.rpc("create_service_request",{
+    p_professional_id:professionalId,
+    p_service_id:selection.serviceId,
+    p_sub_service_id:selection.subServiceId||null,
+    p_title:title.trim()||null,
+    p_description:description.trim()||null,
+    p_preferred_date:date.trim()||null,
+    p_preferred_time:time.trim()||null,
+    p_location_text:location.trim()||null,
+    p_location_latitude:latitude,
+    p_location_longitude:longitude
+   });
+   if(error)throw error;
+   if(!requestId)throw new Error("The server did not confirm that the request was created. Please open My Jobs and check before trying again.");
+   router.replace({pathname:"/jobs",params:{created:"1",requestId:String(requestId)}});
+  }catch(e:any){
+   setSubmitMessage(e?.message||"The job request could not be created. Please try again.");
+  }finally{
+   setBusy(false);
+  }
  }
 
  return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
@@ -71,7 +109,8 @@ export default function ServiceRequest(){
   <Text style={s.label}>Preferred time <Text style={s.optional}>(optional)</Text></Text><TextInput value={time} onChangeText={setTime} placeholder="e.g. 11:00 AM" style={s.input}/>
   <Text style={s.label}>Service location <Text style={s.optional}>(optional)</Text></Text><TextInput value={location} onChangeText={setLocation} placeholder="Enter the property/service address" style={[s.input,s.large]}/>
   <Text style={s.note}>You can create the job now with just the selected service. The other details can be discussed with the professional later.</Text>
-  <Pressable onPress={submit} disabled={busy||loadingSelection} style={s.primary}><Text style={s.primaryText}>{busy?"Creating...":"Create Job"}</Text></Pressable>
+  {submitMessage?<View accessibilityRole="alert" style={s.submitError}><Text style={s.submitErrorText}>{submitMessage}</Text></View>:null}
+  <Pressable accessibilityRole="button" onPress={submit} disabled={busy||loadingSelection} style={[s.primary,(busy||loadingSelection)&&{opacity:0.65}]}><Text style={s.primaryText}>{busy?"Creating job…":loadingSelection?"Loading service…":"Create Job"}</Text></Pressable>
  </ScrollView></SafeAreaView>;
 }
-const s=StyleSheet.create({safe:{flex:1,backgroundColor:KAMPRO.background},container:{width:"100%",maxWidth:900,alignSelf:"center",padding:28,paddingBottom:60},title:{fontSize:30,fontWeight:"900",color:KAMPRO.navy,letterSpacing:-.4},muted:{opacity:.65,marginTop:6,lineHeight:20},loading:{marginTop:18,color:"#6B7280"},lockedSelection:{marginTop:16,borderWidth:1,borderColor:"#bcd9d0",borderRadius:16,padding:14,backgroundColor:"#f2f8f6"},selectedLabel:{fontSize:10,fontWeight:"900",color:"#FF4B1F",textTransform:"uppercase"},selectedService:{fontSize:17,fontWeight:"900",color:"#10233F",marginTop:4},selectedSub:{fontSize:13,color:"#46534f",marginTop:3},label:{fontWeight:"800",marginTop:20,marginBottom:7},optional:{fontSize:11,fontWeight:"600",color:"#6B7280"},input:{borderWidth:1,borderColor:KAMPRO.border,borderRadius:14,padding:12,minHeight:48,backgroundColor:"#fff",color:"#10233F"},large:{height:120,textAlignVertical:"top"},note:{fontSize:12,color:"#6B7280",marginTop:10,lineHeight:18},primary:{marginTop:24,borderRadius:12,padding:14,alignItems:"center",backgroundColor:"#FF4B1F",minHeight:50,justifyContent:"center"},primaryText:{color:"#fff",fontWeight:"900"}});
+const s=StyleSheet.create({safe:{flex:1,backgroundColor:KAMPRO.background},container:{width:"100%",maxWidth:900,alignSelf:"center",padding:28,paddingBottom:60},title:{fontSize:30,fontWeight:"900",color:KAMPRO.navy,letterSpacing:-.4},muted:{opacity:.65,marginTop:6,lineHeight:20},loading:{marginTop:18,color:"#6B7280"},lockedSelection:{marginTop:16,borderWidth:1,borderColor:"#bcd9d0",borderRadius:16,padding:14,backgroundColor:"#f2f8f6"},selectedLabel:{fontSize:10,fontWeight:"900",color:"#FF4B1F",textTransform:"uppercase"},selectedService:{fontSize:17,fontWeight:"900",color:"#10233F",marginTop:4},selectedSub:{fontSize:13,color:"#46534f",marginTop:3},label:{fontWeight:"800",marginTop:20,marginBottom:7},optional:{fontSize:11,fontWeight:"600",color:"#6B7280"},input:{borderWidth:1,borderColor:KAMPRO.border,borderRadius:14,padding:12,minHeight:48,backgroundColor:"#fff",color:"#10233F"},large:{height:120,textAlignVertical:"top"},note:{fontSize:12,color:"#6B7280",marginTop:10,lineHeight:18},submitError:{marginTop:12,padding:12,borderWidth:1,borderColor:"#FDA29B",backgroundColor:"#FEF3F2",borderRadius:12},submitErrorText:{color:"#B42318",fontSize:13,lineHeight:19,fontWeight:"600"},primary:{marginTop:24,borderRadius:12,padding:14,alignItems:"center",backgroundColor:"#FF4B1F",minHeight:50,justifyContent:"center"},primaryText:{color:"#fff",fontWeight:"900"}});
