@@ -25,13 +25,30 @@ export default function ProfessionalProfile(){
   setLoading(true);
   const[q,a,ct,pss,pr]=await Promise.all([
    supabase.from("professional_profiles").select("headline,about,years_experience,service_radius_km,is_available,verification_status,base_latitude,base_longitude").eq("user_id",uid).maybeSingle(),
-   supabase.from("service_areas").select("id,label,city,state,radius_km").eq("professional_id",uid).order("created_at"),
+   supabase.from("service_areas").select("id,label,city,state,latitude,longitude,radius_km,is_primary").eq("professional_id",uid).order("created_at"),
    supabase.from("user_contact_details").select("phone,phone_2").eq("user_id",uid).maybeSingle(),
    supabase.from("professional_sub_services").select("sub_service_id").eq("professional_id",uid),
    supabase.from("profiles").select("avatar_url").eq("id",uid).maybeSingle()
   ]);
   if(q.data){setP({...q.data,years_experience:String(q.data.years_experience||0),service_radius_km:String(q.data.service_radius_km||10)});if(q.data.base_latitude!=null&&q.data.base_longitude!=null)setBaseLocation({latitude:Number(q.data.base_latitude),longitude:Number(q.data.base_longitude)});}
-  setPhone(ct.data?.phone||"");setPhone2(ct.data?.phone_2||"");setAvatarUrl(pr.data?.avatar_url||null);setAreas(a.data||[]);
+  setPhone(ct.data?.phone||"");setPhone2(ct.data?.phone_2||"");setAvatarUrl(pr.data?.avatar_url||null);
+  let loadedAreas=a.data||[];
+  // Repair older service areas that were saved without coordinates so they can be used as marketplace fallback.
+  for(const savedArea of loadedAreas){
+   if(savedArea.latitude!=null&&savedArea.longitude!=null)continue;
+   const query=[savedArea.label,savedArea.city,savedArea.state,"India"].filter(Boolean).join(", ");
+   try{
+    const response=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=${encodeURIComponent(query)}`,{headers:{Accept:"application/json"}});
+    if(!response.ok)continue;
+    const places=await response.json();const place=Array.isArray(places)?places[0]:null;
+    if(place&&Number.isFinite(Number(place.lat))&&Number.isFinite(Number(place.lon))){
+     const latitude=Number(place.lat),longitude=Number(place.lon);
+     const{error:areaUpdateError}=await supabase.from("service_areas").update({latitude,longitude,is_primary:loadedAreas.length===1?true:savedArea.is_primary}).eq("id",savedArea.id);
+     if(!areaUpdateError){savedArea.latitude=latitude;savedArea.longitude=longitude;if(loadedAreas.length===1)savedArea.is_primary=true;}
+    }
+   }catch{}
+  }
+  setAreas(loadedAreas);
   const ids=(pss.data||[]).map((x:any)=>x.sub_service_id);
   if(ids.length){const{data:catalog}=await supabase.from("service_catalogue_sub_services").select("id,name,service_id,service_catalogue_services(name)").in("id",ids);setSelectedSubServices((catalog||[]).map((x:any)=>({id:x.id,name:x.name,serviceId:x.service_id,serviceName:x.service_catalogue_services?.name||"Service"})));}else setSelectedSubServices([]);
   setLoading(false);
@@ -50,9 +67,16 @@ export default function ProfessionalProfile(){
   Alert.alert("Saved successfully","Your professional profile has been updated.");load();
  }
  async function addArea(){
-  if(!area.label.trim())return Alert.alert("Service area","Enter an area.");
-  const{error}=await supabase.from("service_areas").insert({professional_id:uid,label:area.label.trim(),city:area.city||null,state:area.state||null,radius_km:Number(area.radius_km)||10,is_primary:areas.length===0});
-  if(error)Alert.alert("Area",error.message);else{setArea({label:"",city:"",state:"",radius_km:"10"});load()}
+  if(!area.label.trim()&&!area.city.trim())return Alert.alert("Service area","Enter an area or city.");
+  let latitude:number|null=null,longitude:number|null=null;
+  const query=[area.label.trim(),area.city.trim(),area.state.trim(),"India"].filter(Boolean).join(", ");
+  try{
+   const response=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=${encodeURIComponent(query)}`,{headers:{Accept:"application/json"}});
+   if(response.ok){const places=await response.json();const place=Array.isArray(places)?places[0]:null;if(place&&Number.isFinite(Number(place.lat))&&Number.isFinite(Number(place.lon))){latitude=Number(place.lat);longitude=Number(place.lon);}}
+  }catch{}
+  if(latitude==null||longitude==null)return Alert.alert("Service area","We couldn't locate this area. Check the spelling and include the city and state so customers can find you.");
+  const{error}=await supabase.from("service_areas").insert({professional_id:uid,label:area.label.trim()||area.city.trim(),city:area.city.trim()||null,state:area.state.trim()||null,latitude,longitude,radius_km:Number(area.radius_km)||10,is_primary:areas.length===0});
+  if(error)Alert.alert("Area",error.message);else{setArea({label:"",city:"",state:"",radius_km:"10"});await load();Alert.alert("Service area saved","Location coordinates are set for customer search.")}
  }
  async function addPortfolio(){
   if(!port.title.trim())return Alert.alert("Portfolio","Enter a title.");
