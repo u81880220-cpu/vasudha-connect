@@ -10,6 +10,22 @@ import { useKamproLanguage } from "../src/i18n/LanguageProvider";
 
 type Method="mobile"|"email";
 
+function friendlyAuthError(error: unknown, flow: "login" | "signup" | "reset" | "general" = "general") {
+ const e = error as { message?: string; code?: string; status?: number };
+ const message = (e?.message ?? "").toLowerCase();
+ const code = (e?.code ?? "").toLowerCase();
+ if (flow === "login" && (message.includes("invalid login credentials") || message.includes("invalid credentials") || message.includes("wrong password") || code === "invalid_credentials")) return "Incorrect email/mobile number or password. Please check your details and try again.";
+ if (flow === "signup" && (code.includes("user_already_exists") || code.includes("email_exists") || message.includes("already registered") || message.includes("already been registered") || message.includes("user already registered") || message.includes("email address is already"))) return "An account may already exist with these details. Please sign in or use Forgot password/PIN.";
+ if (message.includes("email not confirmed")) return "Please verify your email using the confirmation link we sent before logging in.";
+ if (message.includes("password should be at least") || message.includes("password must be")) return "Password must be at least 8 characters long.";
+ if (message.includes("rate limit") || message.includes("too many requests")) return "Too many attempts. Please wait a little while and try again.";
+ if (message.includes("network") || message.includes("fetch")) return "We couldn’t connect. Check your internet connection and try again.";
+ if (flow === "reset") return "We couldn’t process the password reset request. Please try again shortly.";
+ if (flow === "login") return "We couldn’t sign you in. Check your details and try again.";
+ if (flow === "signup") return "We couldn’t create your account. Please check your details and try again.";
+ return "Something went wrong. Please try again.";
+}
+
 export default function AuthScreen(){
  const {t}=useKamproLanguage();
  const params=useLocalSearchParams<{mode?:string}>();
@@ -38,7 +54,7 @@ export default function AuthScreen(){
   if(password.length<8)return Alert.alert("Enter PIN/password","Use at least 8 characters.");
   setBusy(true);
   try{const{error}=await supabase.auth.signInWithPassword({phone:"+91"+phone.replace(/\D/g,"").slice(-10),password});if(error)throw error;router.replace("/home");}
-  catch(e){Alert.alert("Mobile sign in failed",e instanceof Error?e.message:"Please try again.");}
+  catch(e){Alert.alert("Sign-in unsuccessful",friendlyAuthError(e,"login"));}
   finally{setBusy(false);}
  }
  async function mobileSignup(){
@@ -48,14 +64,14 @@ export default function AuthScreen(){
   if(password!==confirmPassword)return Alert.alert("PIN/passwords do not match","Enter the same PIN/password in both fields.");
   setBusy(true);
   try{const{data,error}=await supabase.auth.signUp({phone:"+91"+phone.replace(/\D/g,"").slice(-10),password,options:{data:{initial_mode:mode,full_name:fullName.trim()}}});if(error)throw error;if(data.session){const{error:modeError}=await supabase.rpc("switch_app_mode",{p_mode:mode});if(modeError)throw modeError;router.replace("/home");}else{setMobileRecovery(false);setSent(true);setOtp("");}}
-  catch(e){Alert.alert("Mobile account creation failed",e instanceof Error?e.message:"Please try again.");}
+  catch(e){Alert.alert("Couldn’t create account",friendlyAuthError(e,"signup"));}
   finally{setBusy(false);}
  }
  async function startMobileRecovery(){
   if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Enter the mobile number linked to your KAMPRO account first.");
   setBusy(true);
   try{const{error}=await supabase.auth.signInWithOtp({phone:"+91"+phone.replace(/\D/g,"").slice(-10),options:{shouldCreateUser:false}});if(error)throw error;setMobileRecovery(true);setPinRecoveryReady(false);setOtp("");setSent(true);Alert.alert("OTP sent","Verify your mobile number to set a new PIN/password.");}
-  catch(e){Alert.alert("Unable to send recovery OTP",e instanceof Error?e.message:"Please try again.");}
+  catch(e){Alert.alert("Unable to send recovery OTP",friendlyAuthError(e,"reset"));}
   finally{setBusy(false);}
  }
  async function updateMobilePin(){
@@ -67,26 +83,29 @@ export default function AuthScreen(){
   finally{setBusy(false);}
  }
  async function emailLogin(){
-  if(!email.includes("@")||password.length<6)return Alert.alert("Check details","Enter a valid email and a password of at least 6 characters.");
+  if(!email.trim()||!/^\S+@\S+\.\S+$/.test(email.trim()))return setFeedback({kind:"error",text:"Please enter a valid email address."});
+  if(password.length<8)return setFeedback({kind:"error",text:"Password must be at least 8 characters long."});
+  setFeedback(null);
   setBusy(true);
   try{const{error}=await supabase.auth.signInWithPassword({email:email.trim(),password});if(error)throw error;router.replace("/home");}
-  catch(e){Alert.alert("Email sign in failed",e instanceof Error?e.message:"Please try again.");}
+  catch(e){setFeedback({kind:"error",text:friendlyAuthError(e,"login")});}
   finally{setBusy(false);}
  }
  async function forgotPassword(){
   if(!email.trim()||!email.includes("@"))return Alert.alert("Enter your email","Enter the email address linked to your KAMPRO account first.");
   setBusy(true);
   try{const{error}=await supabase.auth.resetPasswordForEmail(email.trim(),{redirectTo:getAuthRedirect()+"?mode=reset-password"});if(error)throw error;setResetSent(true);Alert.alert("Check your email","If an account exists for this address, Supabase will send a password-reset link. Open it on this device or browser to choose a new password.");}
-  catch(e){Alert.alert("Unable to send reset link",e instanceof Error?e.message:"Please try again.");}
+  catch(e){Alert.alert("Password reset",friendlyAuthError(e,"reset"));}
   finally{setBusy(false);}
  }
  async function emailSignup(){
   setFeedback(null);
   if(fullName.trim().length<2){setFeedback({kind:"error",text:"Enter your full name before creating an account."});return;}
-  if(!email.includes("@")||password.length<6){setFeedback({kind:"error",text:"Enter a valid email and a password of at least 6 characters."});return;}
+  if(!email.trim()||!/^\S+@\S+\.\S+$/.test(email.trim())){setFeedback({kind:"error",text:"Please enter a valid email address."});return;}
+  if(password.length<8){setFeedback({kind:"error",text:"Password must be at least 8 characters long."});return;}
   setBusy(true);
-  try{const{data,error}=await supabase.auth.signUp({email:email.trim(),password,options:{data:{initial_mode:mode,full_name:fullName.trim()},emailRedirectTo:getAuthRedirect()}});if(error)throw error;if(data.session)router.replace("/home");else setFeedback({kind:"success",text:"Account request received. Check your inbox for the confirmation email."});}
-  catch(e){setFeedback({kind:"error",text:e instanceof Error?e.message:"Account creation failed. Please try again."});}
+  try{const{data,error}=await supabase.auth.signUp({email:email.trim(),password,options:{data:{initial_mode:mode,full_name:fullName.trim()},emailRedirectTo:getAuthRedirect()}});if(error)throw error;if(data.session)router.replace("/home");else setFeedback({kind:"success",text:"Registration request accepted. Check your inbox and spam folder for the confirmation email. If you already have an account, please sign in or use Forgot password."});}
+  catch(e){setFeedback({kind:"error",text:friendlyAuthError(e,"signup")});}
   finally{setBusy(false);}
  }
  async function google(){
