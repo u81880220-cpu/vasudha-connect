@@ -58,6 +58,10 @@ export default function ServiceRequest(){
    setSubmitMessage("Please choose a service before creating this job.");
    return;
   }
+  if(!location.trim()){
+   setSubmitMessage("Please enter the service address or area. The professional needs this to navigate to the job.");
+   return;
+  }
   setBusy(true);
   try{
    let latitude:null|number=null, longitude:null|number=null;
@@ -107,8 +111,8 @@ export default function ServiceRequest(){
   <Text style={s.label}>Work details <Text style={s.optional}>(optional)</Text></Text><TextInput value={description} onChangeText={setDescription} placeholder="Describe the work required..." multiline style={[s.input,s.large]}/>
   <Text style={s.label}>Preferred date <Text style={s.optional}>(optional)</Text></Text><TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" style={s.input}/>
   <Text style={s.label}>Preferred time <Text style={s.optional}>(optional)</Text></Text><TextInput value={time} onChangeText={setTime} placeholder="e.g. 11:00 AM" style={s.input}/>
-  <Text style={s.label}>Service location <Text style={s.optional}>(optional)</Text></Text><TextInput value={location} onChangeText={setLocation} placeholder="Enter the property/service address" style={[s.input,s.large]}/>
-  <Text style={s.note}>You can create the job now with just the selected service. The other details can be discussed with the professional later.</Text>
+  <Text style={s.label}>Service location (required for navigation)</Text><TextInput value={location} onChangeText={setLocation} placeholder="Enter full address or area, e.g. Civil Lines, Raebareli" style={[s.input,s.large]}/>
+  <Text style={s.note}>Please provide the service location so the professional can open directions in Google Maps. Work details and schedule can be discussed later.</Text>
   {submitMessage?<View accessibilityRole="alert" style={s.submitError}><Text style={s.submitErrorText}>{submitMessage}</Text></View>:null}
   <Pressable accessibilityRole="button" onPress={submit} disabled={busy||loadingSelection} style={[s.primary,(busy||loadingSelection)&&{opacity:0.65}]}><Text style={s.primaryText}>{busy?"Creating job…":loadingSelection?"Loading service…":"Create Job"}</Text></Pressable>
  </ScrollView></SafeAreaView>;
