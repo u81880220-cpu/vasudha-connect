@@ -83,7 +83,7 @@ export default function AuthScreen(){
   finally{setBusy(false);}
  }
  async function emailLogin(){
-  if(!email.trim()||!/^\S+@\S+\.\S+$/.test(email.trim()))return setFeedback({kind:"error",text:"Please enter a valid email address."});
+  if(!email.trim()||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())){const message="Please enter a valid email address.";setFeedback({kind:"error",text:message});Alert.alert("Check your email",message);return;}
   if(password.length<8)return setFeedback({kind:"error",text:"Password must be at least 8 characters long."});
   setFeedback(null);
   setBusy(true);
