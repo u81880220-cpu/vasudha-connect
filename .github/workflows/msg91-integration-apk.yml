@@ -53,6 +53,35 @@ jobs:
           EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
         run: npx expo prebuild --platform android --non-interactive
 
+      # Temporary compatibility workaround: the RN 0.81 codegen parser
+      # rejects React.ComponentRef in react-native-screens command specs.
+      # Patch only the disposable CI node_modules tree; never production source.
+      - name: Apply temporary React Native codegen compatibility workaround
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+          const path = require("path");
+          const root = path.resolve("node_modules/react-native-screens/src");
+          if (!fs.existsSync(root)) throw new Error("react-native-screens source directory not found");
+          let changed = 0;
+          function visit(dir) {
+            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+              const file = path.join(dir, entry.name);
+              if (entry.isDirectory()) visit(file);
+              else if (/\\.(ts|tsx)$/.test(entry.name)) {
+                const source = fs.readFileSync(file, "utf8");
+                const patched = source.replace(/React\\.ComponentRef/g, "React.ElementRef");
+                if (patched !== source) {
+                  fs.writeFileSync(file, patched);
+                  changed++;
+                }
+              }
+            }
+          }
+          visit(root);
+          console.log(`Patched ${changed} react-native-screens source file(s) for CI codegen compatibility.`);
+          NODE
+
       - name: Build installable test APK
         working-directory: apps/mobile/android
         env:
