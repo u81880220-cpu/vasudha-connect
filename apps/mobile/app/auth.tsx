@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
+import { DefaultWidget } from "@msg91comm/sendotp-react-native";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase,getAuthRedirect } from "../src/lib/supabase";
@@ -34,7 +35,7 @@ export default function AuthScreen(){
  const [phone,setPhone]=useState(""); const [otp,setOtp]=useState("");
  const [email,setEmail]=useState(""); const [password,setPassword]=useState(""); const [fullName,setFullName]=useState("");
  const [accountMode,setAccountMode]=useState<"login"|"signup">("login");
- const [sent,setSent]=useState(false); const [busy,setBusy]=useState(false); const [resetSent,setResetSent]=useState(false); const [confirmPassword,setConfirmPassword]=useState(""); const [mobileRecovery,setMobileRecovery]=useState(false); const [pinRecoveryReady,setPinRecoveryReady]=useState(false); const [feedback,setFeedback]=useState<{kind:"error"|"success";text:string}|null>(null); const isReset=params.mode==="reset-password";
+ const [sent,setSent]=useState(false); const [busy,setBusy]=useState(false); const [showMsg91Widget,setShowMsg91Widget]=useState(false); const [resetSent,setResetSent]=useState(false); const [confirmPassword,setConfirmPassword]=useState(""); const [mobileRecovery,setMobileRecovery]=useState(false); const [pinRecoveryReady,setPinRecoveryReady]=useState(false); const [feedback,setFeedback]=useState<{kind:"error"|"success";text:string}|null>(null); const isReset=params.mode==="reset-password";
 
  useEffect(()=>{const {data}=supabase.auth.onAuthStateChange((event,session)=>{if(event==="SIGNED_IN"&&session&&!isReset){setTimeout(()=>router.replace("/home"),0);}});return()=>data.subscription.unsubscribe();},[isReset]);
  async function updatePassword(){if(password.length<8)return Alert.alert("Password too short","Use at least 8 characters.");if(password!==confirmPassword)return Alert.alert("Passwords do not match","Enter the same password in both fields.");setBusy(true);try{const{error}=await supabase.auth.updateUser({password});if(error)throw error;Alert.alert("Password updated","Your password has been changed.");router.replace("/home");}catch(e){Alert.alert("Unable to update password",e instanceof Error?e.message:"Please request a new reset link.");}finally{setBusy(false);}}
@@ -62,30 +63,31 @@ export default function AuthScreen(){
   if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
   if(password.length<8)return Alert.alert("PIN/password too short","Use at least 8 characters.");
   if(password!==confirmPassword)return Alert.alert("PIN/passwords do not match","Enter the same PIN/password in both fields.");
+  if(!process.env.EXPO_PUBLIC_MSG91_WIDGET_TOKEN)return Alert.alert("OTP setup incomplete","KAMPRO's MSG91 widget token has not been configured for this build. Please configure EXPO_PUBLIC_MSG91_WIDGET_TOKEN in the mobile build environment.");
   setFeedback(null);
+  setShowMsg91Widget(true);
+ }
+ async function completeMsg91Registration(result: {success?:boolean; identifier?:string; message?:string}){
+  setShowMsg91Widget(false);
+  if(!result?.success)return Alert.alert("Mobile verification failed",result?.message||"MSG91 could not verify this mobile number. Please try again.");
+  const enteredPhone="+91"+phone.replace(/\D/g,"").slice(-10);
+  const verifiedDigits=(result.identifier||"").replace(/\D/g,"");
+  const normalizedVerified=verifiedDigits.length===10?"91"+verifiedDigits:verifiedDigits;
+  if(normalizedVerified!==enteredPhone.replace(/\D/g,""))return Alert.alert("Mobile number mismatch","The number verified by MSG91 does not match the number entered. Please retry with the same number.");
+  const accessToken=result.message||"";
+  if(accessToken.length<20)return Alert.alert("Verification response incomplete","MSG91 did not return a valid verification token. Please retry.");
   setBusy(true);
   try{
-   const{data,error}=await supabase.auth.signUp({phone:"+91"+phone.replace(/\D/g,"").slice(-10),password,options:{data:{initial_mode:mode,full_name:fullName.trim()}}});
-   if(error)throw error;
-   if(!data.session){
-    const message="KAMPRO created a registration request but did not sign you in. SMS-free mobile registration requires Phone confirmations to be disabled in Supabase Auth settings. Please contact support or use Email registration for now.";
-    setFeedback({kind:"error",text:message});
-    Alert.alert("Registration needs attention",message);
-    return;
-   }
-   const{error:modeError}=await supabase.rpc("switch_app_mode",{p_mode:mode});
-   if(modeError){
-    const message="Your account was created, but KAMPRO could not finish setting up your account type. Please sign in with the same mobile number and password. Setup detail: "+modeError.message;
-    setFeedback({kind:"error",text:message});
-    Alert.alert("Account created; setup incomplete",message);
-    return;
-   }
+   const {data,error}=await supabase.functions.invoke("msg91-register",{body:{accessToken,phone:enteredPhone,password,fullName:fullName.trim(),mode}});
+   if(error)throw new Error(error.message||"Registration service request failed.");
+   if(!data?.success)throw new Error(typeof data?.error==="string"?data.error:"KAMPRO could not complete registration.");
+   const {error:loginError}=await supabase.auth.signInWithPassword({phone:enteredPhone,password});
+   if(loginError)throw new Error("Your account was created and your mobile was verified, but automatic sign-in failed. Please sign in using the same mobile number and password.");
+   const {error:modeError}=await supabase.rpc("switch_app_mode",{p_mode:mode});
+   if(modeError)throw new Error("Account created, but account type setup did not finish. Please sign in again.");
    router.replace("/home");
   }catch(e){
-   const raw=e as {message?:string;code?:string};
-   const friendly=friendlyAuthError(e,"signup");
-   const detail=(raw?.message||"").trim();
-   const message=detail?friendly+" Details: "+detail:friendly;
+   const message=e instanceof Error?e.message:"Please try again.";
    setFeedback({kind:"error",text:message});
    Alert.alert("Couldn’t create account",message);
   }finally{setBusy(false);}
@@ -174,6 +176,7 @@ export default function AuthScreen(){
   <View style={s.or}><View style={s.line}/><Text style={s.orText}>or</Text><View style={s.line}/></View>
   <Pressable disabled={busy} onPress={google} style={s.google}><Text style={s.googleG}>G</Text><Text style={s.googleText}>Continue with Google</Text></Pressable>
   <Text style={s.terms}>By continuing, you agree to our{"\n"}Terms & Conditions and Privacy Policy</Text>
+  {showMsg91Widget&&<DefaultWidget visible={showMsg91Widget} onClose={()=>setShowMsg91Widget(false)} onCompletion={(result)=>{void completeMsg91Registration(result as {success?:boolean;identifier?:string;message?:string});}} widgetId="366a6b676c43383839313434" tokenAuth={process.env.EXPO_PUBLIC_MSG91_WIDGET_TOKEN||""} theme="light" primaryColor="#FF4B1F" primaryButtonTextColor="#FFFFFF" defaultCountry="IN" defaultVerificationType="mobile" autoFocus />}
   <Pressable onPress={()=>router.replace({pathname:"/select-mode",params:{mode}})}><Text style={s.switch}>{mode==="customer"?"Use KAMPRO as a Professional":"Use KAMPRO as a Customer"}</Text></Pressable>
  </View></KeyboardAvoidingView></SafeAreaView>
 }
