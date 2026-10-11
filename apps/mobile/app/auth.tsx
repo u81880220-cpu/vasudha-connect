@@ -62,10 +62,33 @@ export default function AuthScreen(){
   if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
   if(password.length<8)return Alert.alert("PIN/password too short","Use at least 8 characters.");
   if(password!==confirmPassword)return Alert.alert("PIN/passwords do not match","Enter the same PIN/password in both fields.");
+  setFeedback(null);
   setBusy(true);
-  try{const{data,error}=await supabase.auth.signUp({phone:"+91"+phone.replace(/\D/g,"").slice(-10),password,options:{data:{initial_mode:mode,full_name:fullName.trim()}}});if(error)throw error;if(data.session){const{error:modeError}=await supabase.rpc("switch_app_mode",{p_mode:mode});if(modeError)throw modeError;router.replace("/home");}else{setFeedback({kind:"error",text:"KAMPRO did not receive a sign-in session. SMS-free mobile registration requires Phone confirmations to be disabled in Supabase Auth settings. Please try again after the setting is updated."});}}
-  catch(e){Alert.alert("Couldn’t create account",friendlyAuthError(e,"signup"));}
-  finally{setBusy(false);}
+  try{
+   const{data,error}=await supabase.auth.signUp({phone:"+91"+phone.replace(/\D/g,"").slice(-10),password,options:{data:{initial_mode:mode,full_name:fullName.trim()}}});
+   if(error)throw error;
+   if(!data.session){
+    const message="KAMPRO created a registration request but did not sign you in. SMS-free mobile registration requires Phone confirmations to be disabled in Supabase Auth settings. Please contact support or use Email registration for now.";
+    setFeedback({kind:"error",text:message});
+    Alert.alert("Registration needs attention",message);
+    return;
+   }
+   const{error:modeError}=await supabase.rpc("switch_app_mode",{p_mode:mode});
+   if(modeError){
+    const message="Your account was created, but KAMPRO could not finish setting up your account type. Please sign in with the same mobile number and password. Setup detail: "+modeError.message;
+    setFeedback({kind:"error",text:message});
+    Alert.alert("Account created; setup incomplete",message);
+    return;
+   }
+   router.replace("/home");
+  }catch(e){
+   const raw=e as {message?:string;code?:string};
+   const friendly=friendlyAuthError(e,"signup");
+   const detail=(raw?.message||"").trim();
+   const message=detail&&!friendly.includes("Please check your details")&&!friendly.includes("try again")?friendly+" (Details: "+detail+")":friendly;
+   setFeedback({kind:"error",text:message});
+   Alert.alert("Couldn’t create account",message);
+  }finally{setBusy(false);}
  }
  async function startMobileRecovery(){
   if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Enter the mobile number linked to your KAMPRO account first.");
