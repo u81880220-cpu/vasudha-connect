@@ -117,7 +117,12 @@ Deno.serve(async (req: Request) => {
   }
 
   // Fail closed: never create an account unless MSG91 returns the verified number.
-  const verifiedPhone = verifiedPhoneFrom(providerResult) ?? verifiedPhoneFromAccessToken(accessToken);
+  const providerMessage = providerResult && typeof providerResult === "object"
+    ? (providerResult as Record<string, unknown>).message
+    : null;
+  // MSG91's verifyAccessToken endpoint can return the verified phone directly
+  // in its "message" field rather than a named phone property.
+  const verifiedPhone = verifiedPhoneFrom(providerResult) ?? normalizeIndianPhone(providerMessage) ?? verifiedPhoneFromAccessToken(accessToken);
   if (!verifiedPhone) {
     const responseKeys = providerResult && typeof providerResult === "object" ? Object.keys(providerResult as Record<string, unknown>) : [];
     console.error("MSG91 token verified but no phone identifier was present in the verified response or token claims; refusing account creation", { responseKeys });
