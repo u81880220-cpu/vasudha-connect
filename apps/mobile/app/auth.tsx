@@ -85,7 +85,7 @@ export default function AuthScreen(){
    const raw=e as {message?:string;code?:string};
    const friendly=friendlyAuthError(e,"signup");
    const detail=(raw?.message||"").trim();
-   const message=detail&&!friendly.includes("Please check your details")&&!friendly.includes("try again")?friendly+" (Details: "+detail+")":friendly;
+   const message=detail?friendly+" Details: "+detail:friendly;
    setFeedback({kind:"error",text:message});
    Alert.alert("Couldn’t create account",message);
   }finally{setBusy(false);}
