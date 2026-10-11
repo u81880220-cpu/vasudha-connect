@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 import { DefaultWidget } from "@msg91comm/sendotp-react-native";
-import { supabase } from "../lib/supabase";
 
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onVerified: (identifier: string) => void;
+  onVerified: (accessToken: string, identifier: string) => void;
 };
 
 /**
  * MSG91 OTP widget wrapper. The callback is not trusted until the access token
- * is checked by the server-side verify-msg91-otp function.
+ * is checked by the server-side msg91-register function.
  */
 export function Msg91OtpModal({ visible, onClose, onVerified }: Props) {
   const [checking, setChecking] = useState(false);
@@ -38,19 +37,10 @@ export function Msg91OtpModal({ visible, onClose, onVerified }: Props) {
 
     setChecking(true);
     try {
-      const { data, error } = await supabase.functions.invoke("verify-msg91-otp", {
-        body: { accessToken: result.message },
-      });
-      if (error) throw error;
-      if (!data?.verified) throw new Error("MSG91 could not verify this token.");
-      onVerified(result.identifier ?? "");
-    } catch (error) {
-      Alert.alert(
-        "Could not verify OTP",
-        error instanceof Error
-          ? error.message
-          : "Please try again. If this continues, contact support.",
-      );
+      // The access token is sent to the server together with the intended
+      // account details. The server verifies it with MSG91 before creating
+      // any Supabase account.
+      onVerified(result.message, result.identifier ?? "");
     } finally {
       setChecking(false);
       onClose();
