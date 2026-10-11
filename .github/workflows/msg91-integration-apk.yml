@@ -1,0 +1,69 @@
+name: KAMPRO MSG91 Integration Test APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/msg91-widget-integration
+    paths:
+      - "apps/mobile/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/msg91-integration-apk.yml"
+
+jobs:
+  build-test-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout MSG91 integration branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/msg91-widget-integration
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check Expo environment
+        working-directory: apps/mobile
+        env:
+          EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
+          EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
+        run: |
+          test -n "$EXPO_PUBLIC_MSG91_WIDGET_ID" || (echo "Missing EXPO_PUBLIC_MSG91_WIDGET_ID repository secret" && exit 1)
+          test -n "$EXPO_PUBLIC_MSG91_TOKEN_AUTH" || (echo "Missing EXPO_PUBLIC_MSG91_TOKEN_AUTH repository secret" && exit 1)
+          npx expo-doctor
+
+      - name: Generate Android project
+        working-directory: apps/mobile
+        env:
+          EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
+          EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
+        run: npx expo prebuild --platform android --non-interactive
+
+      - name: Build installable test APK
+        working-directory: apps/mobile/android
+        env:
+          EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
+          EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload MSG91 integration test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kampro-msg91-integration-test-apk
+          path: apps/mobile/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
