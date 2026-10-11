@@ -17,14 +17,51 @@ function normalizeIndianPhone(value: unknown): string | null {
   return null;
 }
 function verifiedPhoneFrom(payload: unknown): string | null {
-  if (!payload || typeof payload !== "object") return null;
-  const root = payload as Record<string, unknown>;
-  const data = root.data && typeof root.data === "object" ? root.data as Record<string, unknown> : {};
-  for (const value of [data.mobile, data.phone, data.phone_number, data.identifier, root.mobile, root.phone, root.phone_number, root.identifier]) {
-    const phone = normalizeIndianPhone(value);
-    if (phone) return phone;
+  const phoneKeys = new Set(["mobile", "phone", "phone_number", "phonenumber", "identifier", "mobile_number", "mobilenumber"]);
+  const seen = new Set<object>();
+  function visit(value: unknown, depth: number): string | null {
+    if (!value || typeof value !== "object" || depth > 5 || seen.has(value as object)) return null;
+    seen.add(value as object);
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const found = visit(item, depth + 1);
+        if (found) return found;
+      }
+      return null;
+    }
+    const obj = value as Record<string, unknown>;
+    for (const [key, field] of Object.entries(obj)) {
+      if (phoneKeys.has(key.toLowerCase().replace(/[-\s]/g, ""))) {
+        const phone = normalizeIndianPhone(field);
+        if (phone) return phone;
+      }
+    }
+    for (const field of Object.values(obj)) {
+      if (field && typeof field === "object") {
+        const found = visit(field, depth + 1);
+        if (found) return found;
+      }
+    }
+    return null;
   }
-  return null;
+  return visit(payload, 0);
+}
+
+// MSG91 may return a success status without repeating the identifier in the
+// verification response. After MSG91 validates the access token server-side,
+// inspect its JWT claims for the verified identifier; never trust claims before
+// the provider confirms that the token is valid.
+function verifiedPhoneFromAccessToken(accessToken: string): string | null {
+  const parts = accessToken.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - base64.length % 4) % 4);
+    const claims: unknown = JSON.parse(atob(padded));
+    return verifiedPhoneFrom(claims);
+  } catch {
+    return null;
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -80,10 +117,11 @@ Deno.serve(async (req: Request) => {
   }
 
   // Fail closed: never create an account unless MSG91 returns the verified number.
-  const verifiedPhone = verifiedPhoneFrom(providerResult);
+  const verifiedPhone = verifiedPhoneFrom(providerResult) ?? verifiedPhoneFromAccessToken(accessToken);
   if (!verifiedPhone) {
-    console.error("MSG91 token verified but no recognized phone field was returned; refusing account creation");
-    return json({ error: "OTP was accepted, but KAMPRO could not confirm the verified phone number. No account was created." }, 422);
+    const responseKeys = providerResult && typeof providerResult === "object" ? Object.keys(providerResult as Record<string, unknown>) : [];
+    console.error("MSG91 token verified but no phone identifier was present in the verified response or token claims; refusing account creation", { responseKeys });
+    return json({ error: "MSG91 accepted the OTP, but its verified response did not include a phone number KAMPRO can safely match. No account was created. Please contact support." }, 422);
   }
   if (verifiedPhone !== phone) return json({ error: "Verified mobile number does not match the registration number" }, 403);
 
