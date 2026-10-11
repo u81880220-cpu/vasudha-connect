@@ -51,18 +51,30 @@ jobs:
 
       - name: Expo environment check
         working-directory: apps/mobile
+        env:
+          EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
+          EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
         run: npx expo-doctor
 
       - name: Generate Android project
         working-directory: apps/mobile
+        env:
+          EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
+          EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
         run: npx expo prebuild --platform android --non-interactive
 
       - name: Build release APK and AAB
         working-directory: apps/mobile/android
+        env:
+          EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
+          EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
         run: ./gradlew assembleRelease bundleRelease --no-daemon
 
       - name: Build installable debug APK
         working-directory: apps/mobile/android
+        env:
+          EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
+          EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
         run: ./gradlew assembleDebug --no-daemon
 
       - name: Upload KAMPRO release APK and AAB
