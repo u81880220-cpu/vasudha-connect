@@ -91,6 +91,9 @@ Deno.serve(async (req: Request) => {
   const fullName = typeof body.fullName === "string" ? body.fullName.trim() : "";
   const mode = body.mode === "customer" || body.mode === "professional" ? body.mode : null;
 
+  // normalizeIndianPhone returns 91 + 10 digits; convert to E.164 exactly once.
+  const e164Phone = phone ? "+91" + phone.slice(-10) : null;
+
   if (accessToken.length < 20 || accessToken.length > 8192) return json({ error: "Valid MSG91 accessToken is required" }, 400);
   if (!phone) return json({ error: "Enter a valid Indian mobile number" }, 400);
   if (password.length < 8 || password.length > 128) return json({ error: "Password must be 8–128 characters" }, 400);
@@ -136,7 +139,7 @@ Deno.serve(async (req: Request) => {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: serviceRoleKey, Authorization: "Bearer " + serviceRoleKey },
       body: JSON.stringify({
-        phone: "+" + phone, password, phone_confirm: true,
+        phone: e164Phone, password, phone_confirm: true,
         user_metadata: { full_name: fullName, initial_mode: mode, phone_verified_by: "msg91" },
       }),
     });
@@ -154,7 +157,7 @@ Deno.serve(async (req: Request) => {
 
   return json({
     success: true,
-    user: { id: typeof account.id === "string" ? account.id : null, phone: "+" + phone, fullName, mode },
+    user: { id: typeof account.id === "string" ? account.id : null, phone: e164Phone, fullName, mode },
     message: "Mobile verified and account created. Sign in using your mobile number and password.",
   }, 201);
 });
