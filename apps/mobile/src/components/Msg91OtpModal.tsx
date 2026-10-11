@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 import { DefaultWidget } from "@msg91comm/sendotp-react-native";
 import { supabase } from "../lib/supabase";
@@ -17,6 +17,13 @@ export function Msg91OtpModal({ visible, onClose, onVerified }: Props) {
   const [checking, setChecking] = useState(false);
   const widgetId = process.env.EXPO_PUBLIC_MSG91_WIDGET_ID ?? "";
   const tokenAuth = process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH ?? "";
+  const missingConfig = !widgetId || !tokenAuth;
+
+  useEffect(() => {
+    if (visible && missingConfig) {
+      Alert.alert("OTP setup incomplete", "Configure EXPO_PUBLIC_MSG91_WIDGET_ID and EXPO_PUBLIC_MSG91_TOKEN_AUTH in the mobile build environment before testing.");
+    }
+  }, [visible, missingConfig]);
 
   async function handleCompletion(result: {
     success: boolean;
@@ -50,14 +57,8 @@ export function Msg91OtpModal({ visible, onClose, onVerified }: Props) {
     }
   }
 
-  if (!widgetId || !tokenAuth) {
-    if (visible) {
-      Alert.alert(
-        "OTP setup incomplete",
-        "Add EXPO_PUBLIC_MSG91_WIDGET_ID and EXPO_PUBLIC_MSG91_TOKEN_AUTH to the mobile build environment before testing.",
-      );
-    }
-    return null;
+  if (missingConfig) {
+    return visible ? <View><Text>OTP setup incomplete. Configure the MSG91 widget ID and widget token in the mobile build environment.</Text></View> : null;
   }
 
   return (
@@ -69,8 +70,6 @@ export function Msg91OtpModal({ visible, onClose, onVerified }: Props) {
         onCompletion={handleCompletion}
         widgetId={widgetId}
         tokenAuth={tokenAuth}
-        defaultCountry="IN"
-        defaultVerificationType="mobile"
         theme="light"
         primaryColor="#FF4B1F"
         primaryButtonTextColor="#FFFFFF"
