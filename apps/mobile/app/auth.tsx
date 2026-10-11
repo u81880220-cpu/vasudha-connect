@@ -63,7 +63,7 @@ export default function AuthScreen(){
   if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
   if(password.length<8)return Alert.alert("PIN/password too short","Use at least 8 characters.");
   if(password!==confirmPassword)return Alert.alert("PIN/passwords do not match","Enter the same PIN/password in both fields.");
-  if(!process.env.EXPO_PUBLIC_MSG91_WIDGET_TOKEN)return Alert.alert("OTP setup incomplete","KAMPRO's MSG91 widget token has not been configured for this build. Please configure EXPO_PUBLIC_MSG91_WIDGET_TOKEN in the mobile build environment.");
+  if(!process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH)return Alert.alert("OTP setup incomplete","KAMPRO's MSG91 widget token has not been configured for this build. Please configure EXPO_PUBLIC_MSG91_TOKEN_AUTH in the mobile build environment.");
   setFeedback(null);
   setShowMsg91Widget(true);
  }
@@ -176,7 +176,7 @@ export default function AuthScreen(){
   <View style={s.or}><View style={s.line}/><Text style={s.orText}>or</Text><View style={s.line}/></View>
   <Pressable disabled={busy} onPress={google} style={s.google}><Text style={s.googleG}>G</Text><Text style={s.googleText}>Continue with Google</Text></Pressable>
   <Text style={s.terms}>By continuing, you agree to our{"\n"}Terms & Conditions and Privacy Policy</Text>
-  {showMsg91Widget&&<DefaultWidget visible={showMsg91Widget} onClose={()=>setShowMsg91Widget(false)} onCompletion={(result)=>{void completeMsg91Registration(result as {success?:boolean;identifier?:string;message?:string});}} widgetId="366a6b676c43383839313434" tokenAuth={process.env.EXPO_PUBLIC_MSG91_WIDGET_TOKEN||""} theme="light" primaryColor="#FF4B1F" primaryButtonTextColor="#FFFFFF" defaultVerificationType="mobile" autoFocus />}
+  {showMsg91Widget&&<DefaultWidget visible={showMsg91Widget} onClose={()=>setShowMsg91Widget(false)} onCompletion={(result)=>{void completeMsg91Registration(result as {success?:boolean;identifier?:string;message?:string});}} widgetId={process.env.EXPO_PUBLIC_MSG91_WIDGET_ID||""} tokenAuth={process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH||""} theme="light" primaryColor="#FF4B1F" primaryButtonTextColor="#FFFFFF" defaultVerificationType="mobile" autoFocus />}
   <Pressable onPress={()=>router.replace({pathname:"/select-mode",params:{mode}})}><Text style={s.switch}>{mode==="customer"?"Use KAMPRO as a Professional":"Use KAMPRO as a Customer"}</Text></Pressable>
  </View></KeyboardAvoidingView></SafeAreaView>
 }
