@@ -60,7 +60,7 @@ export default function AuthScreen(){
  }
  async function mobileSignup(){
   if(fullName.trim().length<2)return Alert.alert("Enter your name","Please enter your full name before creating your account.");
-  if(phone.replace(/\\D/g,"").length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
+  if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
   if(password.length<8)return Alert.alert("PIN/password too short","Use at least 8 characters.");
   if(password!==confirmPassword)return Alert.alert("PIN/passwords do not match","Enter the same PIN/password in both fields.");
   setFeedback(null);
@@ -69,7 +69,7 @@ export default function AuthScreen(){
  async function completeMsg91Signup(accessToken:string, _widgetIdentifier:string){
   setBusy(true);
   try{
-   const{data,error}=await supabase.functions.invoke("msg91-register",{body:{accessToken,phone:"+91"+phone.replace(/\\D/g,"").slice(-10),password,fullName:fullName.trim(),mode}});
+   const{data,error}=await supabase.functions.invoke("msg91-register",{body:{accessToken,phone:"+91"+phone.replace(/\D/g,"").slice(-10),password,fullName:fullName.trim(),mode}});
    if(error)throw error;
    if(!data?.created||typeof data.phone!=="string")throw new Error(data?.error||"Mobile registration could not be completed.");
    const{error:loginError}=await supabase.auth.signInWithPassword({phone:data.phone,password});
