@@ -53,6 +53,24 @@ jobs:
           EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
         run: npx expo prebuild --platform android --non-interactive
 
+      # A standalone APK must contain the JS bundle; the default debug
+      # variant expects Metro to be running and can show "Unable to load script".
+      - name: Configure standalone JS bundle for test APK
+        working-directory: apps/mobile/android
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("app/build.gradle")
+          s = p.read_text()
+          marker = "react {"
+          if marker not in s:
+              raise SystemExit("Could not find React Native Gradle react block in app/build.gradle")
+          if "debuggableVariants = []" not in s:
+              s = s.replace(marker, marker + "\n    debuggableVariants = []", 1)
+          p.write_text(s)
+          print("Configured standalone JS bundle generation for the debug test APK.")
+          PY
+
       - name: Build installable test APK
         working-directory: apps/mobile/android
         env:
