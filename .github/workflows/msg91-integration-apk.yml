@@ -53,42 +53,6 @@ jobs:
           EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
         run: npx expo prebuild --platform android --non-interactive
 
-      # Temporary CI-only compatibility patch for react-native-screens command refs.
-      # Patch source files containing the unsupported React.ComponentRef annotation.
-      - name: Apply temporary React Native codegen compatibility workaround
-        run: |
-          node <<'NODE'
-          const fs = require("fs");
-          const path = require("path");
-          const root = path.resolve("node_modules/react-native-screens");
-          if (!fs.existsSync(root)) throw new Error("react-native-screens package not found");
-          let changed = 0;
-          function visit(dir) {
-            for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-              const file = path.join(dir, entry.name);
-              if (entry.isDirectory()) {
-                if (entry.name !== "node_modules") visit(file);
-              } else if (/\.(ts|tsx|js|jsx|json)$/.test(entry.name)) {
-                const source = fs.readFileSync(file, "utf8");
-                const patched = source.replace(/React\.ComponentRef/g, "React.ElementRef");
-                if (patched !== source) {
-                  fs.writeFileSync(file, patched);
-                  changed++;
-                }
-              }
-            }
-          }
-          visit(root);
-          console.log(`Patched ${changed} react-native-screens file(s).`);
-          if (changed === 0) {
-            const { execFileSync } = require("child_process");
-            try {
-              execFileSync("grep", ["-R", "-n", "ComponentRef", root], { stdio: "inherit" });
-            } catch {}
-            throw new Error("No ComponentRef annotation found to patch; stop rather than retry the same build.");
-          }
-          NODE
-
       - name: Build installable test APK
         working-directory: apps/mobile/android
         env:
