@@ -54,8 +54,14 @@ export default function AuthScreen(){
   if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
   if(password.length<8)return Alert.alert("Enter PIN/password","Use at least 8 characters.");
   setBusy(true);
-  try{const{error}=await supabase.auth.signInWithPassword({phone:"+91"+phone.replace(/\D/g,"").slice(-10),password});if(error)throw error;router.replace("/home");}
-  catch(e){Alert.alert("Sign-in unsuccessful",friendlyAuthError(e,"login"));}
+  try{
+   const {data,error}=await supabase.functions.invoke("mobile-login",{body:{phone:"+91"+phone.replace(/\D/g,"").slice(-10),password}});
+   if(error)throw new Error(error.message||"Mobile sign-in request failed.");
+   if(!data?.access_token||!data?.refresh_token)throw new Error(typeof data?.error==="string"?data.error:"We couldn't sign you in. Check your details and try again.");
+   const {error:sessionError}=await supabase.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token});
+   if(sessionError)throw sessionError;
+   router.replace("/home");
+  }catch(e){Alert.alert("Sign-in unsuccessful",e instanceof Error?e.message:friendlyAuthError(e,"login"));}
   finally{setBusy(false);}
  }
  async function mobileSignup(){
@@ -81,8 +87,10 @@ export default function AuthScreen(){
    const {data,error}=await supabase.functions.invoke("msg91-register",{body:{accessToken,phone:enteredPhone,password,fullName:fullName.trim(),mode}});
    if(error)throw new Error(error.message||"Registration service request failed.");
    if(!data?.success)throw new Error(typeof data?.error==="string"?data.error:"KAMPRO could not complete registration.");
-   const {error:loginError}=await supabase.auth.signInWithPassword({phone:enteredPhone,password});
-   if(loginError)throw new Error("Your account was created and your mobile was verified, but automatic sign-in failed. Please sign in using the same mobile number and password.");
+   const {data:loginData,error:loginError}=await supabase.functions.invoke("mobile-login",{body:{phone:enteredPhone,password}});
+   if(loginError||!loginData?.access_token||!loginData?.refresh_token)throw new Error("Your account was created and your mobile was verified, but automatic sign-in failed. Please sign in using the same mobile number and password.");
+   const {error:sessionError}=await supabase.auth.setSession({access_token:loginData.access_token,refresh_token:loginData.refresh_token});
+   if(sessionError)throw new Error("Account created, but automatic sign-in could not be completed. Please sign in again.");
    const {error:modeError}=await supabase.rpc("switch_app_mode",{p_mode:mode});
    if(modeError)throw new Error("Account created, but account type setup did not finish. Please sign in again.");
    router.replace("/home");
