@@ -16,7 +16,7 @@ type Category={id:string;name:string;icon?:string|null};
 type Service={id:string;category_id:string;name:string;icon?:string|null;legacy_skill_id:string|null};
 type SubService={id:string;service_id:string;name:string};
 
-export function ServicePicker({value,onChange,title="Choose a service",optionalSubService=false,requestService=false}:{value?:Partial<ServiceSelection>;onChange:(value:ServiceSelection)=>void;title?:string;optionalSubService?:boolean;requestService?:boolean}){
+export function ServicePicker({value,onChange,title="Choose a service",optionalSubService=false,requestService=false,searchQuery=""}:{value?:Partial<ServiceSelection>;onChange:(value:ServiceSelection)=>void;title?:string;optionalSubService?:boolean;requestService?:boolean;searchQuery?:string}){
  const[categories,setCategories]=useState<Category[]>([]),[services,setServices]=useState<Service[]>([]),[subs,setSubs]=useState<SubService[]>([]);
  const[categoryId,setCategoryId]=useState(value?.categoryId||null),[serviceId,setServiceId]=useState(value?.serviceId||null),[subId,setSubId]=useState(value?.subServiceId||null);
  const[loading,setLoading]=useState(true);
@@ -41,6 +41,10 @@ export function ServicePicker({value,onChange,title="Choose a service",optionalS
  }
  const currentServices=services.filter(x=>x.category_id===categoryId);
  const currentSubs=subs.filter(x=>x.service_id===serviceId);
+ const q=searchQuery.trim().toLowerCase();
+ const serviceMatches=q.length>=2?services.flatMap(svc=>{const cat=categories.find(c=>c.id===svc.category_id);const matchedSubs=subs.filter(sub=>sub.service_id===svc.id&&sub.name.toLowerCase().includes(q));const serviceMatch=svc.name.toLowerCase().includes(q)||String(cat?.name||"").toLowerCase().includes(q);if(serviceMatch)return [{key:"svc-"+svc.id,category:cat,service:svc,sub:null,label:svc.name,detail:cat?.name||"Service"}];return matchedSubs.map(sub=>({key:"sub-"+sub.id,category:cat,service:svc,sub,label:sub.name,detail:svc.name+" · "+(cat?.name||"")}));}).slice(0,8):[];
+ function chooseSearchMatch(match:any){if(!match.service||!match.category)return;setCategoryId(match.category.id);setServiceId(match.service.id);setSubId(match.sub?.id||null);onChange({categoryId:match.category.id,categoryName:match.category.name,serviceId:match.service.id,serviceName:match.service.name,legacySkillId:match.service.legacy_skill_id||null,subServiceId:match.sub?.id||null,subServiceName:match.sub?.name||null});}
+
  const category=categories.find(x=>x.id===categoryId),service=services.find(x=>x.id===serviceId),sub=currentSubs.find(x=>x.id===subId);
 
  function chooseCategory(id:string){
