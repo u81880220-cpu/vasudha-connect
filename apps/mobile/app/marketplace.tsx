@@ -58,6 +58,7 @@ function MarketplaceScreen(){
   useEffect(()=>{(async()=>{const{data}=await supabase.rpc("marketplace_configuration");const cfg=data||{};setMarketplaceConfig(cfg);setRadius(Math.min(Number(cfg.default_radius_km||25),Number(cfg.max_radius_km||50)));setVerifiedOnly(cfg.verified_only_default===true);setAvailableOnly(cfg.available_only_default===true);setMinRating(Number(cfg.min_rating||0));})();},[]);
   useEffect(()=>{if(cachedMarketplaceLocation){setUserCoords(cachedMarketplaceLocation.coords);setLocationLabel(cachedMarketplaceLocation.label);setLoading(false);void searchProfessionals(cachedMarketplaceLocation.coords);}else{void requestLocation();}},[]);
   useEffect(()=>{if(userCoords) searchProfessionals(userCoords);},[selection.categoryId,selection.serviceId,selection.subServiceId,radius]);
+  useEffect(()=>{if(!userCoords||query.trim().length===0)return;const timer=setTimeout(()=>{void searchProfessionals(userCoords,true);},250);return()=>clearTimeout(timer);},[query,userCoords]);
   useEffect(()=>{
     const query=manualLocation.trim();
     if(query.length<3){setLocationSuggestions([]);return;}
@@ -161,13 +162,13 @@ function MarketplaceScreen(){
     }
   }
 
-  async function searchProfessionals(coords:Coords){
+  async function searchProfessionals(coords:Coords,searchAllForText=false){
     const requestId=++searchRequestRef.current;
     setLoading(true);
     setSearchError("");
     const timeout=new Promise<{data:null;error:any}>(resolve=>setTimeout(()=>resolve({data:null,error:new Error("Search timed out")}),10000));
     const request=supabase.rpc("nearby_professionals_map",{
-      p_latitude:coords.latitude,p_longitude:coords.longitude,p_radius_km:radius,p_skill_id:selection.legacySkillId||null,p_sub_service_id:selection.subServiceId||null,p_category_id:selection.categoryId||null,p_service_id:selection.serviceId||null
+      p_latitude:coords.latitude,p_longitude:coords.longitude,p_radius_km:radius,p_skill_id:searchAllForText?null:(selection.legacySkillId||null),p_sub_service_id:searchAllForText?null:(selection.subServiceId||null),p_category_id:searchAllForText?null:(selection.categoryId||null),p_service_id:searchAllForText?null:(selection.serviceId||null)
     });
     const{data,error}=await Promise.race([request,timeout]);
     if(requestId!==searchRequestRef.current)return;
