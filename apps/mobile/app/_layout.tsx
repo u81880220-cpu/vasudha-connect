@@ -22,7 +22,6 @@ export default function RootLayout(){
 const s=StyleSheet.create({
   webRoot:{
     flex:1,
-    minHeight:"100vh",
     width:"100%",
     backgroundColor:"#fff",
   },
