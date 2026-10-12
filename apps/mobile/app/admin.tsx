@@ -25,9 +25,11 @@ export default function AdminScreen(){
   const results=await Promise.all(calls.map(async([key,fn])=>{const{data,error}=await supabase.rpc(fn);return[key,error?[]:data||[]]}));
   const{data:configuration,error:configurationError}=await supabase.rpc("admin_configuration");
   const{data:subscriptionPlans}=await supabase.rpc("admin_subscription_plans");
-  const{data:offers,error:offersError}=await supabase.from("marketing_offers").select("*").order("created_at",{ascending:false});\n  const{data:serviceRequests,error:serviceRequestsError}=await supabase.from("professional_service_requests").select("*").order("created_at",{ascending:false});
+  const{data:offers,error:offersError}=await supabase.from("marketing_offers").select("*").order("created_at",{ascending:false});
+  const{data:serviceRequests,error:serviceRequestsError}=await supabase.from("professional_service_requests").select("*").order("created_at",{ascending:false});
   if(configurationError)setMessage(configurationError.message);
-  if(offersError)setMessage("Offers: "+offersError.message);\n  if(serviceRequestsError)setMessage("Service requests: "+serviceRequestsError.message);
+  if(offersError)setMessage("Offers: "+offersError.message);
+  if(serviceRequestsError)setMessage("Service requests: "+serviceRequestsError.message);
   setData({...Object.fromEntries(results),offers:offers||[],serviceRequests:serviceRequests||[],configuration:{...(configuration||{settings:[],flags:[],locations:[],packages:[],categories:[]}),subscriptionPlans:subscriptionPlans||[]}});
  }
  async function loadOffers(){const{data:offers,error}=await supabase.from("marketing_offers").select("*").order("created_at",{ascending:false});if(error)setMessage(error.message);else setData((v:any)=>({...v,offers:offers||[]}));}
