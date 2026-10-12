@@ -2,15 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { supabase } from "../src/lib/supabase";
 
-type Tab="dashboard"|"professionals"|"verification"|"customers"|"services"|"connections"|"subscriptions"|"offers"|"operations"|"payments"|"notifications"|"communication"|"analytics"|"complaints"|"portfolio"|"audit"|"configuration";
-const tabs:Tab[]=["dashboard","professionals","verification","customers","services","connections","subscriptions","offers","operations","payments","notifications","communication","analytics","complaints","portfolio","audit","configuration"];
+type Tab="dashboard"|"professionals"|"verification"|"customers"|"services"|"serviceRequests"|"connections"|"subscriptions"|"offers"|"operations"|"payments"|"notifications"|"communication"|"analytics"|"complaints"|"portfolio"|"audit"|"configuration";
+const tabs:Tab[]=["dashboard","professionals","verification","customers","services","serviceRequests","connections","subscriptions","offers","operations","payments","notifications","communication","analytics","complaints","portfolio","audit","configuration"];
 
 export default function AdminScreen(){
  const[session,setSession]=useState<any>(null),[admin,setAdmin]=useState(false),[loading,setLoading]=useState(true);
  const[email,setEmail]=useState(""),[password,setPassword]=useState(""),[message,setMessage]=useState("");
  const[tab,setTab]=useState<Tab>("dashboard");
  const[search,setSearch]=useState(""),[filter,setFilter]=useState("all"),[selectedRecord,setSelectedRecord]=useState<any>(null),[proDetail,setProDetail]=useState<any>(null),[proDetailLoading,setProDetailLoading]=useState(false),[customerDetail,setCustomerDetail]=useState<any>(null),[customerDetailLoading,setCustomerDetailLoading]=useState(false),[workDetail,setWorkDetail]=useState<any>(null),[workDetailLoading,setWorkDetailLoading]=useState(false);
- const[data,setData]=useState<any>({pros:[],verification:[],customers:[],services:[],connections:[],subscriptions:[],operations:[],payments:[],notifications:[],templates:[],analytics:null,complaints:[],portfolio:[],audit:[],configuration:{settings:[],flags:[],locations:[],packages:[],categories:[],subscriptionPlans:[]},subscriptionPayments:[],offers:[]});
+ const[data,setData]=useState<any>({pros:[],verification:[],customers:[],services:[],connections:[],subscriptions:[],operations:[],payments:[],notifications:[],templates:[],analytics:null,complaints:[],portfolio:[],audit:[],configuration:{settings:[],flags:[],locations:[],packages:[],categories:[],subscriptionPlans:[]},subscriptionPayments:[],offers:[],serviceRequests:[]});
 
  useEffect(()=>{let mounted=true;
   supabase.auth.getSession().then(async({data:d})=>{if(!mounted)return;setSession(d.session);if(d.session)await checkAdmin();setLoading(false)});
@@ -25,10 +25,10 @@ export default function AdminScreen(){
   const results=await Promise.all(calls.map(async([key,fn])=>{const{data,error}=await supabase.rpc(fn);return[key,error?[]:data||[]]}));
   const{data:configuration,error:configurationError}=await supabase.rpc("admin_configuration");
   const{data:subscriptionPlans}=await supabase.rpc("admin_subscription_plans");
-  const{data:offers,error:offersError}=await supabase.from("marketing_offers").select("*").order("created_at",{ascending:false});
+  const{data:offers,error:offersError}=await supabase.from("marketing_offers").select("*").order("created_at",{ascending:false});\n  const{data:serviceRequests,error:serviceRequestsError}=await supabase.from("professional_service_requests").select("*").order("created_at",{ascending:false});
   if(configurationError)setMessage(configurationError.message);
-  if(offersError)setMessage("Offers: "+offersError.message);
-  setData({...Object.fromEntries(results),offers:offers||[],configuration:{...(configuration||{settings:[],flags:[],locations:[],packages:[],categories:[]}),subscriptionPlans:subscriptionPlans||[]}});
+  if(offersError)setMessage("Offers: "+offersError.message);\n  if(serviceRequestsError)setMessage("Service requests: "+serviceRequestsError.message);
+  setData({...Object.fromEntries(results),offers:offers||[],serviceRequests:serviceRequests||[],configuration:{...(configuration||{settings:[],flags:[],locations:[],packages:[],categories:[]}),subscriptionPlans:subscriptionPlans||[]}});
  }
  async function loadOffers(){const{data:offers,error}=await supabase.from("marketing_offers").select("*").order("created_at",{ascending:false});if(error)setMessage(error.message);else setData((v:any)=>({...v,offers:offers||[]}));}
  async function editOffer(x:any=null){
@@ -139,6 +139,12 @@ export default function AdminScreen(){
       )}
     </Section>}
    {tab==="connections"&&<Section title="Connections"><Text style={s.muted}>Customer-to-professional access history. Connections are read-only here; purchasing and access rules remain protected by the marketplace RPCs.</Text>{!filtered("connections").length?<Text style={s.muted}>No connections found.</Text>:filtered("connections").map((x:any)=><View key={x.connection_id} style={s.item}><View style={{flex:1}}><Text style={s.rowTitle}>{x.customer_name||"Customer"} → {x.professional_name||"Professional"}</Text><Text style={s.muted}>Purchased {x.purchased_at?new Date(x.purchased_at).toLocaleString():"—"} • Expires {x.expires_at?new Date(x.expires_at).toLocaleString():"—"}</Text><Text style={s.muted}>Last accessed {x.last_accessed_at?new Date(x.last_accessed_at).toLocaleString():"Never"}</Text></View><Text style={s.badge}>{x.is_active?"Active":"Expired"}</Text></View>)}</Section>}
+   {tab==="serviceRequests"&&<Section title="Professional service requests">
+    <Text style={s.muted}>Professionals can suggest missing services. Approving a request adds its category/service/sub-service to the live catalogue; rejection leaves the catalogue unchanged.</Text>
+    {!data.serviceRequests.filter((x:any)=>x.status==="pending").length&&<Text style={s.muted}>No pending service requests.</Text>}
+    {data.serviceRequests.filter((x:any)=>x.status==="pending").map((x:any)=><View key={x.id} style={s.item}><View style={{flex:1}}><Text style={s.rowTitle}>{x.service_name}{x.sub_service_name?" · "+x.sub_service_name:""}</Text><Text style={s.muted}>Category: {x.category_name}</Text>{x.description?<Text style={s.muted}>{x.description}</Text>:null}<Text style={s.muted}>Professional ID: {x.professional_id}</Text><Text style={s.muted}>Submitted: {x.created_at?new Date(x.created_at).toLocaleString():"—"}</Text></View><View style={s.actions}><Pressable style={s.primary} onPress={()=>act("admin_review_professional_service_request",{p_request_id:x.id,p_decision:"approved",p_admin_note:null},"Service request approved and added to catalogue.",loadAll,"service_request",x.id,{service:x.service_name})}><Text style={s.primaryText}>Approve</Text></Pressable><Pressable style={s.danger} onPress={()=>{const note=window.prompt("Reason for rejection (optional)")||null;act("admin_review_professional_service_request",{p_request_id:x.id,p_decision:"rejected",p_admin_note:note},"Service request rejected.",loadAll,"service_request",x.id,{service:x.service_name});}}><Text style={s.dangerText}>Reject</Text></Pressable></View></View>)}
+    <Text style={s.sectionTitle}>Recently reviewed</Text>{data.serviceRequests.filter((x:any)=>x.status!=="pending").slice(0,20).map((x:any)=><View key={x.id} style={s.item}><View style={{flex:1}}><Text style={s.rowTitle}>{x.service_name}{x.sub_service_name?" · "+x.sub_service_name:""}</Text><Text style={s.muted}>{x.category_name} · {x.status}{x.admin_note?" · "+x.admin_note:""}</Text></View><Text style={s.badge}>{x.status}</Text></View>)}
+   </Section>}
    {tab==="offers"&&<Section title="Offers & Coupons">
     <Text style={s.muted}>Create and schedule offers. New coupons are stored dynamically; checkout redemption must be enabled separately before discounts affect payment totals.</Text>
     <Pressable style={s.primary} onPress={()=>editOffer()}><Text style={s.primaryText}>Add offer / coupon</Text></Pressable>
