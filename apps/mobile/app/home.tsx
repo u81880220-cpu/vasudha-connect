@@ -107,7 +107,7 @@ function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
    if(!active)return;
    if(!jobsError)setActiveJob(jobs?.[0]||null);
    if(!requestsError)setRecentRequests(requests||[]);
-    if(!walletError)setCreditBalance(Number(wallet?.balance??0));
+    if(!walletError)setCreditBalance(Number(wallet??0));
   }
   void refreshHomeItems();
   // Home can remain mounted while the user cancels a job on another screen.
