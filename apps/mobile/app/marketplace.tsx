@@ -52,7 +52,21 @@ function MarketplaceScreen(){
   const[verifiedOnly,setVerifiedOnly]=useState(false);
   const[availableOnly,setAvailableOnly]=useState(false);
   const[minRating,setMinRating]=useState(0);
-  const searchedItems=items.filter((item)=>{const q=query.trim().toLowerCase();if(!q)return true;return [item.display_name,item.headline,item.city,item.state,...(item.skills||[]).map((s:any)=>s.name)].filter(Boolean).some((v)=>String(v).toLowerCase().includes(q));});
+  const professionalSearchAliases:Record<string,string[]>={
+    carpenter:["carpentry","woodwork","woodworker","furniture repair","door repair","cabinet maker","बढ़ई","लकड़ी का काम"],
+    plumber:["plumbing","pipe repair","tap repair","water leakage","bathroom fitting","नल ठीक करना","प्लंबर"],
+    electrician:["electrical","wiring","fan repair","switch repair","light fitting","बिजली मिस्त्री","इलेक्ट्रीशियन"],
+    painter:["painting","wall painting","whitewash","putty","पेंटिंग","रंगाई"],
+    cleaner:["cleaning","house cleaning","deep cleaning","सफाई"],
+    ac:["air conditioner","air conditioning","ac repair","एसी मरम्मत"],
+    mechanic:["vehicle repair","bike repair","car repair","मोटर मैकेनिक"],
+    driver:["chauffeur","car driver","personal driver","ड्राइवर"],
+    beautician:["beauty parlour","salon","makeup artist","hair stylist","ब्यूटीशियन"],
+    tutor:["teacher","tuition","home tutor","coaching","ट्यूशन"],
+    solar:["solar panel","solar installation","solar repair","सोलर पैनल"]
+  };
+  const relatedSearchTerms=(value:string)=>{const normalized=value.toLowerCase();const out=[normalized];for(const[key,aliases]of Object.entries(professionalSearchAliases)){if(normalized.includes(key)||key.includes(normalized)||aliases.some(a=>a===normalized||a.includes(normalized)||normalized.includes(a))){out.push(key,...aliases);}}return out;};
+  const searchedItems=items.filter((item)=>{const q=query.trim().toLowerCase();if(!q)return true;const terms=relatedSearchTerms(q);return [item.display_name,item.headline,item.city,item.state,...(item.skills||[]).map((s:any)=>s.name)].filter(Boolean).some((v)=>relatedSearchTerms(String(v)).some(term=>term.includes(q)||terms.some(qterm=>qterm.includes(term)||term.includes(qterm))));});
   const visibleItems=[...searchedItems].filter(x=>(!verifiedOnly||x.verification_status==="verified")&&(!availableOnly||x.is_available)&&(Math.round(x.trust_score)/20)>=minRating).sort((a,b)=>{const tw=Number(marketplaceConfig?.trust_weight??0.5),dw=Number(marketplaceConfig?.distance_weight??0.3),aw=Number(marketplaceConfig?.availability_weight??0.2);const score=(x:any)=>tw*(Number(x.trust_score||0)/100)+dw*(1/(1+Number(x.distance_km||0)))+aw*(x.is_available?1:0);return score(b)-score(a)});
 
   useEffect(()=>{(async()=>{const{data}=await supabase.rpc("marketplace_configuration");const cfg=data||{};setMarketplaceConfig(cfg);setRadius(Math.min(Number(cfg.default_radius_km||25),Number(cfg.max_radius_km||50)));setVerifiedOnly(cfg.verified_only_default===true);setAvailableOnly(cfg.available_only_default===true);setMinRating(Number(cfg.min_rating||0));})();},[]);
