@@ -96,6 +96,19 @@ export function ServicePicker({value,onChange,title="Choose a service",optionalS
   {categoryId?<><Text style={s.step}>2. Service</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}>{currentServices.map(x=><Pressable key={x.id} onPress={()=>chooseService(x.id)} style={[s.chip,serviceId===x.id&&s.on]}><Text style={[s.chipText,serviceId===x.id&&s.onText]}>{x.name}</Text></Pressable>)}</ScrollView></>:null}
   {serviceId?<><Text style={s.step}>3. Sub-service {optionalSubService?"(optional)":""}</Text><View style={s.subGrid}>{optionalSubService?<Pressable onPress={chooseGeneral} style={[s.subChip,sub?.name.toLowerCase()==="general / any"&&s.on]}><Text style={[s.chipText,sub?.name.toLowerCase()==="general / any"&&s.onText]}>General service</Text></Pressable>:null}{currentSubs.map(x=><Pressable key={x.id} onPress={()=>chooseSub(x.id)} style={[s.subChip,subId===x.id&&s.on]}><Text style={[s.chipText,subId===x.id&&s.onText]}>{x.name}</Text></Pressable>)}</View></>:null}
   {sub?<View style={s.selected}><Text style={s.selectedLabel}>Selected</Text><Text style={s.selectedText}>{category?.name} › {service?.name} › {sub.name==="General / Any"?"General service":sub.name}</Text></View>:null}
+  {requestService?<View style={s.requestBox}>
+   <Text style={s.requestTitle}>Can’t find your profession or service?</Text>
+   <Text style={s.muted}>Request a new category or service. It will appear in the catalogue only after KAMPRO admin approves it.</Text>
+   <Pressable accessibilityRole="button" style={s.requestButton} onPress={()=>setRequestOpen(v=>!v)}><Text style={s.requestButtonText}>{requestOpen?"Close request form":"+ Request missing service"}</Text></Pressable>
+   {requestOpen?<View style={{gap:8,marginTop:10}}>
+    <TextInput value={requestCategory} onChangeText={setRequestCategory} placeholder="Profession / category (e.g. Home Repair)" placeholderTextColor="#8B93A1" style={s.requestInput} maxLength={80}/>
+    <TextInput value={requestServiceName} onChangeText={setRequestServiceName} placeholder="Service name (e.g. Solar Panel Installer)" placeholderTextColor="#8B93A1" style={s.requestInput} maxLength={100}/>
+    <TextInput value={requestSubService} onChangeText={setRequestSubService} placeholder="Sub-service (optional)" placeholderTextColor="#8B93A1" style={s.requestInput} maxLength={100}/>
+    <TextInput value={requestDescription} onChangeText={setRequestDescription} placeholder="Details for admin (optional)" placeholderTextColor="#8B93A1" style={[s.requestInput,{minHeight:72,textAlignVertical:"top"}]} multiline maxLength={500}/>
+    <Pressable accessibilityRole="button" disabled={requestBusy} style={[s.requestButton,requestBusy&&{opacity:0.6}]} onPress={submitServiceRequest}><Text style={s.requestButtonText}>{requestBusy?"Submitting…":"Submit for admin approval"}</Text></Pressable>
+   </View>:null}
+   {myRequests.length>0?<View style={{gap:6,marginTop:12}}><Text style={s.requestTitle}>Your recent requests</Text>{myRequests.map((r:any)=><View key={r.id} style={s.requestItem}><Text style={s.chipText}>{r.service_name}{r.sub_service_name?" · "+r.sub_service_name:""}</Text><Text style={s.muted}>{r.category_name} · {r.status.toUpperCase()}</Text>{r.admin_note?<Text style={s.muted}>Admin note: {r.admin_note}</Text>:null}</View>)}</View>:null}
+  </View>:null}
  </View>;
 }
 
