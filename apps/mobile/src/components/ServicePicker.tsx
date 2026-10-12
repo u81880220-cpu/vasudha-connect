@@ -86,6 +86,7 @@ export function ServicePicker({value,onChange,title="Choose a service",optionalS
 
  return <View style={s.wrap}>
   <Text style={s.title}>{title}</Text>
+  {q.length>=2?<View style={s.searchMatches}><Text style={s.searchMatchesTitle}>Matching services</Text>{serviceMatches.length?serviceMatches.map(match=><Pressable key={match.key} onPress={()=>chooseSearchMatch(match)} style={s.searchMatch}><View style={{flex:1}}><Text style={s.searchMatchName}>{match.label}</Text><Text style={s.searchMatchDetail}>{match.detail}</Text></View><Text style={s.searchMatchAction}>Select</Text></Pressable>):<Text style={s.muted}>No matching service in the catalogue yet.</Text>}</View>:null}
   <Text style={s.step}>1. Category</Text>
   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}>{categories.map(x=><Pressable key={x.id} onPress={()=>chooseCategory(x.id)} style={[s.chip,categoryId===x.id&&s.on]}><Text style={[s.chipText,categoryId===x.id&&s.onText]}>{x.name}</Text></Pressable>)}</ScrollView>
   {categoryId?<><Text style={s.step}>2. Service</Text><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}>{currentServices.map(x=><Pressable key={x.id} onPress={()=>chooseService(x.id)} style={[s.chip,serviceId===x.id&&s.on]}><Text style={[s.chipText,serviceId===x.id&&s.onText]}>{x.name}</Text></Pressable>)}</ScrollView></>:null}
