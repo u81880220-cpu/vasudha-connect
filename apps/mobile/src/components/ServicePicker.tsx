@@ -42,7 +42,24 @@ export function ServicePicker({value,onChange,title="Choose a service",optionalS
  const currentServices=services.filter(x=>x.category_id===categoryId);
  const currentSubs=subs.filter(x=>x.service_id===serviceId);
  const q=searchQuery.trim().toLowerCase();
- const serviceMatches=q.length>=2?services.flatMap(svc=>{const cat=categories.find(c=>c.id===svc.category_id);const matchedSubs=subs.filter(sub=>sub.service_id===svc.id&&sub.name.toLowerCase().includes(q));const serviceMatch=svc.name.toLowerCase().includes(q)||String(cat?.name||"").toLowerCase().includes(q);if(serviceMatch)return [{key:"svc-"+svc.id,category:cat,service:svc,sub:null,label:svc.name,detail:cat?.name||"Service"}];return matchedSubs.map(sub=>({key:"sub-"+sub.id,category:cat,service:svc,sub,label:sub.name,detail:svc.name+" · "+(cat?.name||"")}));}).slice(0,8):[];
+ const searchAliases:Record<string,string[]>={
+  carpenter:["carpentry","woodworker","wood work","furniture repair","door repair","wooden door","cabinet","wardrobe","almirah","लकड़ी","बढ़ई","बढ़ईगीरी"],
+  plumber:["plumbing","pipe repair","water tap","leakage","bathroom fitting","नल","प्लंबर","पानी की पाइप"],
+  electrician:["electrical","wiring","fan repair","switch repair","light fitting","मीटर","बिजली","इलेक्ट्रीशियन"],
+  painter:["painting","wall paint","whitewash","putty","दीवार पेंट","पेंटर"],
+  cleaner:["cleaning","house cleaning","deep cleaning","सफai","सफाई"],
+  ac:["air conditioner","air conditioning","ac repair","cooling","एसी रिपेयर"],
+  mechanic:["vehicle repair","bike repair","car repair","मिस्त्री"],
+  driver:["chauffeur","car driver","personal driver","ड्राइवर"],
+  beautician:["beauty parlour","salon","makeup artist","hair styling","ब्यूटी पार्लर"],
+  tutor:["teacher","tuition","home tutor","coaching","ट्यूशन"],
+  appliance:["washing machine repair","refrigerator repair","fridge repair","microwave repair","घरेलू उपकरण"],
+  pest:["pest control","termite","cockroach","दीमक"],
+  solar:["solar panel","solar installation","solar repair","सोलर पैनल"]
+ };
+ const termsFor=(name:string)=>{const n=name.toLowerCase();const terms=[n];for(const [key,aliases] of Object.entries(searchAliases)){if(n.includes(key)||key.includes(n)||aliases.some(a=>a===n||n.includes(a)||a.includes(n))){terms.push(key,...aliases);}}return terms;};
+ const matchesQuery=(name:string)=>termsFor(name).some(term=>term.includes(q)||q.includes(term));
+ const serviceMatches=q.length>=2?services.flatMap(svc=>{const cat=categories.find(c=>c.id===svc.category_id);const matchedSubs=subs.filter(sub=>sub.service_id===svc.id&&matchesQuery(sub.name));const serviceMatch=matchesQuery(svc.name)||Boolean(cat&&matchesQuery(cat.name));if(serviceMatch)return [{key:"svc-"+svc.id,category:cat,service:svc,sub:null,label:svc.name,detail:(cat?.name||"Service")+" · Category/service match"}];return matchedSubs.map(sub=>({key:"sub-"+sub.id,category:cat,service:svc,sub,label:sub.name,detail:svc.name+" · "+(cat?.name||"")}));}).slice(0,8):[];
  function chooseSearchMatch(match:any){if(!match.service||!match.category)return;setCategoryId(match.category.id);setServiceId(match.service.id);setSubId(match.sub?.id||null);onChange({categoryId:match.category.id,categoryName:match.category.name,serviceId:match.service.id,serviceName:match.service.name,legacySkillId:match.service.legacy_skill_id||null,subServiceId:match.sub?.id||null,subServiceName:match.sub?.name||null});}
 
  const category=categories.find(x=>x.id===categoryId),service=services.find(x=>x.id===serviceId),sub=currentSubs.find(x=>x.id===subId);
