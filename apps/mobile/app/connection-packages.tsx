@@ -100,7 +100,7 @@ export default function ConnectionPackages() {
         </Text>
 
         <View style={s.balance}>
-          <Text>Available connections</Text>
+          <Text style={s.balanceLabel}>Available connections</Text>
           <Text style={s.balanceValue}>{balance}</Text>
           <Text style={s.balanceHint}>
             Credits are used only when you unlock a professional.
@@ -165,11 +165,12 @@ const s = StyleSheet.create({
   title: { fontSize: 30, fontWeight: "900", color: KAMPRO.navy },
   sub: { marginTop: 5, color: "#475467", fontWeight: "600", marginBottom: 18 },
   balance: { borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 12, backgroundColor: KAMPRO.surface },
-  balanceValue: { fontSize: 30, fontWeight: "800", color: KAMPRO.ink, marginTop: 4 },
-  balanceHint: { fontSize: 12, color: "#475467", fontWeight: "600", marginTop: 4 },
+  balanceLabel: { fontSize: 14, fontWeight: "700", color: "#344054" },
+  balanceValue: { fontSize: 30, fontWeight: "800", color: "#172033", marginTop: 4 },
+  balanceHint: { fontSize: 13, lineHeight: 18, color: "#344054", fontWeight: "600", marginTop: 4 },
   notice: { borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 16 },
   testBadge: { fontSize: 11, fontWeight: "900", color: "#FF4B1F", marginBottom: 6 },
-  noticeTitle: { fontWeight: "800", color: KAMPRO.ink, marginBottom: 4 },
+  noticeTitle: { fontWeight: "800", color: "#172033", marginBottom: 4 },
   card: { borderWidth: 1, borderColor: KAMPRO.border, borderRadius: 20, padding: 20, marginBottom: 14, backgroundColor: KAMPRO.surface, shadowColor: KAMPRO.navy, shadowOpacity: .04, shadowRadius: 10, shadowOffset: {width:0,height:4}, elevation:1 },
   row: {
     flexDirection: "row",
