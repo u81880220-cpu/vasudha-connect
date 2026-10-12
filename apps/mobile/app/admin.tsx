@@ -2,15 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { supabase } from "../src/lib/supabase";
 
-type Tab="dashboard"|"professionals"|"verification"|"customers"|"services"|"connections"|"subscriptions"|"operations"|"payments"|"notifications"|"communication"|"analytics"|"complaints"|"portfolio"|"audit"|"configuration";
-const tabs:Tab[]=["dashboard","professionals","verification","customers","services","connections","subscriptions","operations","payments","notifications","communication","analytics","complaints","portfolio","audit","configuration"];
+type Tab="dashboard"|"professionals"|"verification"|"customers"|"services"|"connections"|"subscriptions"|"offers"|"operations"|"payments"|"notifications"|"communication"|"analytics"|"complaints"|"portfolio"|"audit"|"configuration";
+const tabs:Tab[]=["dashboard","professionals","verification","customers","services","connections","subscriptions","offers","operations","payments","notifications","communication","analytics","complaints","portfolio","audit","configuration"];
 
 export default function AdminScreen(){
  const[session,setSession]=useState<any>(null),[admin,setAdmin]=useState(false),[loading,setLoading]=useState(true);
  const[email,setEmail]=useState(""),[password,setPassword]=useState(""),[message,setMessage]=useState("");
  const[tab,setTab]=useState<Tab>("dashboard");
  const[search,setSearch]=useState(""),[filter,setFilter]=useState("all"),[selectedRecord,setSelectedRecord]=useState<any>(null),[proDetail,setProDetail]=useState<any>(null),[proDetailLoading,setProDetailLoading]=useState(false),[customerDetail,setCustomerDetail]=useState<any>(null),[customerDetailLoading,setCustomerDetailLoading]=useState(false),[workDetail,setWorkDetail]=useState<any>(null),[workDetailLoading,setWorkDetailLoading]=useState(false);
- const[data,setData]=useState<any>({pros:[],verification:[],customers:[],services:[],connections:[],subscriptions:[],operations:[],payments:[],notifications:[],templates:[],analytics:null,complaints:[],portfolio:[],audit:[],configuration:{settings:[],flags:[],locations:[],packages:[],categories:[],subscriptionPlans:[]},subscriptionPayments:[]});
+ const[data,setData]=useState<any>({pros:[],verification:[],customers:[],services:[],connections:[],subscriptions:[],operations:[],payments:[],notifications:[],templates:[],analytics:null,complaints:[],portfolio:[],audit:[],configuration:{settings:[],flags:[],locations:[],packages:[],categories:[],subscriptionPlans:[]},subscriptionPayments:[],offers:[]});
 
  useEffect(()=>{let mounted=true;
   supabase.auth.getSession().then(async({data:d})=>{if(!mounted)return;setSession(d.session);if(d.session)await checkAdmin();setLoading(false)});
@@ -25,9 +25,33 @@ export default function AdminScreen(){
   const results=await Promise.all(calls.map(async([key,fn])=>{const{data,error}=await supabase.rpc(fn);return[key,error?[]:data||[]]}));
   const{data:configuration,error:configurationError}=await supabase.rpc("admin_configuration");
   const{data:subscriptionPlans}=await supabase.rpc("admin_subscription_plans");
+  const{data:offers,error:offersError}=await supabase.from("marketing_offers").select("*").order("created_at",{ascending:false});
   if(configurationError)setMessage(configurationError.message);
-  setData({...Object.fromEntries(results),configuration:{...(configuration||{settings:[],flags:[],locations:[],packages:[],categories:[]}),subscriptionPlans:subscriptionPlans||[]}});
+  if(offersError)setMessage("Offers: "+offersError.message);
+  setData({...Object.fromEntries(results),offers:offers||[],configuration:{...(configuration||{settings:[],flags:[],locations:[],packages:[],categories:[]}),subscriptionPlans:subscriptionPlans||[]}});
  }
+ async function loadOffers(){const{data:offers,error}=await supabase.from("marketing_offers").select("*").order("created_at",{ascending:false});if(error)setMessage(error.message);else setData((v:any)=>({...v,offers:offers||[]}));}
+ async function editOffer(x:any=null){
+  const code=(window.prompt("Coupon code",x?.code||"")||"").trim().toUpperCase();if(!code)return;
+  const title=(window.prompt("Offer title",x?.title||"")||"").trim();if(!title)return;
+  const description=window.prompt("Description",x?.description||"")||null;
+  const discountType=(window.prompt("Discount type: percentage or fixed",x?.discount_type||"percentage")||"percentage").toLowerCase();
+  if(!["percentage","fixed"].includes(discountType)){setMessage("Discount type must be percentage or fixed.");return;}
+  const discountValue=Number(window.prompt("Discount value",String(x?.discount_value||""))||0);
+  const appliesTo=(window.prompt("Applies to: customer_connections, professional_subscription, both",x?.applies_to||"both")||"both").toLowerCase();
+  if(!["customer_connections","professional_subscription","both"].includes(appliesTo)){setMessage("Invalid offer eligibility.");return;}
+  const minPurchase=Number(window.prompt("Minimum purchase INR",String(x?.min_purchase_inr||0))||0);
+  const maxRaw=window.prompt("Maximum total redemptions (blank = unlimited)",x?.max_redemptions==null?"":String(x.max_redemptions));
+  const perUserRaw=window.prompt("Maximum redemptions per user (blank = unlimited)",x?.per_user_limit==null?"":String(x.per_user_limit));
+  const startsRaw=window.prompt("Starts at ISO date/time (blank = immediately)",x?.starts_at||"");
+  const endsRaw=window.prompt("Ends at ISO date/time (blank = no end)",x?.ends_at||"");
+  if(!Number.isFinite(discountValue)||discountValue<=0||(discountType==="percentage"&&discountValue>100)||!Number.isFinite(minPurchase)||minPurchase<0){setMessage("Please enter valid discount and minimum purchase values.");return;}
+  const payload={code,title,description,discount_type:discountType,discount_value:discountValue,applies_to:appliesTo,min_purchase_inr:minPurchase,max_redemptions:maxRaw?.trim()?Number(maxRaw):null,per_user_limit:perUserRaw?.trim()?Number(perUserRaw):null,starts_at:startsRaw?.trim()?startsRaw:null,ends_at:endsRaw?.trim()?endsRaw:null,status:x?.status||"inactive",updated_at:new Date().toISOString()};
+  const q=x?.id?supabase.from("marketing_offers").update(payload).eq("id",x.id):supabase.from("marketing_offers").insert(payload);
+  const{error}=await q;if(error){setMessage("Offer save failed: "+error.message);return;}setMessage("Offer saved. It is not yet applied at checkout; redemption integration is a separate step.");await loadOffers();await supabase.rpc("admin_record_audit",{p_action:x?.id?"update_offer":"create_offer",p_entity_type:"marketing_offer",p_entity_id:x?.id||null,p_metadata:{code}});
+ }
+ async function toggleOffer(x:any){const next=x.status==="active"?"inactive":"active";const{error}=await supabase.from("marketing_offers").update({status:next,updated_at:new Date().toISOString()}).eq("id",x.id);if(error){setMessage(error.message);return;}setMessage("Offer "+next+".");await loadOffers();await supabase.rpc("admin_record_audit",{p_action:next+"_offer",p_entity_type:"marketing_offer",p_entity_id:x.id,p_metadata:{code:x.code}})}
+ async function deleteOffer(x:any){if(!window.confirm("Delete coupon "+x.code+"?"))return;const{error}=await supabase.from("marketing_offers").delete().eq("id",x.id);if(error){setMessage(error.message);return;}setMessage("Offer deleted.");await loadOffers();}
  async function signOut(){await supabase.auth.signOut();setAdmin(false);setSession(null)}
  async function act(fn:string,args:any,success:string,refresh=loadAll,entityType?:string,entityId?:string,metadata:any={}){setMessage("");const{error}=await supabase.rpc(fn,args);if(error){setMessage(error.message);return}if(entityType){const{error:auditError}=await supabase.rpc("admin_record_audit",{p_action:fn,p_entity_type:entityType,p_entity_id:entityId||null,p_metadata:{source:"mobile_admin",...metadata}});if(auditError){setMessage("Action succeeded, but audit logging failed: "+auditError.message);return}}setMessage(success);await refresh();}
  async function verify(id:string,decision:"approved"|"rejected"){const note=decision==="rejected"?window.prompt("Reason for rejection (optional):")||null:null;await act("admin_review_verification",{p_document_id:id,p_decision:decision,p_note:note},decision==="approved"?"Professional approved.":"Professional rejected.",loadAll,"verification",id);}
@@ -115,6 +139,23 @@ export default function AdminScreen(){
       )}
     </Section>}
    {tab==="connections"&&<Section title="Connections"><Text style={s.muted}>Customer-to-professional access history. Connections are read-only here; purchasing and access rules remain protected by the marketplace RPCs.</Text>{!filtered("connections").length?<Text style={s.muted}>No connections found.</Text>:filtered("connections").map((x:any)=><View key={x.connection_id} style={s.item}><View style={{flex:1}}><Text style={s.rowTitle}>{x.customer_name||"Customer"} → {x.professional_name||"Professional"}</Text><Text style={s.muted}>Purchased {x.purchased_at?new Date(x.purchased_at).toLocaleString():"—"} • Expires {x.expires_at?new Date(x.expires_at).toLocaleString():"—"}</Text><Text style={s.muted}>Last accessed {x.last_accessed_at?new Date(x.last_accessed_at).toLocaleString():"Never"}</Text></View><Text style={s.badge}>{x.is_active?"Active":"Expired"}</Text></View>)}</Section>}
+   {tab==="offers"&&<Section title="Offers & Coupons">
+    <Text style={s.muted}>Create and schedule offers. New coupons are stored dynamically; checkout redemption must be enabled separately before discounts affect payment totals.</Text>
+    <Pressable style={s.primary} onPress={()=>editOffer()}><Text style={s.primaryText}>Add offer / coupon</Text></Pressable>
+    <Pressable style={s.secondary} onPress={loadOffers}><Text>Refresh offers</Text></Pressable>
+    {!data.offers.length?<Text style={s.muted}>No offers created yet.</Text>:data.offers.map((x:any)=><View key={x.id} style={s.item}>
+      <View style={{flex:1}}>
+       <Text style={s.rowTitle}>{x.title} • {x.code}</Text>
+       <Text style={s.muted}>{x.discount_type==="percentage"?String(x.discount_value)+"%":"₹"+Number(x.discount_value).toLocaleString("en-IN")} off • {x.applies_to.replaceAll("_"," ")} • {x.status}</Text>
+       <Text style={s.muted}>Min ₹{Number(x.min_purchase_inr||0).toLocaleString("en-IN")} • {x.starts_at?new Date(x.starts_at).toLocaleString():"No start date"} – {x.ends_at?new Date(x.ends_at).toLocaleString():"No end date"}</Text>
+      </View>
+      <View style={s.actions}>
+       <Pressable style={s.secondary} onPress={()=>editOffer(x)}><Text>Edit</Text></Pressable>
+       <Pressable style={x.status==="active"?s.danger:s.primary} onPress={()=>toggleOffer(x)}><Text style={x.status==="active"?s.dangerText:s.primaryText}>{x.status==="active"?"Disable":"Activate"}</Text></Pressable>
+       <Pressable style={s.danger} onPress={()=>deleteOffer(x)}><Text style={s.dangerText}>Delete</Text></Pressable>
+      </View>
+    </View>)}
+   </Section>}
    {tab==="subscriptions"&&<Section title="Professional Subscriptions">
     <Text style={s.muted}>Professional subscriptions are a KAMPRO revenue stream. Service payments between customers and professionals remain outside KAMPRO.</Text>
     <Pressable style={s.primary} onPress={()=>{const code=window.prompt("Plan code");if(!code)return;const name=window.prompt("Plan name");if(!name)return;const price=Number(window.prompt("Price in INR","0")||0);const interval=(window.prompt("Billing interval: monthly, quarterly or annual","monthly")||"monthly").toLowerCase();act("admin_save_subscription_plan",{p_action:"create",p_code:code,p_name:name,p_price_inr:price,p_billing_interval:interval,p_active:true,p_sort_order:0},"Subscription plan created.");}}>
