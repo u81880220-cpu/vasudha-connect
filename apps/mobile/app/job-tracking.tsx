@@ -7,7 +7,6 @@ import { useLocalSearchParams, router } from "expo-router";
 import { useAuth } from "../src/auth/AuthProvider";
 import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
-import JobTrackingLocationMap from "../src/components/JobTrackingLocationMap";
 import { KAMPRO } from "../src/components/kamproTheme";
 
 const steps=[["worker_accepted","Professional accepted"],["on_the_way","On the Way"],["arrived","Arrived"],["work_started","Work Started"],["work_completed","Work Completed"],["customer_confirmed","Customer Confirmed"]];
@@ -16,7 +15,7 @@ export default function JobTracking(){
  const {jobId}=useLocalSearchParams<{jobId:string}>(); const {user,mode}=useAuth(); const [job,setJob]=useState<any>(null); const [updating,setUpdating]=useState(false); const [privateData,setPrivateData]=useState<any>({}); const [live,setLive]=useState<any>(null); const [route,setRoute]=useState<any>(null); const [routeBusy,setRouteBusy]=useState(false); const [loading,setLoading]=useState(true); const [photoCount,setPhotoCount]=useState(0); const [photoBusy,setPhotoBusy]=useState(false);
  useEffect(()=>{load()},[jobId]);
  useEffect(()=>{if(!jobId||mode!=="professional"||!job||!["worker_accepted","on_the_way","arrived","work_started"].includes(job.status))return;let watcher:Location.LocationSubscription|undefined;let active=true;(async()=>{try{const perm=await Location.requestForegroundPermissionsAsync();if(!active)return;if(perm.status!=="granted"){console.warn("KAMPRO live tracking: location permission not granted");return;}watcher=await Location.watchPositionAsync({accuracy:Location.Accuracy.Balanced,timeInterval:10000,distanceInterval:10},async pos=>{if(!active)return;const{error}=await supabase.rpc("update_professional_live_location",{p_job_id:jobId,p_latitude:pos.coords.latitude,p_longitude:pos.coords.longitude,p_accuracy_m:pos.coords.accuracy??null});if(error)console.error("KAMPRO live location update failed:",error.message);});}catch(e){console.error("KAMPRO live tracking could not start:",e);}})();return()=>{active=false;watcher?.remove()}},[jobId,mode,job?.status]);
- useEffect(()=>{if(!jobId)return; let active=true; const tick=async()=>{const{data}=await supabase.rpc("get_job_live_location",{p_job_id:jobId});if(active)setLive(data?.[0]||null)}; void tick(); const t=setInterval(tick,10000); return()=>{active=false;clearInterval(t)}},[jobId]);
+ useEffect(()=>{if(!jobId)return; let active=true; const tick=async()=>{try{const{data,error}=await supabase.rpc("get_job_live_location",{p_job_id:String(jobId)});if(error)console.warn("KAMPRO live location lookup failed:",error.message);if(active)setLive(Array.isArray(data)?data[0]||null:data||null);}catch(e){console.warn("KAMPRO live location polling failed:",e);}}; void tick(); const t=setInterval(()=>{void tick()},15000); return()=>{active=false;clearInterval(t)}},[jobId]);
  async function load(){
   if(!jobId){setJob(null);setPrivateData({});setLoading(false);return;}
   setLoading(true);
@@ -99,10 +98,12 @@ export default function JobTracking(){
    Alert.alert("Route unavailable","Live professional location and the service location are both required to calculate an ETA.");return;
   }
   setRouteBusy(true);
-  const {data,error}=await supabase.functions.invoke("google-routes",{body:{job_id:jobId}});
-  setRouteBusy(false);
-  if(error||data?.error){Alert.alert("Unable to calculate route",data?.error||error?.message||"Please try again.");return;}
-  setRoute(data);
+  try{
+   const {data,error}=await supabase.functions.invoke("google-routes",{body:{job_id:String(jobId)}});
+   if(error||data?.error){Alert.alert("Unable to calculate route",data?.error||error?.message||"Please try again.");return;}
+   setRoute(data);
+  }catch(e:any){Alert.alert("Unable to calculate route",e?.message||"Please try again.");}
+  finally{setRouteBusy(false);}
  }
  async function advanceStatus(){
   if(!job)return;
@@ -123,7 +124,6 @@ export default function JobTracking(){
      <Text style={s.jobId}>JOB · {String(job?.id||jobId||"12345").slice(0,8).toUpperCase()}</Text>
      {steps.map((x,i)=><View key={x[0]} style={s.stepRow}><View style={s.track}>{i<steps.length-1&&<View style={[s.line,i<=idx&&s.doneLine]}/>}<View style={[s.dot,i<=idx?s.active:s.inactive]}>{i<=idx&&<Text style={s.check}>✓</Text>}</View></View><View><Text style={[s.step,i<=idx?s.done:s.future]}>{x[1]}</Text>{i===idx?<Text style={s.current}>Current status</Text>:null}</View></View>)}
    </View>}
-   <JobTrackingLocationMap serviceLatitude={privateData?.service_location?.latitude} serviceLongitude={privateData?.service_location?.longitude} serviceLabel={privateData?.service_location?.address} liveLatitude={live?.latitude} liveLongitude={live?.longitude}/>
    {mode==="customer"&&job?.status&&["worker_accepted","on_the_way","arrived","work_started"].includes(job.status)?<View style={s.routeCard}>
      <Text style={s.infoTitle}>Google Maps route & ETA</Text>
      <Text style={s.muted}>Calculate the driving distance and traffic-aware ETA from the professional's latest shared location.</Text>
