@@ -8,6 +8,7 @@ import { useAuth } from "../src/auth/AuthProvider";
 import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { KAMPRO } from "../src/components/kamproTheme";
+import JobTrackingLocationMap from "../src/components/JobTrackingLocationMap";
 
 const steps=[["worker_accepted","Professional accepted"],["on_the_way","On the Way"],["arrived","Arrived"],["work_started","Work Started"],["work_completed","Work Completed"],["customer_confirmed","Customer Confirmed"]];
 
@@ -125,8 +126,9 @@ export default function JobTracking(){
      {steps.map((x,i)=><View key={x[0]} style={s.stepRow}><View style={s.track}>{i<steps.length-1&&<View style={[s.line,i<=idx&&s.doneLine]}/>}<View style={[s.dot,i<=idx?s.active:s.inactive]}>{i<=idx&&<Text style={s.check}>✓</Text>}</View></View><View><Text style={[s.step,i<=idx?s.done:s.future]}>{x[1]}</Text>{i===idx?<Text style={s.current}>Current status</Text>:null}</View></View>)}
    </View>}
    {mode==="customer"&&job?.status&&["worker_accepted","on_the_way","arrived","work_started"].includes(job.status)?<View style={s.routeCard}>
-     <Text style={s.infoTitle}>Google Maps route & ETA</Text>
-     <Text style={s.muted}>Calculate the driving distance and traffic-aware ETA from the professional's latest shared location.</Text>
+     <Text style={s.infoTitle}>Live professional tracking</Text>
+     <Text style={s.muted}>The map shows the service location and the latest shared GPS location.</Text>
+     <JobTrackingLocationMap serviceLatitude={privateData?.service_location?.latitude??privateData?.service_location?.lat??privateData?.service_location?.coordinates?.latitude} serviceLongitude={privateData?.service_location?.longitude??privateData?.service_location?.lng??privateData?.service_location?.coordinates?.longitude} serviceLabel={privateData?.service_location?.address||"Service location"} liveLatitude={live?.latitude} liveLongitude={live?.longitude}/>
      <Pressable style={s.navigation} disabled={routeBusy||!live} onPress={calculateRoute}><Text style={s.navigationText}>{routeBusy?"Calculating route…":!live?"Waiting for live location":"Calculate distance & ETA"}</Text></Pressable>
      {route?<Text style={s.routeResult}>{route.distance_km} km • about {route.duration_minutes} min by car</Text>:null}
    </View>:null}
