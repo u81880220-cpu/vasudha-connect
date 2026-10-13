@@ -12,6 +12,10 @@ import JobTrackingLocationMap from "../src/components/JobTrackingLocationMap";
 
 const steps=[["worker_accepted","Professional accepted"],["on_the_way","On the Way"],["arrived","Arrived"],["work_started","Work Started"],["work_completed","Work Completed"],["customer_confirmed","Customer Confirmed"]];
 
+export function ErrorBoundary({error,retry}:{error:Error;retry:()=>void}) {
+ return <SafeAreaView style={s.safe}><View style={{flex:1,justifyContent:"center",padding:24}}><Text style={s.title}>Job tracking couldn't open</Text><Text style={s.muted}>The tracking screen encountered an error. Your job request is still saved. Please retry, or return to My Jobs.</Text><Text style={[s.muted,{marginTop:12}]}>{error?.message||"Unexpected tracking error"}</Text><Pressable style={s.primary} onPress={retry}><Text style={s.primaryText}>Try again</Text></Pressable><Pressable style={s.secondary} onPress={()=>router.replace("/jobs")}><Text style={s.secondaryText}>Back to My Jobs</Text></Pressable></View></SafeAreaView>;
+}
+
 export default function JobTracking(){
  const {jobId}=useLocalSearchParams<{jobId:string}>(); const {user,mode}=useAuth(); const [job,setJob]=useState<any>(null); const [updating,setUpdating]=useState(false); const [privateData,setPrivateData]=useState<any>({}); const [live,setLive]=useState<any>(null); const [route,setRoute]=useState<any>(null); const [routeBusy,setRouteBusy]=useState(false); const [loading,setLoading]=useState(true); const [photoCount,setPhotoCount]=useState(0); const [photoBusy,setPhotoBusy]=useState(false);
  useEffect(()=>{load()},[jobId]);
