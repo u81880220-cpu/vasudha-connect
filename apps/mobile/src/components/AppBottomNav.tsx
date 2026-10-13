@@ -6,7 +6,7 @@ import { useKamproLanguage } from "../i18n/LanguageProvider";
 const tabs=[
   ["/home","⌂","home"],
   ["/marketplace","⌖","findPro"],
-  ["/connections","◌","chat"],
+  ["/jobs","◷","jobs"],
   ["/profile","◉","profile"],
 ] as const;
 
@@ -18,7 +18,7 @@ export function AppBottomNav({active}: {active?: NavKey}){
     <View style={s.bar}>
       {tabs.map(([href,icon,key])=>{
         const label=t(key);
-        const isActive=path===href || (active==="map" && href==="/marketplace") || ((active==="chat" || active==="connections") && href==="/connections") || (active==="home" && href==="/home") || (active==="profile" && href==="/profile");
+        const isActive=path===href || (active==="map" && href==="/marketplace") || ((active==="chat" || active==="connections") && href==="/connections") || (active==="home" && href==="/home") || (active==="jobs" && href==="/jobs") || (active==="profile" && href==="/profile");
         return (
           <Pressable
             key={href}
