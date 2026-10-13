@@ -17,31 +17,41 @@ export default function Jobs(){
  const[jobs,setJobs]=useState<any[]>([]); const[requests,setRequests]=useState<any[]>([]); const[loading,setLoading]=useState(true); const[notice,setNotice]=useState(!!created);
  useEffect(()=>{load()},[user?.id,mode]);
  async function load(){
-  if(!user){setLoading(false);return;}
+  if(!user){setJobs([]);setRequests([]);setLoading(false);return;}
   setLoading(true);
-  const{data,error}=await supabase.from("jobs").select("*").or(`customer_id.eq.${user.id},professional_id.eq.${user.id}`).order("created_at",{ascending:false});
-  if(error)Alert.alert("Unable to load jobs",error.message); else setJobs(data||[]);
-  if(mode==="customer"){
+  try{
+   const{data,error}=await supabase.from("jobs").select("*").or(`customer_id.eq.${user.id},professional_id.eq.${user.id}`).order("created_at",{ascending:false});
+   if(error)throw error;
+   setJobs(data||[]);
+   if(mode==="customer"){
     const{data:rq,error:re}=await supabase.from("service_requests").select("*").eq("customer_id",user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false});
-    if(!re){
-      const ids=[...new Set((rq||[]).map((x:any)=>x.professional_id).filter(Boolean))];
-      const names:Record<string,string>={};
-      if(ids.length){
-        const{data:profiles}=await supabase.from("profiles").select("id,display_name,full_name").in("id",ids);
-        (profiles||[]).forEach((p:any)=>{names[p.id]=p.display_name||p.full_name||"Professional"});
-      }
-      setRequests((rq||[]).map((x:any)=>({...x,professional_name:names[x.professional_id]||null})));
+    if(re)throw re;
+    const ids=[...new Set((rq||[]).map((x:any)=>x.professional_id).filter(Boolean))];
+    const names:Record<string,string>={};
+    if(ids.length){
+     const{data:profiles,error:profileError}=await supabase.from("profiles").select("id,display_name,full_name").in("id",ids);
+     if(profileError)throw profileError;
+     (profiles||[]).forEach((p:any)=>{names[p.id]=p.display_name||p.full_name||"Professional"});
     }
-  } else {
+    setRequests((rq||[]).map((x:any)=>({...x,professional_name:names[x.professional_id]||null})));
+   }else{
     const{data:rq,error:re}=await supabase.from("service_requests").select("*").eq("professional_id",user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false});
-    if(!re){
-      const ids=[...new Set((rq||[]).map((x:any)=>x.customer_id).filter(Boolean))];
-      const names:Record<string,string>={};
-      if(ids.length){const{data:profiles}=await supabase.from("profiles").select("id,full_name").in("id",ids);(profiles||[]).forEach((p:any)=>{names[p.id]=p.full_name||"Customer"});}
-      setRequests((rq||[]).map((x:any)=>({...x,customer_name:names[x.customer_id]||"Customer"})));
+    if(re)throw re;
+    const ids=[...new Set((rq||[]).map((x:any)=>x.customer_id).filter(Boolean))];
+    const names:Record<string,string>={};
+    if(ids.length){
+     const{data:profiles,error:profileError}=await supabase.from("profiles").select("id,full_name").in("id",ids);
+     if(profileError)throw profileError;
+     (profiles||[]).forEach((p:any)=>{names[p.id]=p.full_name||"Customer"});
     }
-  }
-  setLoading(false);
+    setRequests((rq||[]).map((x:any)=>({...x,customer_name:names[x.customer_id]||"Customer"})));
+   }
+  }catch(e:any){
+   console.error("KAMPRO My Jobs load failed:",e?.message||e);
+   Alert.alert("Unable to load My Jobs",e?.message||"Please check your connection and try again.");
+   setJobs([]);
+   setRequests([]);
+  }finally{setLoading(false);}
  }
  async function rehire(job:any){if(!job?.professional_id){Alert.alert("Rehire unavailable","This job has no linked professional.");return;}router.push({pathname:"/professional-public",params:{professionalId:job.professional_id}});}
  async function status(job:any,next:string){const{error}=await supabase.rpc("update_job_status",{p_job_id:job.id,p_status:next});if(error)Alert.alert("Status update failed",error.message);else load()}
