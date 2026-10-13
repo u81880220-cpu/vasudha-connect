@@ -162,6 +162,7 @@ function ProfessionalHome(){
  const {t}=useKamproLanguage();
  const[professionalName,setProfessionalName]=useState("");
  const[avatarUrl,setAvatarUrl]=useState<string|null>(null);
+ const[activeJob,setActiveJob]=useState<any>(null);
  const[stats,setStats]=useState({trust:0,verified:false,available:false,requests:0,connections:0,rating:null as number|null,completion:0});
  const[incomingJobs,setIncomingJobs]=useState<any[]>([]);
  const[busy,setBusy]=useState(false);
@@ -192,6 +193,18 @@ function ProfessionalHome(){
    setStats({trust:Number(profile?.trust_score||0),verified:profile?.verification_status==="verified",available:!!profile?.is_available,requests:(incoming||[]).length,connections:(connections||[]).length,rating,completion:allJobs.length?Math.round(done/allJobs.length*100):0});
   })();
   return()=>{active=false};
+ },[session?.user.id]);
+ useEffect(()=>{
+  if(!session?.user.id)return;
+  let active=true;
+  async function refreshActiveJob(){
+   const{data,error}=await supabase.from("jobs").select("id,title,status,created_at,updated_at").eq("professional_id",session!.user.id).in("status",["worker_accepted","on_the_way","arrived","work_started"]).order("created_at",{ascending:false}).limit(1);
+   if(active&&!error)setActiveJob(data?.[0]||null);
+  }
+  void refreshActiveJob();
+  const channel=supabase.channel("professional-home-active-job-"+session.user.id).on("postgres_changes",{event:"*",schema:"public",table:"jobs",filter:"professional_id=eq."+session.user.id},()=>{void refreshActiveJob()}).subscribe();
+  const interval=setInterval(()=>{void refreshActiveJob()},15000);
+  return()=>{active=false;clearInterval(interval);void supabase.removeChannel(channel)};
  },[session?.user.id]);
  useEffect(()=>{
   if(!session?.user.id)return;
@@ -251,6 +264,7 @@ function ProfessionalHome(){
  return <View>
   <View style={s.proIdentity}><View style={s.proPhoto}>{avatarUrl?<Image source={{uri:avatarUrl}} style={s.proPhotoImage}/>:<Text style={s.proInitial}>{professionalName.slice(0,1).toUpperCase()||"P"}</Text>}</View><View style={{flex:1}}><Text style={s.greeting}>Good morning{professionalName?", "+professionalName:""} 👋</Text><Text style={s.proRole}>{t("professionalAccount")}</Text></View></View>
   <CurrentLocationBar/>
+  {activeJob?<Pressable accessibilityRole="button" accessibilityLabel="Open active job" onPress={()=>router.push({pathname:"/job-tracking",params:{jobId:String(activeJob.id)}})} style={s.activeJobHero}><View style={s.activeJobIcon}><Text>📍</Text></View><View style={{flex:1,minWidth:0}}><Text style={s.activeJobTitle}>Active job · Open now</Text><Text style={s.name} numberOfLines={2}>{activeJob.title||"Professional service"}</Text><Text style={s.meta}>Status: {String(activeJob.status||"worker_accepted").replaceAll("_"," ")} · {new Date(activeJob.created_at||activeJob.updated_at).toLocaleString()}</Text></View><Text style={s.view}>Open →</Text></Pressable>:null}
   <Text style={s.heading}>{t("growBusiness")}</Text><Text style={s.heading}>{t("getMoreCustomers")}</Text>
   <View style={s.availability}><View style={{flex:1}}><Text style={s.availabilityTitle}>{t("availableForWork")}</Text><Text style={s.meta}>{stats.available?t("availableNow"):t("unavailable")}</Text><Text style={s.locationStatus}>{stats.available?locationStatus:"Live GPS tracking is off while unavailable."}</Text></View><Switch value={stats.available} onValueChange={toggleAvailability} disabled={busy}/></View>
   <View style={s.statHero}><Text style={s.statLabel}>Professional Trust</Text><Text style={s.statValue}>{Math.round(stats.trust)} <Text style={s.statSmall}>/ 100</Text></Text><Text style={s.meta}>{stats.verified?"✓ Verified":"Verification pending"}</Text></View>
