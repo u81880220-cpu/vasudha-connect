@@ -95,19 +95,17 @@ function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
  const {t}=useKamproLanguage();
  const[activeJob,setActiveJob]=useState<any>(null);
  const[recentRequests,setRecentRequests]=useState<any[]>([]);
-  const[creditBalance,setCreditBalance]=useState<number|null>(null);
  useEffect(()=>{
   if(!session?.user.id)return;
   let active=true;
   async function refreshHomeItems(){
-   const[{data:jobs,error:jobsError},{data:requests,error:requestsError},{data:wallet,error:walletError}]=await Promise.all([
+   const[{data:jobs,error:jobsError},{data:requests,error:requestsError}]=await Promise.all([
     supabase.from("jobs").select("id,title,status,created_at,updated_at,professional_id").eq("customer_id",session!.user.id).in("status",["worker_accepted","on_the_way","arrived","work_started"]).order("created_at",{ascending:false}).limit(3),
     supabase.from("service_requests").select("id,title,description,preferred_date,preferred_time,location_text,status,created_at,professional_id").eq("customer_id",session!.user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false}).limit(3)
    ]);
    if(!active)return;
    if(!jobsError)setActiveJob(jobs?.[0]||null);
    if(!requestsError)setRecentRequests(requests||[]);
-    if(!walletError)setCreditBalance(Number(wallet??0));
   }
   void refreshHomeItems();
   // Home can remain mounted while the user cancels a job on another screen.
