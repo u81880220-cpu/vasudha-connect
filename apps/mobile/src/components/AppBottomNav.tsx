@@ -10,7 +10,7 @@ const tabs=[
   ["/profile","◉","profile"],
 ] as const;
 
-type NavKey = "home" | "map" | "chat" | "connections" | "profile";
+type NavKey = "home" | "map" | "jobs" | "chat" | "connections" | "profile";
 export function AppBottomNav({active}: {active?: NavKey}){
   const path=usePathname();
   const {t}=useKamproLanguage();
