@@ -17,7 +17,28 @@ export default function JobTracking(){
  useEffect(()=>{load()},[jobId]);
  useEffect(()=>{if(!jobId||mode!=="professional"||!job||!["worker_accepted","on_the_way","arrived","work_started"].includes(job.status))return;let watcher:Location.LocationSubscription|undefined;let active=true;(async()=>{try{const perm=await Location.requestForegroundPermissionsAsync();if(!active)return;if(perm.status!=="granted"){console.warn("KAMPRO live tracking: location permission not granted");return;}watcher=await Location.watchPositionAsync({accuracy:Location.Accuracy.Balanced,timeInterval:10000,distanceInterval:10},async pos=>{if(!active)return;const{error}=await supabase.rpc("update_professional_live_location",{p_job_id:jobId,p_latitude:pos.coords.latitude,p_longitude:pos.coords.longitude,p_accuracy_m:pos.coords.accuracy??null});if(error)console.error("KAMPRO live location update failed:",error.message);});}catch(e){console.error("KAMPRO live tracking could not start:",e);}})();return()=>{active=false;watcher?.remove()}},[jobId,mode,job?.status]);
  useEffect(()=>{if(!jobId)return; let active=true; const tick=async()=>{const{data}=await supabase.rpc("get_job_live_location",{p_job_id:jobId});if(active)setLive(data?.[0]||null)}; void tick(); const t=setInterval(tick,10000); return()=>{active=false;clearInterval(t)}},[jobId]);
- async function load(){if(!jobId){setLoading(false);return;}const{data}=await supabase.from("jobs").select("*").eq("id",jobId).maybeSingle();setJob(data);if(data){const{data:pd}=await supabase.rpc("get_job_contact_and_location",{p_job_id:jobId});setPrivateData(pd||{});if(mode==="professional"){const{count}=await supabase.from("portfolio_items").select("id",{count:"exact",head:true}).eq("job_id",jobId).eq("professional_id",user?.id||"");setPhotoCount(count||0);}}setLoading(false);}
+ async function load(){
+  if(!jobId){setJob(null);setPrivateData({});setLoading(false);return;}
+  setLoading(true);
+  try{
+   const{data,error}=await supabase.from("jobs").select("*").eq("id",String(jobId)).maybeSingle();
+   if(error)throw error;
+   setJob(data||null);
+   if(!data){setPrivateData({});return;}
+   const{data:pd,error:privateError}=await supabase.rpc("get_job_contact_and_location",{p_job_id:String(jobId)});
+   if(privateError)console.warn("KAMPRO job details unavailable:",privateError.message);
+   setPrivateData(pd||{});
+   if(mode==="professional"&&user?.id){
+    const{count,error:countError}=await supabase.from("portfolio_items").select("id",{count:"exact",head:true}).eq("job_id",String(jobId)).eq("professional_id",user.id);
+    if(countError)console.warn("KAMPRO work-photo count unavailable:",countError.message);
+    setPhotoCount(count||0);
+   }
+  }catch(e:any){
+   console.error("KAMPRO job tracking load failed:",e?.message||e);
+   setJob(null);setPrivateData({});
+   Alert.alert("Unable to open job","The job details could not be loaded. Please return to My Jobs and try again.");
+  }finally{setLoading(false);}
+ }
  async function uploadCompletedWorkPhotos(){
   if(!job||!user?.id||mode!=="professional"||job.status!=="work_completed")return;
   const remaining=Math.max(0,2-photoCount);
