@@ -30,9 +30,10 @@ env:
 - extendedWaitUntil:
     visible: "Welcome Back"
     timeout: 20000
-- tapOn: "Email address"
+- tapOn: "Email"
+- tapOn: "KAMPRO email address"
 - inputText: ${PROFESSIONAL_EMAIL}
-- tapOn: "Password"
+- tapOn: "KAMPRO password"
 - inputText: ${PROFESSIONAL_PASSWORD}
 - hideKeyboard
 - tapOn: "Sign in with Email"
