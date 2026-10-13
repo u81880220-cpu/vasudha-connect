@@ -32,12 +32,21 @@ export function ServicePicker({value,onChange,title="Choose a service",optionalS
  }
  async function load(){
   setLoading(true);
-  const[a,b,c]=await Promise.all([
-   supabase.from("service_categories").select("id,name,icon").eq("status","active").order("sort_order").order("name"),
-   supabase.from("service_catalogue_services").select("id,category_id,name,icon,legacy_skill_id").eq("status","active").order("sort_order").order("name"),
-   supabase.from("service_catalogue_sub_services").select("id,service_id,name").eq("status","active").order("sort_order").order("name")
-  ]);
-  setCategories(a.data||[]);setServices(b.data||[]);setSubs(c.data||[]);setLoading(false);
+  try{
+   const[a,b,c]=await Promise.all([
+    supabase.from("service_categories").select("id,name,icon").eq("status","active").order("sort_order").order("name"),
+    supabase.from("service_catalogue_services").select("id,category_id,name,icon,legacy_skill_id").eq("status","active").order("sort_order").order("name"),
+    supabase.from("service_catalogue_sub_services").select("id,service_id,name").eq("status","active").order("sort_order").order("name")
+   ]);
+   if(a.error)throw a.error;
+   if(b.error)throw b.error;
+   if(c.error)throw c.error;
+   setCategories(a.data||[]);setServices(b.data||[]);setSubs(c.data||[]);
+  }catch(e:any){
+   console.error("KAMPRO service catalogue failed to load:",e?.message||e);
+   setCategories([]);setServices([]);setSubs([]);
+   Alert.alert("Services unavailable","The service list could not be loaded. Please go back and try again.");
+  }finally{setLoading(false);}
  }
  const currentServices=services.filter(x=>x.category_id===categoryId);
  const currentSubs=subs.filter(x=>x.service_id===serviceId);
