@@ -65,6 +65,14 @@ export default function AuthScreen(){
   finally{setBusy(false);}
  }
  async function mobileSignup(){
+  // The MSG91 registration widget is currently supported in the Android app only.
+  // Do not open the placeholder web component, which cannot complete OTP verification.
+  if(Platform.OS==="web"){
+   const message="Mobile OTP registration is available in the KAMPRO Android app. On the web, choose Email to create an account, or open KAMPRO on Android to register with your mobile number.";
+   setFeedback({kind:"error",text:message});
+   Alert.alert("Mobile registration unavailable on web",message);
+   return;
+  }
   if(fullName.trim().length<2)return Alert.alert("Enter your name","Please enter your full name before creating your account.");
   if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
   if(password.length<8)return Alert.alert("PIN/password too short","Use at least 8 characters.");
