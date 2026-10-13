@@ -17,6 +17,10 @@ jobs:
       EXPO_PUBLIC_SUPABASE_URL: https://bbweclhmbzwmflijppoi.supabase.co
       EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_fE2u4A3S9YNOR_-imSZKJg_MQuxzPVX
       EXPO_PUBLIC_PAYMENT_PROVIDER: test
+      CUSTOMER_EMAIL: ${{ secrets.CUSTOMER_EMAIL }}
+      CUSTOMER_PASSWORD: ${{ secrets.CUSTOMER_PASSWORD }}
+      PROFESSIONAL_EMAIL: ${{ secrets.PROFESSIONAL_EMAIL }}
+      PROFESSIONAL_PASSWORD: ${{ secrets.PROFESSIONAL_PASSWORD }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -74,6 +78,14 @@ jobs:
             find "$HOME/.maestro" -maxdepth 4 -type f -name "maestro" -print || true
             exit 1
           fi
+
+      - name: Validate Maestro test credentials
+        run: |
+          test -n "$CUSTOMER_EMAIL" || (echo "Missing GitHub Actions secret CUSTOMER_EMAIL"; exit 1)
+          test -n "$CUSTOMER_PASSWORD" || (echo "Missing GitHub Actions secret CUSTOMER_PASSWORD"; exit 1)
+          test -n "$PROFESSIONAL_EMAIL" || (echo "Missing GitHub Actions secret PROFESSIONAL_EMAIL"; exit 1)
+          test -n "$PROFESSIONAL_PASSWORD" || (echo "Missing GitHub Actions secret PROFESSIONAL_PASSWORD"; exit 1)
+          echo "Both test account credentials are configured."
 
       - name: Start Android emulator and run Maestro UI QA
         uses: reactivecircus/android-emulator-runner@v2
