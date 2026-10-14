@@ -15,7 +15,7 @@ export function ErrorBoundary({error,retry}:{error:Error;retry:()=>void}){return
 
 export default function Jobs(){
  const{user,mode}=useAuth(); const {t}=useKamproLanguage(); const routeParams=useLocalSearchParams<{created?:string|string[];requestId?:string|string[]}>(); const created=Array.isArray(routeParams.created)?routeParams.created[0]:routeParams.created; const requestId=Array.isArray(routeParams.requestId)?routeParams.requestId[0]:routeParams.requestId;
- const[cancelTarget,setCancelTarget]=useState<any|null>(null); const[cancelBusy,setCancelBusy]=useState(false); const[cancelMessage,setCancelMessage]=useState("");
+ const[cancelTarget,setCancelTarget]=useState<any|null>(null); const[cancelBusy,setCancelBusy]=useState(false); const[cancelMessage,setCancelMessage]=useState(""); const[rehireBusyId,setRehireBusyId]=useState<string|null>(null);
  const[jobs,setJobs]=useState<any[]>([]); const[requests,setRequests]=useState<any[]>([]); const[loading,setLoading]=useState(true); const[notice,setNotice]=useState(!!created);
  useEffect(()=>{load()},[user?.id,mode]);
  async function load(){
@@ -55,7 +55,7 @@ export default function Jobs(){
    setRequests([]);
   }finally{setLoading(false);}
  }
- async function rehire(job:any){if(!job?.professional_id){Alert.alert("Rehire unavailable","This job has no linked professional.");return;}router.push({pathname:"/professional-public",params:{professionalId:job.professional_id}});}
+ async function rehire(job:any){if(!job?.id||!job?.professional_id||rehireBusyId)return;setRehireBusyId(job.id);try{const{error}=await supabase.rpc("create_rehire_connection",{p_job_id:job.id});if(error){const noCredits=/no connection credits/i.test(error.message||"");if(noCredits){Alert.alert("Connection credit required","Rehiring this professional uses 1 connection credit. Get a connection package to continue.",[{text:"Not now",style:"cancel"},{text:"Get connections",onPress:()=>router.push("/connection-packages")}]);}else Alert.alert("Rehire unavailable",error.message||"Please try again.");return;}router.push({pathname:"/professional-public",params:{professionalId:job.professional_id}});}catch(e:any){Alert.alert("Rehire unavailable",e?.message||"Please try again.");}finally{setRehireBusyId(null);}}
  async function status(job:any,next:string){const{error}=await supabase.rpc("update_job_status",{p_job_id:job.id,p_status:next});if(error)Alert.alert("Status update failed",error.message);else load()}
  function cancel(job:any){setCancelMessage("");setCancelTarget(job)}
  async function confirmCancel(){if(!cancelTarget||cancelBusy)return;setCancelBusy(true);setCancelMessage("");try{const{data,error}=await supabase.rpc("cancel_job",{p_job_id:cancelTarget.id,p_reason:"Cancelled by participant"});if(error)throw error;setCancelTarget(null);Alert.alert("Job cancelled","The other participant has been notified.");await load()}catch(e:any){setCancelMessage(e?.message||"Cancellation failed. Please try again.")}finally{setCancelBusy(false)}}
@@ -83,7 +83,7 @@ export default function Jobs(){
       {j.status!=="customer_confirmed"&&j.status!=="cancelled"?<Pressable onPress={()=>router.push({pathname:"/job-tracking",params:{jobId:j.id}})} style={s.trackBtn}><Text style={s.trackText}>{t("trackJob")}</Text></Pressable>:null}
       {n&&isProfessional&&steps.indexOf(n)>=0&&steps.indexOf(n)<=4?<Pressable onPress={()=>status(j,n)} style={s.primary}><Text style={s.primaryText}>Mark {labels[steps.indexOf(n)]}</Text></Pressable>:null}{n==="customer_confirmed"&&isCustomer?<Pressable onPress={()=>status(j,n)} style={s.primary}><Text style={s.primaryText}>{t("confirmCompleted")}</Text></Pressable>:null}
       {["worker_accepted","on_the_way","arrived"].includes(j.status)&&(isProfessional||isCustomer)?<Pressable onPress={()=>cancel(j)} style={s.cancel}><Text style={s.cancelText}>{t("cancelJob")}</Text></Pressable>:null}
-      {isCustomer&&j.status==="customer_confirmed"?<><Pressable onPress={()=>router.push({pathname:"/review",params:{jobId:j.id,professionalId:j.professional_id}})} style={s.secondary}><Text style={s.secondaryText}>{t("rateProfessional")}</Text></Pressable><Pressable onPress={()=>rehire(j)} style={s.rehire}><Text style={s.rehireText}>↻ Rehire Professional</Text></Pressable></>:null}
+      {isCustomer&&j.status==="customer_confirmed"?<><Pressable onPress={()=>router.push({pathname:"/review",params:{jobId:j.id,professionalId:j.professional_id}})} style={s.secondary}><Text style={s.secondaryText}>{t("rateProfessional")}</Text></Pressable><Pressable disabled={rehireBusyId===j.id} onPress={()=>rehire(j)} style={[s.rehire,rehireBusyId===j.id&&{opacity:0.6}]}><Text style={s.rehireText}>{rehireBusyId===j.id?"Rehiring…":"↻ Rehire Professional · 1 credit"}</Text></Pressable></>:null}
       {isProfessional&&j.status==="customer_confirmed"?<Pressable onPress={()=>router.push({pathname:"/customer-review",params:{jobId:j.id,customerId:j.customer_id}})} style={s.secondary}><Text style={s.secondaryText}>Rate Customer</Text></Pressable>:null}
       <Pressable onPress={()=>router.push({pathname:"/complaint",params:{jobId:j.id,againstUserId:mode==="customer"?j.professional_id:j.customer_id}})} style={s.problem}><Text style={s.problemText}>Report a Problem</Text></Pressable>
     </View>})}
