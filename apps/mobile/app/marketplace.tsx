@@ -190,7 +190,32 @@ function MarketplaceScreen(){
       setItems([]);
       setSearchError("We couldn't load professionals right now. Please try again.");
     } else {
-      setItems((data??[]) as Professional[]);
+      const professionals=(data??[]) as Professional[];
+      // Include saved catalogue services in local text search, not only legacy skills.
+      const professionalIds=professionals.map((x)=>x.professional_id);
+      if(professionalIds.length){
+        const {data:assignments,error:assignmentError}=await supabase
+          .from("professional_sub_services")
+          .select("professional_id,service_catalogue_sub_services(name,service_catalogue_services(name))")
+          .in("professional_id",professionalIds);
+        if(!assignmentError&&assignments?.length){
+          const catalogueSkills=new Map<string,Professional["skills"]>();
+          for(const assignment of assignments as any[]){
+            const sub=assignment.service_catalogue_sub_services;
+            if(!sub)continue;
+            const service=sub.service_catalogue_services;
+            const names=[sub.name,service?.name].filter(Boolean);
+            const existing=catalogueSkills.get(assignment.professional_id)||[];
+            for(const name of names){
+              if(!existing.some((skill)=>skill.name.toLowerCase()===String(name).toLowerCase())){
+                existing.push({id:"catalogue-"+assignment.professional_id+"-"+String(name),name:String(name),category:"Catalogue service",primary:false});
+              }
+            }
+            catalogueSkills.set(assignment.professional_id,existing);
+          }
+          setItems(professionals.map((professional)=>({...professional,skills:[...(professional.skills||[]),...(catalogueSkills.get(professional.professional_id)||[])]})));
+        }else{setItems(professionals);}
+      }else{setItems(professionals);}
     }
     setLoading(false);
   }
