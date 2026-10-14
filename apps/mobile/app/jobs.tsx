@@ -1,7 +1,7 @@
-import {useEffect,useState} from "react";
+import {useCallback,useState} from "react";
 import {ActivityIndicator,Alert,Modal,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,View} from "react-native";
 import {supabase} from "../src/lib/supabase";
-import {router,useLocalSearchParams} from "expo-router";
+import {router,useFocusEffect,useLocalSearchParams} from "expo-router";
 import {useAuth} from "../src/auth/AuthProvider";
 import {VasudhaLogo} from "../src/components/VasudhaLogo";
 import {AppBottomNav} from "../src/components/AppBottomNav";
@@ -17,7 +17,7 @@ export default function Jobs(){
  const{user,mode}=useAuth(); const {t}=useKamproLanguage(); const routeParams=useLocalSearchParams<{created?:string|string[];requestId?:string|string[]}>(); const created=Array.isArray(routeParams.created)?routeParams.created[0]:routeParams.created; const requestId=Array.isArray(routeParams.requestId)?routeParams.requestId[0]:routeParams.requestId;
  const[cancelTarget,setCancelTarget]=useState<any|null>(null); const[cancelBusy,setCancelBusy]=useState(false); const[cancelMessage,setCancelMessage]=useState(""); const[rehireBusyId,setRehireBusyId]=useState<string|null>(null);
  const[jobs,setJobs]=useState<any[]>([]); const[requests,setRequests]=useState<any[]>([]); const[loading,setLoading]=useState(true); const[notice,setNotice]=useState(!!created);
- useEffect(()=>{load()},[user?.id,mode]);
+ useFocusEffect(useCallback(()=>{void load();return undefined},[user?.id,mode]));
  async function load(){
   if(!user){setJobs([]);setRequests([]);setLoading(false);return;}
   setLoading(true);
@@ -26,7 +26,7 @@ export default function Jobs(){
    if(error)throw error;
    setJobs(data||[]);
    if(mode==="customer"){
-    const{data:rq,error:re}=await supabase.from("service_requests").select("*").eq("customer_id",user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false});
+    const{data:rq,error:re}=await supabase.from("service_requests").select("id,title,description,preferred_date,preferred_time,location_text,status,created_at,professional_id,customer_id").eq("customer_id",user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false});
     if(re)throw re;
     const ids=[...new Set((rq||[]).map((x:any)=>x.professional_id).filter(Boolean))];
     const names:Record<string,string>={};
@@ -37,7 +37,7 @@ export default function Jobs(){
     }
     setRequests((rq||[]).map((x:any)=>({...x,professional_name:names[x.professional_id]||null})));
    }else{
-    const{data:rq,error:re}=await supabase.from("service_requests").select("*").eq("professional_id",user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false});
+    const{data:rq,error:re}=await supabase.from("service_requests").select("id,title,description,preferred_date,preferred_time,location_text,status,created_at,professional_id,customer_id").eq("professional_id",user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false});
     if(re)throw re;
     const ids=[...new Set((rq||[]).map((x:any)=>x.customer_id).filter(Boolean))];
     const names:Record<string,string>={};
