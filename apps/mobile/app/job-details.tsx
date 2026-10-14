@@ -7,19 +7,23 @@ import { supabase } from "../src/lib/supabase";
 import JobLocationMap from "../src/components/JobLocationMap";
 import { KamproPage, KamproHeader, KamproCard } from "../src/components/KamproUI";
 
+export function ErrorBoundary({error,retry}:{error:Error;retry:()=>void}){return <SafeAreaView style={{flex:1,justifyContent:"center",padding:24,backgroundColor:"#fff"}}><Text style={{fontSize:22,fontWeight:"900",color:"#10233F"}}>Job details could not open</Text><Text style={{marginTop:8,color:"#475467"}}>{error?.message||"Unexpected error loading job details."}</Text><Pressable onPress={retry} style={{marginTop:16,padding:14,backgroundColor:"#FF4B1F",borderRadius:12,alignItems:"center"}}><Text style={{color:"#fff",fontWeight:"900"}}>Try again</Text></Pressable><Pressable onPress={()=>router.replace("/jobs")} style={{marginTop:10,padding:12,alignItems:"center"}}><Text style={{color:"#FF4B1F",fontWeight:"800"}}>Back to My Jobs</Text></Pressable></SafeAreaView>;}
+
 export default function JobDetails(){
- const {jobId}=useLocalSearchParams<{jobId:string}>();const{mode}=useAuth();const[job,setJob]=useState<any>(null);const[request,setRequest]=useState<any>(null);const[privateData,setPrivateData]=useState<any>({});const[loading,setLoading]=useState(true);
- useEffect(()=>{if(jobId)load()},[jobId]);
+ const routeParams=useLocalSearchParams<{jobId?:string|string[]}>();const jobId=Array.isArray(routeParams.jobId)?routeParams.jobId[0]:routeParams.jobId;const{mode}=useAuth();const[job,setJob]=useState<any>(null);const[request,setRequest]=useState<any>(null);const[privateData,setPrivateData]=useState<any>({});const[loading,setLoading]=useState(true);
+ useEffect(()=>{if(jobId)void load();else{setJob(null);setLoading(false)}},[jobId]);
  async function load(){
+  if(!jobId)return;
   setLoading(true);
-  const [{data,error}]=await Promise.all([supabase.from("jobs").select("*").eq("id",jobId).maybeSingle()]);
-  if(error){Alert.alert("Unable to load job",error.message);setLoading(false);return;}
-  setJob(data);
-  if(data){
-   if(data.request_id){const{data:rq}=await supabase.from("service_requests").select("title,description,preferred_date,preferred_time,location_text,location_latitude,location_longitude").eq("id",data.request_id).maybeSingle();setRequest(rq||null);}else setRequest(null);
-   const{data:pd}=await supabase.rpc("get_job_contact_details",{p_job_id:jobId});setPrivateData(pd||{});
-  }
-  setLoading(false);
+  try{
+   const{data,error}=await supabase.from("jobs").select("*").eq("id",String(jobId)).maybeSingle();
+   if(error)throw error;
+   setJob(data||null);
+   if(!data){setRequest(null);setPrivateData({});return;}
+   if(data.request_id){const{data:rq,error:requestError}=await supabase.from("service_requests").select("title,description,preferred_date,preferred_time,location_text,location_latitude,location_longitude").eq("id",data.request_id).maybeSingle();if(requestError)console.warn("KAMPRO job request details unavailable:",requestError.message);setRequest(rq||null);}else setRequest(null);
+   const{data:pd,error:privateError}=await supabase.rpc("get_job_contact_details",{p_job_id:String(jobId)});if(privateError)console.warn("KAMPRO job contacts unavailable:",privateError.message);setPrivateData(pd||{});
+  }catch(e:any){console.error("KAMPRO job details load failed:",e?.message||e);setJob(null);setRequest(null);setPrivateData({});Alert.alert("Unable to load job","The job details could not be loaded. Please return to My Jobs and try again.");}
+  finally{setLoading(false);}
  }
  async function openChat(){if(!job)return;if(mode==="customer"){const{data:conversationId,error}=await supabase.rpc("get_or_create_conversation",{p_professional_id:job.professional_id});if(error||!conversationId){Alert.alert("Chat unavailable",error?.message||"Unable to open chat.");return;}router.push({pathname:"/chat",params:{conversationId,otherName:privateData?.professional_name||"Professional"}});}else{const{data,error}=await supabase.from("conversations").select("id").eq("customer_id",job.customer_id).eq("professional_id",job.professional_id).maybeSingle();if(error||!data){Alert.alert("Chat unavailable","No conversation is available yet.");return;}router.push({pathname:"/chat",params:{conversationId:data.id,otherName:privateData?.customer_name||"Customer"}});}}
  async function call(){

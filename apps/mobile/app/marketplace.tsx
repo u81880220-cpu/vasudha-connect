@@ -2,7 +2,7 @@ import * as Location from "expo-location";
 import React,{ useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { AppBottomNav } from "../src/components/AppBottomNav";
@@ -31,9 +31,12 @@ class MarketplaceErrorBoundary extends React.Component<any,{error:Error|null}>{
 
 function MarketplaceScreen(){
   const {t}=useKamproLanguage();
+  const routeParams=useLocalSearchParams<{serviceName?:string|string[]}>();
+  const initialServiceName=Array.isArray(routeParams.serviceName)?routeParams.serviceName[0]||"":routeParams.serviceName||"";
   const[marketplaceConfig,setMarketplaceConfig]=useState<any>(null);
   const[selection,setSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:null,serviceName:null,subServiceId:null,subServiceName:null});
-  const[query,setQuery]=useState("");
+  const[query,setQuery]=useState(initialServiceName);
+  useEffect(()=>{setQuery(initialServiceName)},[initialServiceName]);
   const[selectedMapPro,setSelectedMapPro]=useState<Professional|null>(null);
   const[items,setItems]=useState<Professional[]>([]);
   const[loading,setLoading]=useState(true);
@@ -182,7 +185,7 @@ function MarketplaceScreen(){
     setSearchError("");
     const timeout=new Promise<{data:null;error:any}>(resolve=>setTimeout(()=>resolve({data:null,error:new Error("Search timed out")}),10000));
     const request=supabase.rpc("nearby_professionals_map",{
-      p_latitude:coords.latitude,p_longitude:coords.longitude,p_radius_km:radius,p_skill_id:selection.legacySkillId||null,p_sub_service_id:selection.subServiceId||null,p_category_id:selection.categoryId||null,p_service_id:selection.serviceId||null
+      p_latitude:coords.latitude,p_longitude:coords.longitude,p_radius_km:radius,p_skill_id:query.trim()?null:selection.legacySkillId||null,p_sub_service_id:query.trim()?null:selection.subServiceId||null,p_category_id:query.trim()?null:selection.categoryId||null,p_service_id:query.trim()?null:selection.serviceId||null
     });
     const{data,error}=await Promise.race([request,timeout]);
     if(requestId!==searchRequestRef.current)return;
