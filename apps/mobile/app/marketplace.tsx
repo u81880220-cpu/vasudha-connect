@@ -191,31 +191,41 @@ function MarketplaceScreen(){
       setSearchError("We couldn't load professionals right now. Please try again.");
     } else {
       const professionals=(data??[]) as Professional[];
-      // Include saved catalogue services in local text search, not only legacy skills.
+      // Build search labels through explicit queries so nested PostgREST relationship names
+      // cannot silently prevent approved catalogue services from being indexed.
       const professionalIds=professionals.map((x)=>x.professional_id);
+      const catalogueSkills=new Map<string,Professional["skills"]>();
       if(professionalIds.length){
         const {data:assignments,error:assignmentError}=await supabase
-          .from("professional_sub_services")
-          .select("professional_id,service_catalogue_sub_services(name,service_catalogue_services(name))")
+          .from("professional_sub_services").select("professional_id,sub_service_id")
           .in("professional_id",professionalIds);
         if(!assignmentError&&assignments?.length){
-          const catalogueSkills=new Map<string,Professional["skills"]>();
+          const subIds=[...new Set(assignments.map((x:any)=>x.sub_service_id).filter(Boolean))];
+          const {data:subServices}=await supabase.from("service_catalogue_sub_services").select("id,name,service_id").in("id",subIds);
+          const serviceIds=[...new Set((subServices||[]).map((x:any)=>x.service_id).filter(Boolean))];
+          const {data:services}=serviceIds.length?await supabase.from("service_catalogue_services").select("id,name,category_id").in("id",serviceIds):{data:[] as any[]};
+          const categoryIds=[...new Set((services||[]).map((x:any)=>x.category_id).filter(Boolean))];
+          const {data:categories}=categoryIds.length?await supabase.from("service_categories").select("id,name").in("id",categoryIds):{data:[] as any[]};
+          const subById=new Map((subServices||[]).map((x:any)=>[x.id,x]));
+          const serviceById=new Map((services||[]).map((x:any)=>[x.id,x]));
+          const categoryById=new Map((categories||[]).map((x:any)=>[x.id,x]));
           for(const assignment of assignments as any[]){
-            const sub=assignment.service_catalogue_sub_services;
+            const sub:any=subById.get(assignment.sub_service_id);
             if(!sub)continue;
-            const service=sub.service_catalogue_services;
-            const names=[sub.name,service?.name].filter(Boolean);
+            const service:any=serviceById.get(sub.service_id);
+            const category:any=service?categoryById.get(service.category_id):null;
+            const labels=[category?.name,service?.name,sub.name].filter(Boolean);
             const existing=catalogueSkills.get(assignment.professional_id)||[];
-            for(const name of names){
-              if(!existing.some((skill)=>skill.name.toLowerCase()===String(name).toLowerCase())){
-                existing.push({id:"catalogue-"+assignment.professional_id+"-"+String(name),name:String(name),category:"Catalogue service",primary:false});
+            for(const label of labels){
+              if(!existing.some((skill)=>skill.name.toLowerCase()===String(label).toLowerCase())){
+                existing.push({id:"catalogue-"+assignment.professional_id+"-"+String(label),name:String(label),category:"Catalogue service",primary:false});
               }
             }
             catalogueSkills.set(assignment.professional_id,existing);
           }
-          setItems(professionals.map((professional)=>({...professional,skills:[...(professional.skills||[]),...(catalogueSkills.get(professional.professional_id)||[])]})));
-        }else{setItems(professionals);}
-      }else{setItems(professionals);}
+        }
+      }
+      setItems(professionals.map((professional)=>({...professional,skills:[...(professional.skills||[]),...(catalogueSkills.get(professional.professional_id)||[])]})));
     }
     setLoading(false);
   }
