@@ -36,6 +36,7 @@ function MarketplaceScreen(){
   const[marketplaceConfig,setMarketplaceConfig]=useState<any>(null);
   const[selection,setSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:null,serviceName:null,subServiceId:null,subServiceName:null});
   const[query,setQuery]=useState(initialServiceName);
+  useEffect(()=>{setQuery(initialServiceName)},[initialServiceName]);
   const[selectedMapPro,setSelectedMapPro]=useState<Professional|null>(null);
   const[items,setItems]=useState<Professional[]>([]);
   const[loading,setLoading]=useState(true);
