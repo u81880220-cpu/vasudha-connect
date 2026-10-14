@@ -254,6 +254,21 @@ function ProfessionalHome(){
   const subscription=AppState.addEventListener("change",(state)=>{if(state==="active")void refreshProfessionalLocation()});
   return()=>{active=false;clearInterval(interval);subscription.remove()};
  },[session?.user.id,stats.available]);
+ useEffect(()=>{
+  if(!session?.user.id)return;
+  let active=true;
+  async function refreshSavedAvailability(){
+   const{data,error}=await supabase.from("professional_profiles").select("is_available").eq("user_id",session!.user.id).maybeSingle();
+   if(active&&!error&&data)setStats(x=>({...x,available:!!data.is_available}));
+  }
+  const channel=supabase.channel("professional-availability-"+session.user.id)
+   .on("postgres_changes",{event:"UPDATE",schema:"public",table:"professional_profiles",filter:"user_id=eq."+session.user.id},payload=>{
+    const row=payload.new as any;
+    if(active&&typeof row?.is_available==="boolean")setStats(x=>({...x,available:row.is_available}));
+   }).subscribe();
+  const interval=setInterval(()=>{void refreshSavedAvailability()},15000);
+  return()=>{active=false;clearInterval(interval);void supabase.removeChannel(channel)};
+ },[session?.user.id]);
  async function toggleAvailability(v:boolean){
   if(busy)return;setBusy(true);
   const{data:current}=await supabase.from("professional_profiles").select("headline,about,years_experience,service_radius_km,base_latitude,base_longitude").eq("user_id",session?.user.id).maybeSingle();
