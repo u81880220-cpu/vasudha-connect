@@ -1,4 +1,4 @@
-import {useCallback,useState} from "react";
+import {useCallback,useRef,useState} from "react";
 import {ActivityIndicator,Alert,Modal,Pressable,SafeAreaView,ScrollView,StyleSheet,Text,View} from "react-native";
 import {supabase} from "../src/lib/supabase";
 import {router,useFocusEffect,useLocalSearchParams} from "expo-router";
@@ -15,7 +15,7 @@ export function ErrorBoundary({error,retry}:{error:Error;retry:()=>void}){return
 
 export default function Jobs(){
  const{user,mode}=useAuth(); const {t}=useKamproLanguage(); const routeParams=useLocalSearchParams<{created?:string|string[];requestId?:string|string[]}>(); const created=Array.isArray(routeParams.created)?routeParams.created[0]:routeParams.created; const requestId=Array.isArray(routeParams.requestId)?routeParams.requestId[0]:routeParams.requestId;
- const[cancelTarget,setCancelTarget]=useState<any|null>(null); const[cancelBusy,setCancelBusy]=useState(false); const[cancelMessage,setCancelMessage]=useState(""); const[rehireBusyId,setRehireBusyId]=useState<string|null>(null);
+ const[cancelTarget,setCancelTarget]=useState<any|null>(null); const[cancelBusy,setCancelBusy]=useState(false); const[cancelMessage,setCancelMessage]=useState(""); const[rehireBusyId,setRehireBusyId]=useState<string|null>(null); const rehireRequestKeys=useRef<Record<string,string>>({});
  const[jobs,setJobs]=useState<any[]>([]); const[requests,setRequests]=useState<any[]>([]); const[loading,setLoading]=useState(true); const[notice,setNotice]=useState(!!created);
  useFocusEffect(useCallback(()=>{void load();return undefined},[user?.id,mode]));
  async function load(){
@@ -55,7 +55,7 @@ export default function Jobs(){
    setRequests([]);
   }finally{setLoading(false);}
  }
- async function rehire(job:any){if(!job?.id||!job?.professional_id||rehireBusyId)return;setRehireBusyId(job.id);try{const{error}=await supabase.rpc("create_rehire_connection",{p_job_id:job.id});if(error){const noCredits=/no connection credits/i.test(error.message||"");if(noCredits){Alert.alert("Connection credit required","Rehiring this professional uses 1 connection credit. Get a connection package to continue.",[{text:"Not now",style:"cancel"},{text:"Get connections",onPress:()=>router.push("/connection-packages")}]);}else Alert.alert("Rehire unavailable",error.message||"Please try again.");return;}router.push({pathname:"/professional-public",params:{professionalId:job.professional_id}});}catch(e:any){Alert.alert("Rehire unavailable",e?.message||"Please try again.");}finally{setRehireBusyId(null);}}
+ async function rehire(job:any){if(!job?.id||!job?.professional_id||rehireBusyId)return;setRehireBusyId(job.id);const requestKey=rehireRequestKeys.current[job.id]||(rehireRequestKeys.current[job.id]=job.id+"-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,10));try{const{error}=await supabase.rpc("create_rehire_connection",{p_job_id:job.id,p_request_key:requestKey});if(error){const noCredits=/no connection credits/i.test(error.message||"");if(noCredits){Alert.alert("Connection credit required","Rehiring this professional uses 1 connection credit. Get a connection package to continue.",[{text:"Not now",style:"cancel"},{text:"Get connections",onPress:()=>router.push("/connection-packages")}]);}else Alert.alert("Rehire unavailable",error.message||"Please try again.");return;}delete rehireRequestKeys.current[job.id];router.push({pathname:"/professional-public",params:{professionalId:job.professional_id}});}catch(e:any){Alert.alert("Rehire unavailable",e?.message||"Please try again.");}finally{setRehireBusyId(null);}}
  async function status(job:any,next:string){const{error}=await supabase.rpc("update_job_status",{p_job_id:job.id,p_status:next});if(error)Alert.alert("Status update failed",error.message);else load()}
  function cancel(job:any){setCancelMessage("");setCancelTarget(job)}
  async function confirmCancel(){if(!cancelTarget||cancelBusy)return;setCancelBusy(true);setCancelMessage("");try{const{data,error}=await supabase.rpc("cancel_job",{p_job_id:cancelTarget.id,p_reason:"Cancelled by participant"});if(error)throw error;setCancelTarget(null);Alert.alert("Job cancelled","The other participant has been notified.");await load()}catch(e:any){setCancelMessage(e?.message||"Cancellation failed. Please try again.")}finally{setCancelBusy(false)}}
