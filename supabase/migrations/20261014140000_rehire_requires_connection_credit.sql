@@ -42,17 +42,18 @@ begin
 
   update public.professional_connections
   set expires_at = now() + interval '30 days',
-      last_accessed_at = now()
+      last_accessed_at = now(),
+      purchased_at = now()
   where customer_id = v_customer_id
     and professional_id = v_professional_id
   returning id into v_connection_id;
 
   if v_connection_id is null then
     insert into public.professional_connections(
-      customer_id, professional_id, expires_at, last_accessed_at
+      customer_id, professional_id, expires_at, last_accessed_at, purchased_at
     )
     values (
-      v_customer_id, v_professional_id, now() + interval '30 days', now()
+      v_customer_id, v_professional_id, now() + interval '30 days', now(), now()
     )
     returning id into v_connection_id;
   end if;
