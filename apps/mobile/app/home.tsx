@@ -126,7 +126,7 @@ function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
   <Text style={[s.heading,{fontSize:width<360?20:width<400?22:24,lineHeight:width<360?28:width<400?31:35}]}>{t("findTrustedProfessionals")}</Text><Text style={[s.heading,{fontSize:width<360?20:width<400?22:24,lineHeight:width<360?28:width<400?31:35}]}>{t("aroundYou")}</Text>
   <Pressable accessibilityRole="button" accessibilityLabel="Search for services" onPress={()=>router.push("/marketplace")} style={s.search}><Text style={s.searchIcon}>⌕</Text><Text style={s.searchText}>{t("searchServices")}</Text></Pressable>
   <Text style={s.section}>{t("popularServices")}</Text>
-  <View style={s.services}>{services.map(x=><Link key={x} href="/marketplace" asChild><Pressable style={s.service}><ServiceIcon name={x} size={46}/><Text style={s.serviceText} numberOfLines={2}>{x}</Text></Pressable></Link>)}</View>
+  <View style={s.services}>{services.map(x=><Link key={x} href={{pathname:"/marketplace",params:{serviceName:x}}} asChild><Pressable style={s.service}><ServiceIcon name={x} size={46}/><Text style={s.serviceText} numberOfLines={2}>{x}</Text></Pressable></Link>)}</View>
   <Link href="/marketplace" asChild><Pressable style={s.hero}><Text style={s.heroTitle}>Kam hai? Pro bulaiye.</Text><Text style={s.heroSub}>{t("trustedAtDoorstep")}</Text><Text style={s.heroAction}>{t("findProfessionals")} →</Text></Pressable></Link>
   <Text style={s.section}>{t("yourConnections")}</Text>
   <Link href="/customer-dashboard" asChild><Pressable style={s.nearby}><View style={s.connectionIcon}><Text style={s.connectionIconText}>✓</Text></View><View style={{flex:1,minWidth:0}}><Text style={s.name}>{t("connectionsConversations")}</Text><Text style={s.meta}>{t("openConnections")}</Text></View><Text style={s.view}>Open</Text></Pressable></Link>
@@ -176,7 +176,7 @@ function ProfessionalHome(){
     supabase.from("jobs").select("id,status").eq("professional_id",session.user.id),
     supabase.from("customer_job_reviews").select("punctuality,work_quality,professional_behaviour,communication,value_for_money,reliability,safety_care").eq("professional_id",session.user.id),
     supabase.from("profiles").select("full_name,avatar_url").eq("id",session.user.id).maybeSingle(),
-    supabase.from("service_requests").select("id,title,status,created_at,customer_id").eq("professional_id",session.user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false}).limit(5)
+    supabase.rpc("get_professional_requests")
    ]);
    if(!active)return;
    const allJobs=jobs||[], done=allJobs.filter((x:any)=>x.status==="customer_confirmed").length;
@@ -184,11 +184,12 @@ function ProfessionalHome(){
    const rating=rv.length?rv.reduce((sum:number,x:any)=>sum+(Number(x.punctuality)+Number(x.work_quality)+Number(x.professional_behaviour)+Number(x.communication)+Number(x.value_for_money)+Number(x.reliability)+Number(x.safety_care))/7,0)/rv.length:null;
    setProfessionalName(userProfile?.full_name?.trim()||"");
    setAvatarUrl(userProfile?.avatar_url||null);
-   const customerIds=[...new Set((incoming||[]).map((x:any)=>x.customer_id).filter(Boolean))];
+   const pendingIncoming=(incoming||[]).filter((x:any)=>["requested","submitted"].includes(x.status));
+   const customerIds=[...new Set(pendingIncoming.map((x:any)=>x.customer_id).filter(Boolean))];
    const customerNames:Record<string,string>={};
    if(customerIds.length){const{data:customerProfiles}=await supabase.from("profiles").select("id,full_name").in("id",customerIds);(customerProfiles||[]).forEach((p:any)=>{customerNames[p.id]=p.full_name||"Customer"});}
-   setIncomingJobs((incoming||[]).map((x:any)=>({...x,customer_name:customerNames[x.customer_id]||"Customer"})));
-   setStats({trust:Number(profile?.trust_score||0),verified:profile?.verification_status==="verified",available:!!profile?.is_available,requests:(incoming||[]).length,connections:(connections||[]).length,rating,completion:allJobs.length?Math.round(done/allJobs.length*100):0});
+   setIncomingJobs(pendingIncoming.map((x:any)=>({...x,customer_name:customerNames[x.customer_id]||"Customer"})));
+   setStats({trust:Number(profile?.trust_score||0),verified:profile?.verification_status==="verified",available:!!profile?.is_available,requests:pendingIncoming.length,connections:(connections||[]).length,rating,completion:allJobs.length?Math.round(done/allJobs.length*100):0});
   })();
   return()=>{active=false};
  },[session?.user.id]);
@@ -210,12 +211,13 @@ function ProfessionalHome(){
   async function refreshIncoming(){
    const{data:incoming}=await supabase.from("service_requests").select("id,title,status,created_at,customer_id").eq("professional_id",session!.user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false}).limit(5);
    if(!active)return;
-   const ids=[...new Set((incoming||[]).map((x:any)=>x.customer_id).filter(Boolean))];
+   const pendingIncoming=(incoming||[]).filter((x:any)=>["requested","submitted"].includes(x.status));
+   const ids=[...new Set(pendingIncoming.map((x:any)=>x.customer_id).filter(Boolean))];
    const names:Record<string,string>={};
    if(ids.length){const{data:profiles}=await supabase.from("profiles").select("id,full_name").in("id",ids);(profiles||[]).forEach((p:any)=>{names[p.id]=p.full_name||"Customer"});}
    if(!active)return;
-   setIncomingJobs((incoming||[]).map((x:any)=>({...x,customer_name:names[x.customer_id]||"Customer"})));
-   setStats(x=>({...x,requests:(incoming||[]).length}));
+   setIncomingJobs(pendingIncoming.map((x:any)=>({...x,customer_name:names[x.customer_id]||"Customer"})));
+   setStats(x=>({...x,requests:pendingIncoming.length}));
   }
   const channel=supabase.channel("home-service-requests-"+session.user.id).on("postgres_changes",{event:"*",schema:"public",table:"service_requests",filter:"professional_id=eq."+session.user.id},()=>{void refreshIncoming()}).subscribe();
   const interval=setInterval(()=>{void refreshIncoming()},15000);
