@@ -169,14 +169,13 @@ function ProfessionalHome(){
   if(!session?.user.id)return;
   let active=true;
   (async()=>{
-   const[{data:profile},{data:requests},{data:connections},{data:jobs},{data:reviews},{data:userProfile},{data:incoming}]=await Promise.all([
+   const[{data:profile},{data:incoming},{data:connections},{data:jobs},{data:reviews},{data:userProfile}]=await Promise.all([
     supabase.from("professional_profiles").select("trust_score,verification_status,is_available").eq("user_id",session.user.id).maybeSingle(),
     supabase.rpc("get_professional_requests"),
     supabase.from("professional_connections").select("id").eq("professional_id",session.user.id).gt("expires_at",new Date().toISOString()),
     supabase.from("jobs").select("id,status").eq("professional_id",session.user.id),
     supabase.from("customer_job_reviews").select("punctuality,work_quality,professional_behaviour,communication,value_for_money,reliability,safety_care").eq("professional_id",session.user.id),
-    supabase.from("profiles").select("full_name,avatar_url").eq("id",session.user.id).maybeSingle(),
-    supabase.rpc("get_professional_requests")
+    supabase.from("profiles").select("full_name,avatar_url").eq("id",session.user.id).maybeSingle()
    ]);
    if(!active)return;
    const allJobs=jobs||[], done=allJobs.filter((x:any)=>x.status==="customer_confirmed").length;
