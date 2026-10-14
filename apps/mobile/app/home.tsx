@@ -208,7 +208,7 @@ function ProfessionalHome(){
   if(!session?.user.id)return;
   let active=true;
   async function refreshIncoming(){
-   const{data:incoming}=await supabase.from("service_requests").select("id,title,status,created_at,customer_id").eq("professional_id",session!.user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false}).limit(5);
+   const{data:incoming}=await supabase.rpc("get_professional_requests");
    if(!active)return;
    const pendingIncoming=(incoming||[]).filter((x:any)=>["requested","submitted"].includes(x.status));
    const ids=[...new Set(pendingIncoming.map((x:any)=>x.customer_id).filter(Boolean))];
