@@ -19,7 +19,7 @@ export default function ProfessionalProfile(){
  const[selectedSubServices,setSelectedSubServices]=useState<any[]>([]);
  const[areas,setAreas]=useState<any[]>([]);
  const[phone,setPhone]=useState("");const[phone2,setPhone2]=useState("");const[avatarUrl,setAvatarUrl]=useState<string|null>(null);
- const[port,setPort]=useState({title:"",description:"",media_url:""}),[area,setArea]=useState({label:"",city:"",state:"",radius_km:"10"}),[baseLocation,setBaseLocation]=useState<{latitude:number;longitude:number}|null>(null),[loading,setLoading]=useState(true);
+ const[port,setPort]=useState({title:"",description:"",media_url:""}),[area,setArea]=useState({label:"",city:"",state:"",radius_km:"10"}),[baseLocation,setBaseLocation]=useState<{latitude:number;longitude:number}|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false);
  useEffect(()=>{if(uid)load()},[uid]);
  async function load(){
   setLoading(true);
@@ -54,17 +54,27 @@ export default function ProfessionalProfile(){
   setLoading(false);
  }
  async function save(){
-  let coords=baseLocation;
-  if(!coords){try{const perm=await Location.requestForegroundPermissionsAsync();if(perm.status==="granted"){const pos=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});coords={latitude:pos.coords.latitude,longitude:pos.coords.longitude};setBaseLocation(coords);}}catch{}}
-  const {data:currentAvailability}=await supabase.from("professional_profiles").select("is_available").eq("user_id",uid).maybeSingle();
-  const{error}=await supabase.rpc("update_professional_profile",{p_headline:p.headline?.trim()||null,p_about:p.about?.trim()||null,p_years_experience:Number(p.years_experience)||0,p_service_radius_km:Number(p.service_radius_km)||10,p_is_available:!!currentAvailability?.is_available,p_base_latitude:coords?.latitude??null,p_base_longitude:coords?.longitude??null});
-  if(error)return Alert.alert("Save failed",error.message);
-  if(coords){const{error:locationError}=await supabase.rpc("update_professional_marketplace_location",{p_latitude:coords.latitude,p_longitude:coords.longitude});if(locationError)Alert.alert("Location not refreshed","Your profile was saved, but live marketplace location could not be refreshed: "+locationError.message);}
-  const {error:phoneError}=await supabase.from("user_contact_details").upsert({user_id:uid,phone:pPhone(phone),phone_2:phone2.trim()||null,updated_at:new Date().toISOString()});
-  if(phoneError)return Alert.alert("Phone save failed",phoneError.message);
-  await supabase.from("professional_sub_services").delete().eq("professional_id",uid);
-  if(selectedSubServices.length){const{error:serviceError}=await supabase.from("professional_sub_services").insert(selectedSubServices.map((x,i)=>({professional_id:uid,sub_service_id:x.id,years_experience:Number(p.years_experience)||0,is_primary:i===0})));if(serviceError)return Alert.alert("Services save failed",serviceError.message);}
-  Alert.alert("Saved successfully","Your professional profile has been updated.");load();
+  if(!uid){Alert.alert("Save failed","Please sign in again before saving your profile.");return;}
+  if(saving)return;
+  setSaving(true);
+  try{
+   let coords=baseLocation;
+   if(!coords){try{const perm=await Location.requestForegroundPermissionsAsync();if(perm.status==="granted"){const pos=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});coords={latitude:pos.coords.latitude,longitude:pos.coords.longitude};setBaseLocation(coords);}}catch{}}
+   const{data:currentAvailability,error:availabilityError}=await supabase.from("professional_profiles").select("is_available").eq("user_id",uid).maybeSingle();
+   if(availabilityError)throw new Error("Could not read your current availability: "+availabilityError.message);
+   if(!currentAvailability)throw new Error("Your professional profile was not found. Please sign in again.");
+   const{error:profileError}=await supabase.rpc("update_professional_profile",{p_headline:p.headline?.trim()||null,p_about:p.about?.trim()||null,p_years_experience:Number(p.years_experience)||0,p_service_radius_km:Number(p.service_radius_km)||10,p_is_available:!!currentAvailability.is_available,p_base_latitude:coords?.latitude??null,p_base_longitude:coords?.longitude??null});
+   if(profileError)throw new Error("Profile details could not be saved: "+profileError.message);
+   if(coords){const{error:locationError}=await supabase.rpc("update_professional_marketplace_location",{p_latitude:coords.latitude,p_longitude:coords.longitude});if(locationError)Alert.alert("Location not refreshed","Your profile was saved, but live marketplace location could not be refreshed: "+locationError.message);}
+   const{error:phoneError}=await supabase.from("user_contact_details").upsert({user_id:uid,phone:pPhone(phone),phone_2:phone2.trim()||null,updated_at:new Date().toISOString()});
+   if(phoneError)throw new Error("Contact phone could not be saved: "+phoneError.message);
+   const{error:deleteError}=await supabase.from("professional_sub_services").delete().eq("professional_id",uid);
+   if(deleteError)throw new Error("Existing service selections could not be updated: "+deleteError.message);
+   if(selectedSubServices.length){const{error:serviceError}=await supabase.from("professional_sub_services").insert(selectedSubServices.map((x,i)=>({professional_id:uid,sub_service_id:x.id,years_experience:Number(p.years_experience)||0,is_primary:i===0})));if(serviceError)throw new Error("Service selections could not be saved: "+serviceError.message);}
+   await load();
+   Alert.alert("Saved successfully","Your professional profile has been updated.");
+  }catch(e:any){Alert.alert("Save failed",e?.message||"Something went wrong while saving. Please try again.");}
+  finally{setSaving(false);}
  }
  async function addArea(){
   if(!area.label.trim()&&!area.city.trim())return Alert.alert("Service area","Enter an area or city.");
@@ -96,7 +106,7 @@ export default function ProfessionalProfile(){
     <Text style={s.l}>About your work</Text><TextInput style={[s.i,s.big]} placeholder="Tell customers about your experience and services" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={p.about||""} onChangeText={v=>setP({...p,about:v})} multiline/>
     <View style={s.inline}><View style={s.half}><Text style={s.l}>Experience</Text><TextInput style={s.i} keyboardType="number-pad" value={p.years_experience} onChangeText={v=>setP({...p,years_experience:v})}/></View><View style={s.half}><Text style={s.l}>Service radius</Text><TextInput style={s.i} keyboardType="number-pad" value={p.service_radius_km} onChangeText={v=>setP({...p,service_radius_km:v})}/></View></View>
     <View style={s.av}><View><Text style={s.bold}>Availability is managed from Home</Text><Text style={s.muted}>Use the Available for Work switch on your Home screen to change whether customers can find you.</Text></View></View>
-    <Pressable style={s.p} onPress={save}><Text style={s.pt}>Save profile</Text></Pressable>
+    <Pressable style={[s.p,saving&&{opacity:0.65}]} onPress={save} disabled={saving}><Text style={s.pt}>{saving?"Saving profile…":"Save profile"}</Text></Pressable>
    </View>
    <Text style={s.section}>Services you provide</Text>
    <View style={s.card}><Text style={s.helper}>Choose the exact Category → Service → Sub-service combinations you provide. You can add multiple services.</Text><ServicePicker requestService value={serviceSelection} onChange={v=>{setServiceSelection(v);if(v.subServiceId&&!selectedSubServices.some(x=>x.id===v.subServiceId))setSelectedSubServices(z=>[...z,{id:v.subServiceId,name:v.subServiceName||"Sub-service",serviceId:v.serviceId,serviceName:v.serviceName||"Service"}]);}}/><View style={s.selectedList}>{selectedSubServices.length===0?<Text style={s.muted}>No exact services selected yet.</Text>:selectedSubServices.map((x:any,i:number)=><View key={x.id} style={s.selectedService}><View style={{flex:1}}><Text style={s.bold}>{x.serviceName}</Text><Text style={s.muted}>{x.name}{i===0?" · Primary":""}</Text></View><Pressable onPress={()=>setSelectedSubServices(z=>z.filter(y=>y.id!==x.id))}><Text style={s.remove}>Remove</Text></Pressable></View>)}</View></View>
