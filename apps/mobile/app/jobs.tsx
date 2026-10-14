@@ -11,8 +11,10 @@ import { useKamproLanguage } from "../src/i18n/LanguageProvider";
 const steps=["worker_accepted","on_the_way","arrived","work_started","work_completed","customer_confirmed"];
 const labels=["Professional accepted","On the way","Arrived","Work started","Work completed","Customer confirmed"];
 
+export function ErrorBoundary({error,retry}:{error:Error;retry:()=>void}){return <SafeAreaView style={{flex:1,justifyContent:"center",padding:24,backgroundColor:"#fff"}}><Text style={{fontSize:22,fontWeight:"900",color:"#10233F"}}>My Jobs could not open</Text><Text style={{marginTop:8,color:"#475467"}}>{error?.message||"Unexpected error loading jobs."}</Text><Pressable onPress={retry} style={{marginTop:16,padding:14,backgroundColor:"#FF4B1F",borderRadius:12,alignItems:"center"}}><Text style={{color:"#fff",fontWeight:"900"}}>Try again</Text></Pressable><Pressable onPress={()=>router.replace("/home")} style={{marginTop:10,padding:12,alignItems:"center"}}><Text style={{color:"#FF4B1F",fontWeight:"800"}}>Back to Home</Text></Pressable></SafeAreaView>;}
+
 export default function Jobs(){
- const{user,mode}=useAuth(); const {t}=useKamproLanguage(); const {created,requestId}=useLocalSearchParams<{created?:string;requestId?:string}>();
+ const{user,mode}=useAuth(); const {t}=useKamproLanguage(); const routeParams=useLocalSearchParams<{created?:string|string[];requestId?:string|string[]}>(); const created=Array.isArray(routeParams.created)?routeParams.created[0]:routeParams.created; const requestId=Array.isArray(routeParams.requestId)?routeParams.requestId[0]:routeParams.requestId;
  const[cancelTarget,setCancelTarget]=useState<any|null>(null); const[cancelBusy,setCancelBusy]=useState(false); const[cancelMessage,setCancelMessage]=useState("");
  const[jobs,setJobs]=useState<any[]>([]); const[requests,setRequests]=useState<any[]>([]); const[loading,setLoading]=useState(true); const[notice,setNotice]=useState(!!created);
  useEffect(()=>{load()},[user?.id,mode]);
