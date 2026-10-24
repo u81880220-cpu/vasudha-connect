@@ -73,7 +73,7 @@ jobs:
           IMAGE="system-images;android-34;google_apis;x86_64"
           for attempt in 1 2 3; do
             echo "Installing emulator image (attempt $attempt/3)"
-            if yes | "$SDKMANAGER" --install "$IMAGE"; then
+            if "$SDKMANAGER" --install "$IMAGE"; then
               echo "Android emulator image installed."
               exit 0
             fi
