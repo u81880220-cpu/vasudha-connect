@@ -125,11 +125,31 @@ jobs:
           disk-size: 8G
           emulator-boot-timeout: 1200
           script: |
-            adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
-            maestro --version
+            set -uo pipefail
             mkdir -p android-maestro-results
-            export MAESTRO_DRIVER_STARTUP_TIMEOUT=180000
-            timeout 15m maestro --verbose test --format junit --output android-maestro-results/report.xml --test-output-dir android-maestro-results .maestro
+            echo "=== Emulator health before Maestro ==="
+            adb devices -l
+            adb shell getprop sys.boot_completed
+            adb shell pm list packages | grep -F "com.vasudha.connect" || true
+            echo "=== Install and verify KAMPRO APK ==="
+            adb install -r apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            adb shell monkey -p com.vasudha.connect 1 || true
+            maestro --version
+            export MAESTRO_DRIVER_STARTUP_TIMEOUT=120000
+            echo "=== Starting Maestro UI flows (hard limit: 8 minutes) ==="
+            set +e
+            timeout --foreground --signal=TERM --kill-after=20s 8m maestro --verbose test --format junit --output android-maestro-results/report.xml --test-output-dir android-maestro-results .maestro
+            result=$?
+            set -e
+            if [ "$result" -ne 0 ]; then
+              echo "=== Maestro exited with status $result; collecting diagnostics ==="
+              adb devices -l || true
+              adb shell dumpsys activity activities | tail -n 100 || true
+              adb logcat -d -t 1200 | grep -Ei "maestro|vasudha|kampro|fatal exception|androidruntime|instrumentation" | tail -n 250 || true
+              find android-maestro-results -maxdepth 4 -type f -print || true
+              exit "$result"
+            fi
+            echo "=== Maestro UI flows completed successfully ==="
 
       - name: Upload Android UI evidence
         if: always()
