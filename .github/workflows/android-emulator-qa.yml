@@ -63,6 +63,28 @@ jobs:
           yes | sdkmanager --licenses >/dev/null 2>&1 || true
           sdkmanager "ndk;27.1.12297006"
 
+      - name: Preinstall Android emulator image with retry
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -name sdkmanager -type f | head -n 1)"; fi
+          IMAGE="system-images;android-34;google_apis;x86_64"
+          for attempt in 1 2 3; do
+            echo "Installing emulator image (attempt $attempt/3)"
+            if yes | "$SDKMANAGER" --install "$IMAGE"; then
+              echo "Android emulator image installed."
+              exit 0
+            fi
+            echo "SDK image install failed; clearing partial image and retrying..."
+            rm -rf "$SDK_ROOT/system-images/android-34/google_apis/x86_64"
+            rm -rf "$HOME/.android/cache"/* 2>/dev/null || true
+            sleep $((attempt * 5))
+          done
+          echo "Android emulator system image could not be installed after three attempts."
+          exit 1
+
       - name: Build debug APK
         working-directory: apps/mobile/android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
