@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { Msg91RegistrationWidget } from "../src/components/Msg91RegistrationWidget";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase,getAuthRedirect } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
@@ -169,8 +169,8 @@ export default function AuthScreen(){
   finally{setBusy(false);}
  }
 
- if(isReset)return <SafeAreaView style={s.safe}><KeyboardAvoidingView style={s.flex} behavior={Platform.OS==="ios"?"padding":"height"}><View style={s.container}><VasudhaLogo/><Text style={s.heading}>Reset your password</Text><Text style={s.sub}>Choose a new password for your KAMPRO account.</Text><TextInput value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" placeholder="New password (8+ characters)" placeholderTextColor="#7B8794" style={s.input}/><TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry autoCapitalize="none" placeholder="Confirm new password" placeholderTextColor="#7B8794" style={s.input}/><Pressable disabled={busy} onPress={updatePassword} style={s.primary}><Text style={s.primaryText}>{busy?"Updating…":"Update password"}</Text></Pressable></View></KeyboardAvoidingView></SafeAreaView>;
- return <SafeAreaView style={s.safe}><KeyboardAvoidingView style={s.flex} behavior={Platform.OS==="ios"?"padding":"height"}><View style={s.container}>
+ if(isReset)return <SafeAreaView style={s.safe}><KeyboardAvoidingView style={s.flex} behavior={Platform.OS==="ios"?"padding":"height"}><ScrollView style={s.flex} contentContainerStyle={s.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}><VasudhaLogo/><Text style={s.heading}>Reset your password</Text><Text style={s.sub}>Choose a new password for your KAMPRO account.</Text><TextInput value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" placeholder="New password (8+ characters)" placeholderTextColor="#7B8794" style={s.input}/><TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry autoCapitalize="none" placeholder="Confirm new password" placeholderTextColor="#7B8794" style={s.input}/><Pressable disabled={busy} onPress={updatePassword} style={s.primary}><Text style={s.primaryText}>{busy?"Updating…":"Update password"}</Text></Pressable></ScrollView></KeyboardAvoidingView></SafeAreaView>;
+ return <SafeAreaView style={s.safe}><KeyboardAvoidingView style={s.flex} behavior={Platform.OS==="ios"?"padding":"height"}><ScrollView style={s.flex} contentContainerStyle={s.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
   <View style={{alignItems:"flex-end",marginBottom:10}}><LanguageSwitch/></View>
   <VasudhaLogo/>
   <Text style={s.heading}>{t("welcomeBack")}</Text>
@@ -194,11 +194,11 @@ export default function AuthScreen(){
   <Text style={s.terms}>By continuing, you agree to our{"\n"}Terms & Conditions and Privacy Policy</Text>
   {showMsg91Widget&&<Msg91RegistrationWidget visible={showMsg91Widget} onClose={()=>setShowMsg91Widget(false)} onCompletion={(result)=>{void completeMsg91Registration(result as {success?:boolean;identifier?:string;message?:string});}} widgetId={process.env.EXPO_PUBLIC_MSG91_WIDGET_ID||""} tokenAuth={process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH||""} />}
   <Pressable onPress={()=>router.replace({pathname:"/select-mode",params:{mode}})}><Text style={s.switch}>{mode==="customer"?"Use KAMPRO as a Professional":"Use KAMPRO as a Customer"}</Text></Pressable>
- </View></KeyboardAvoidingView></SafeAreaView>
+ </ScrollView></KeyboardAvoidingView></SafeAreaView>
 }
 
 const s=StyleSheet.create({
- safe:{flex:1,backgroundColor:KAMPRO.background},flex:{flex:1},container:{flex:1,padding:22,justifyContent:"center"},
+ safe:{flex:1,backgroundColor:KAMPRO.background},flex:{flex:1},container:{flexGrow:1,paddingHorizontal:22,paddingVertical:24,justifyContent:"center",width:"100%",maxWidth:520,alignSelf:"center"},
  heading:{fontSize:26,fontWeight:"900",textAlign:"center",marginTop:28,color:"#10233F"},sub:{textAlign:"center",color:"#6B7280",marginTop:5,marginBottom:16},
  tabs:{flexDirection:"row",backgroundColor:"#F7F8FA",borderRadius:12,padding:3,marginBottom:14},tab:{flex:1,height:40,alignItems:"center",justifyContent:"center",borderRadius:9},tabOn:{backgroundColor:"#fff"},tabText:{fontWeight:"800",color:"#6B7280"},tabTextOn:{color:"#FF4B1F"},
  phoneRow:{flexDirection:"row",borderWidth:1,borderColor:"#CBD0D8",borderRadius:12,height:52,overflow:"hidden"},code:{paddingHorizontal:12,justifyContent:"center",backgroundColor:"#f7faf9",borderRightWidth:1,borderRightColor:"#CBD0D8"},phone:{flex:1,paddingHorizontal:12,fontSize:16,color:"#10233F",backgroundColor:"#fff"},
