@@ -8,6 +8,13 @@ type Props = {
  liveLongitude?: number | null;
 };
 
+/**
+ * Crash-safe native tracking panel.
+ * We intentionally do not mount react-native-maps here: native MapView can
+ * terminate older/device-specific Android builds when Google Maps SDK/API
+ * configuration is missing. Tracking/status must remain usable regardless
+ * of map SDK availability; Google Maps is opened externally for navigation.
+ */
 export default function JobTrackingLocationMap({serviceLatitude,serviceLongitude,serviceLabel,liveLatitude,liveLongitude}:Props){
  const lat=serviceLatitude==null?NaN:Number(serviceLatitude);
  const lng=serviceLongitude==null?NaN:Number(serviceLongitude);
@@ -22,36 +29,20 @@ export default function JobTrackingLocationMap({serviceLatitude,serviceLongitude
    : "https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(destination);
   void Linking.openURL(url).catch(()=>{});
  };
-
- // Avoid initializing react-native-maps until valid coordinates exist.
- if(!hasService&&!hasLive)return <View style={s.mapFallback}>
-  <Text style={s.fallbackTitle}>Live map is waiting for GPS coordinates</Text>
-  <Text style={s.fallbackText}>{serviceLabel||"Service location"}{!hasLive?" · Waiting for the professional to share location.":""}</Text>
-  <Pressable accessibilityRole="button" onPress={openMaps} style={s.mapsButton}><Text style={s.mapsButtonText}>Open service location in Google Maps</Text></Pressable>
+ return <View style={s.panel}>
+  <Text style={s.title}>{hasLive?"Professional GPS location received":"Live map is waiting for GPS coordinates"}</Text>
+  <Text style={s.address}>{serviceLabel||"Service location"}</Text>
+  {hasService?<Text style={s.coordinate}>Service coordinates: {lat.toFixed(5)}, {lng.toFixed(5)}</Text>:<Text style={s.note}>Exact service coordinates are not available yet.</Text>}
+  {hasLive?<Text style={s.coordinate}>Professional coordinates: {liveLat.toFixed(5)}, {liveLng.toFixed(5)}</Text>:<Text style={s.note}>Waiting for the professional to share their latest GPS location.</Text>}
+  <Pressable accessibilityRole="button" onPress={openMaps} style={s.button}><Text style={s.buttonText}>{hasLive&&hasService?"Navigate to professional / service in Google Maps":"Open service location in Google Maps"}</Text></Pressable>
  </View>;
-
- let MapView:any, Marker:any;
- try {
-  const maps=require("react-native-maps");
-  MapView=maps.default||maps;
-  Marker=maps.Marker;
- } catch(e) {
-  return <View style={s.mapFallback}>
-   <Text style={s.fallbackTitle}>Map unavailable on this device</Text>
-   <Text style={s.fallbackText}>Your job status is still available. Open the location in Google Maps to navigate.</Text>
-   <Pressable accessibilityRole="button" onPress={openMaps} style={s.mapsButton}><Text style={s.mapsButtonText}>Open in Google Maps</Text></Pressable>
-  </View>;
- }
- const centerLat=hasService&&hasLive?(lat+liveLat)/2:hasService?lat:liveLat;
- const centerLng=hasService&&hasLive?(lng+liveLng)/2:hasService?lng:liveLng;
- const region={latitude:centerLat,longitude:centerLng,latitudeDelta:hasService&&hasLive?Math.max(0.01,Math.abs(lat-liveLat)*1.5):0.01,longitudeDelta:hasService&&hasLive?Math.max(0.01,Math.abs(lng-liveLng)*1.5):0.01};
- return <View style={s.map}><MapView style={{flex:1}} region={region}>{hasService?<Marker coordinate={{latitude:lat,longitude:lng}} title="Service location" description={serviceLabel||undefined}/>:null}{hasLive?<Marker coordinate={{latitude:liveLat,longitude:liveLng}} title="Professional live location" pinColor="#087D65"/>:null}</MapView></View>;
 }
 const s=StyleSheet.create({
- map:{height:220,borderRadius:18,marginTop:14,overflow:"hidden",backgroundColor:"#e9f3ef",alignItems:"center",justifyContent:"center"},
- mapFallback:{minHeight:100,borderRadius:18,marginTop:14,padding:16,backgroundColor:"#e9f3ef",alignItems:"center",justifyContent:"center"},
- fallbackTitle:{fontWeight:"900",color:"#10233F",textAlign:"center"},
- fallbackText:{marginTop:6,color:"#475467",textAlign:"center"},
- mapsButton:{marginTop:12,paddingHorizontal:14,paddingVertical:10,borderRadius:10,backgroundColor:"#FF4B1F"},
- mapsButtonText:{color:"#fff",fontWeight:"800",textAlign:"center"}
+ panel:{minHeight:120,borderRadius:18,marginTop:14,padding:16,backgroundColor:"#e9f3ef",alignItems:"center",justifyContent:"center"},
+ title:{fontWeight:"900",color:"#10233F",textAlign:"center",fontSize:15},
+ address:{marginTop:6,color:"#475467",textAlign:"center"},
+ coordinate:{marginTop:8,color:"#087D65",fontSize:12,fontWeight:"700",textAlign:"center"},
+ note:{marginTop:8,color:"#475467",textAlign:"center"},
+ button:{marginTop:12,paddingHorizontal:14,paddingVertical:11,borderRadius:10,backgroundColor:"#FF4B1F",alignSelf:"stretch"},
+ buttonText:{color:"#fff",fontWeight:"800",textAlign:"center"}
 });
