@@ -41,9 +41,9 @@ export default function ProfessionalProfile(){
   if(saving)return;
   setSaving(true);
   try{
-   if(!fullName.trim()||fullName.trim().length<2)throw new Error("Professional name is required.");
-   if(!phone.trim())throw new Error("Primary contact number is required.");
-   if(!selectedSubServices.length)throw new Error("Select at least one service or sub-service before saving.");
+   if(!fullName.trim()||fullName.trim().length<2)throw new Error("Required: enter your professional name (at least 2 characters).");
+   if(!phone.trim())throw new Error("Required: enter your primary contact number.");
+   if(!selectedSubServices.length)throw new Error("Required: select at least one service or sub-service in “Services you provide” before saving.");
    const radiusInput=String(p.service_radius_km??"").trim()===""?10:Number(p.service_radius_km);const radius=Number.isFinite(radiusInput)&&radiusInput>=1&&radiusInput<=500?radiusInput:10;
    const yearsInput=String(p.years_experience??"").trim()===""?0:Number(p.years_experience);const years=Number.isFinite(yearsInput)&&yearsInput>=0&&yearsInput<=70?yearsInput:0;
    let coords=baseLocation;
@@ -77,7 +77,6 @@ export default function ProfessionalProfile(){
    <Text style={s.t}>My Professional Profile</Text><Text style={s.sub}>Build a trusted profile that helps customers choose you.</Text><View style={s.completion}><Text style={s.completionTitle}>Profile checklist</Text><Text style={s.completionText}>{[!!fullName.trim(),!!phone.trim(),!!selectedSubServices.length].filter(Boolean).length} of 3 required profile items complete. Upload an identity document in Verification to finish registration; approval is reviewed separately.</Text></View>
    <ProfilePhotoPicker userId={uid} avatarUrl={avatarUrl} onUploaded={setAvatarUrl} />
    {loading?<Text style={s.muted}>Loading profile…</Text>:null}
-   {saveMessage?<View accessibilityRole="alert" style={[s.saveNotice,saveMessage.type==="success"?s.saveSuccess:s.saveError]}><Text style={s.saveNoticeText}>{saveMessage.text}</Text></View>:null}
    <View style={s.status}><View><Text style={s.statusTitle}>Professional profile</Text><Text style={s.statusSub}>Verification: {p.verification_status||"pending"}</Text></View><View style={[s.dot,{backgroundColor:p.is_available?"#FF4B1F":"#aebbb7"}]}/></View>
    <Text style={s.section}>Profile details</Text><View style={s.card}><Text style={s.l}>Professional name *</Text><TextInput style={s.i} value={fullName} onChangeText={setFullName} placeholder="Your name" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" autoCapitalize="words"/><Text style={s.l}>Primary phone number *</Text><TextInput style={s.i} keyboardType="phone-pad" placeholder="+91 98765 43210" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={phone} onChangeText={setPhone}/><Text style={s.l}>Alternate phone number (optional)</Text><TextInput style={s.i} keyboardType="phone-pad" placeholder="Alternate number" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={phone2} onChangeText={setPhone2}/><Text style={s.helper}>Your contact number is shared with a customer only after they unlock your profile.</Text></View>
    <View style={s.card}>
@@ -85,7 +84,8 @@ export default function ProfessionalProfile(){
     <Text style={s.l}>About your work</Text><TextInput style={[s.i,s.big]} placeholder="Tell customers about your experience and services" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={p.about||""} onChangeText={v=>setP({...p,about:v})} multiline/>
     <View style={s.inline}><View style={s.half}><Text style={s.l}>Experience (years)</Text><TextInput style={s.i} keyboardType="number-pad" value={p.years_experience} onChangeText={v=>setP({...p,years_experience:v})} placeholder="0" placeholderTextColor="#6B7280"/></View><View style={s.half}><Text style={s.l}>Service radius (km)</Text><TextInput style={s.i} keyboardType="number-pad" value={p.service_radius_km} onChangeText={v=>setP({...p,service_radius_km:v})} placeholder="10" placeholderTextColor="#6B7280"/><Text style={s.helper}>Optional · Defaults to 10 km. Customers farther away may not see your profile.</Text></View></View>
     <View style={s.av}><View><Text style={s.bold}>Availability is managed from Home</Text><Text style={s.muted}>Use the Available for Work switch on your Home screen to change whether customers can find you.</Text></View></View>
-    <Pressable style={[s.p,saving&&{opacity:0.65}]} onPress={save} disabled={saving}><Text style={s.pt}>{saving?"Saving profile…":"Save profile"}</Text></Pressable>
+    {saveMessage?<View accessibilityRole="alert" style={[s.saveNotice,saveMessage.type==="success"?s.saveSuccess:s.saveError]}><Text style={s.saveNoticeText}>{saveMessage.text}</Text></View>:null}
+    <Pressable accessibilityRole="button" accessibilityLabel="Save professional profile" style={[s.p,saving&&{opacity:0.65}]} onPress={save} disabled={saving}><Text style={s.pt}>{saving?"Saving profile…":"Save profile"}</Text></Pressable>
    </View>
    <Text style={s.section}>Services you provide</Text>
    <View style={s.card}><Text style={s.helper}>Required · Choose at least one exact Category → Service → Sub-service combination. All other profile details are optional.</Text><ServicePicker requestService value={serviceSelection} onChange={v=>{setServiceSelection(v);if(v.subServiceId&&!selectedSubServices.some(x=>x.id===v.subServiceId))setSelectedSubServices(z=>[...z,{id:v.subServiceId,name:v.subServiceName||"Sub-service",serviceId:v.serviceId,serviceName:v.serviceName||"Service"}]);}}/><View style={s.selectedList}>{selectedSubServices.length===0?<Text style={s.muted}>No exact services selected yet.</Text>:selectedSubServices.map((x:any,i:number)=><View key={x.id} style={s.selectedService}><View style={{flex:1}}><Text style={s.bold}>{x.serviceName}</Text><Text style={s.muted}>{x.name}{i===0?" · Primary":""}</Text></View><Pressable onPress={()=>setSelectedSubServices(z=>z.filter(y=>y.id!==x.id))}><Text style={s.remove}>Remove</Text></Pressable></View>)}</View></View>
