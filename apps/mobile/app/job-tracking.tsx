@@ -34,15 +34,30 @@ export default function JobTracking(){
  useEffect(()=>{if(!jobId)return; let active=true; const tick=async()=>{try{const{data,error}=await supabase.rpc("get_job_live_location",{p_job_id:String(jobId)});if(error)console.warn("KAMPRO live location lookup failed:",error.message);if(active)setLive(Array.isArray(data)?data[0]||null:data||null);}catch(e){console.warn("KAMPRO live location polling failed:",e);}}; void tick(); const t=setInterval(()=>{void tick()},15000); return()=>{active=false;clearInterval(t)}},[jobId]);
  async function load(){
   if(!jobId){setJob(null);setPrivateData({});setLoading(false);return;}
-  setLoading(true);
+  if(!job)setLoading(true);
   try{
    const{data,error}=await supabase.from("jobs").select("*").eq("id",String(jobId)).maybeSingle();
    if(error)throw error;
    setJob(data||null);
+   // Render the persisted job status immediately; contact/location RPCs must not
+   // keep the entire tracking screen stuck on a loading spinner.
+   setLoading(false);
    if(!data){setPrivateData({});return;}
    const{data:pd,error:privateError}=await supabase.rpc("get_job_contact_and_location",{p_job_id:String(jobId)});
    if(privateError)console.warn("KAMPRO job details unavailable:",privateError.message);
-   setPrivateData(pd||{});
+   let resolvedPrivateData=pd||{};
+   const existingLocation=resolvedPrivateData?.service_location||{};
+   const hasServiceCoordinates=existingLocation.latitude!=null&&existingLocation.longitude!=null;
+   if(data.request_id&&!hasServiceCoordinates){
+    // Recover service coordinates from the participant-scoped request row if
+    // the private-details RPC is delayed or returns incomplete location data.
+    const{data:requestData,error:requestError}=await supabase.from("service_requests")
+     .select("location_text,location_latitude,location_longitude")
+     .eq("id",String(data.request_id)).maybeSingle();
+    if(requestError)console.warn("KAMPRO service location fallback unavailable:",requestError.message);
+    if(requestData)resolvedPrivateData={...resolvedPrivateData,service_location:{...existingLocation,address:existingLocation.address||requestData.location_text,latitude:existingLocation.latitude??requestData.location_latitude,longitude:existingLocation.longitude??requestData.location_longitude}};
+   }
+   setPrivateData(resolvedPrivateData);
    if(mode==="professional"&&user?.id){
     const{count,error:countError}=await supabase.from("portfolio_items").select("id",{count:"exact",head:true}).eq("job_id",String(jobId)).eq("professional_id",user.id);
     if(countError)console.warn("KAMPRO work-photo count unavailable:",countError.message);
@@ -50,8 +65,10 @@ export default function JobTracking(){
    }
   }catch(e:any){
    console.error("KAMPRO job tracking load failed:",e?.message||e);
-   setJob(null);setPrivateData({});
-   Alert.alert("Unable to open job","The job details could not be loaded. Please return to My Jobs and try again.");
+   // Keep the already-loaded job/status visible if a secondary tracking lookup fails.
+   if(!job)setJob(null);
+   setPrivateData(current=>Object.keys(current||{}).length?current:{});
+   Alert.alert("Unable to open job","Some job details could not be refreshed. Your saved job status remains available; please retry tracking.");
   }finally{setLoading(false);}
  }
  async function uploadCompletedWorkPhotos(){
