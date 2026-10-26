@@ -102,7 +102,7 @@ function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
     if(categoryError)throw categoryError;
     const categoryIds=(categories||[]).map((x:any)=>x.id).filter(Boolean);
     if(!categoryIds.length){if(active)setHomeServices([]);return;}
-    const{data:rows,error}=await supabase.from("service_catalogue_services").select("id,name,icon,sort_order,category_id").eq("status","active").in("category_id",categoryIds).order("sort_order").order("name");
+    const{data:rows,error}=await supabase.from("service_catalogue_services").select("id,name,icon,sort_order,category_id,show_on_home,home_display_order").eq("status","active").eq("show_on_home",true).in("category_id",categoryIds).order("home_display_order").order("sort_order").order("name");
     if(error)throw error;
     if(active)setHomeServices(rows||[]);
    }catch(e:any){
