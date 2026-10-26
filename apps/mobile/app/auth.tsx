@@ -11,6 +11,9 @@ import { useKamproLanguage } from "../src/i18n/LanguageProvider";
 
 type Method="mobile"|"email";
 
+// KAMPRO password policy: minimum 8 characters; no mandatory character classes.
+const PASSWORD_MIN_LENGTH = 8;
+
 function friendlyAuthError(error: unknown, flow: "login" | "signup" | "reset" | "general" = "general") {
  const e = error as { message?: string; code?: string; status?: number };
  const message = (e?.message ?? "").toLowerCase();
@@ -18,7 +21,7 @@ function friendlyAuthError(error: unknown, flow: "login" | "signup" | "reset" | 
  if (flow === "login" && (message.includes("invalid login credentials") || message.includes("invalid credentials") || message.includes("wrong password") || code === "invalid_credentials")) return "Incorrect email/mobile number or password. Please check your details and try again.";
  if (flow === "signup" && (code.includes("user_already_exists") || code.includes("email_exists") || message.includes("already registered") || message.includes("already been registered") || message.includes("user already registered") || message.includes("email address is already"))) return "An account may already exist with these details. Please sign in or use Forgot password/PIN.";
  if (message.includes("email not confirmed")) return "Please verify your email using the confirmation link we sent before logging in.";
- if (message.includes("password should be at least") || message.includes("password must be")) return "Password must be at least 8 characters long.";
+ if (message.includes("password should be at least") || message.includes("password must be")) return `Password must be at least ${PASSWORD_MIN_LENGTH} characters long.`;
  if (message.includes("rate limit") || message.includes("too many requests")) return "Too many attempts. Please wait a little while and try again.";
  if (message.includes("network") || message.includes("fetch")) return "We couldn’t connect. Check your internet connection and try again.";
  if (flow === "reset") return "We couldn’t process the password reset request. Please try again shortly.";
@@ -38,7 +41,7 @@ export default function AuthScreen(){
  const [sent,setSent]=useState(false); const [busy,setBusy]=useState(false); const [showMsg91Widget,setShowMsg91Widget]=useState(false); const [resetSent,setResetSent]=useState(false); const [confirmPassword,setConfirmPassword]=useState(""); const [mobileRecovery,setMobileRecovery]=useState(false); const [pinRecoveryReady,setPinRecoveryReady]=useState(false); const [feedback,setFeedback]=useState<{kind:"error"|"success";text:string}|null>(null); const isReset=params.mode==="reset-password";
 
  useEffect(()=>{const {data}=supabase.auth.onAuthStateChange((event,session)=>{if(event==="SIGNED_IN"&&session&&!isReset){setTimeout(()=>router.replace("/home"),0);}});return()=>data.subscription.unsubscribe();},[isReset]);
- async function updatePassword(){if(password.length<8)return Alert.alert("Password too short","Use at least 8 characters.");if(password!==confirmPassword)return Alert.alert("Passwords do not match","Enter the same password in both fields.");setBusy(true);try{const{error}=await supabase.auth.updateUser({password});if(error)throw error;Alert.alert("Password updated","Your password has been changed.");router.replace("/home");}catch(e){Alert.alert("Unable to update password",e instanceof Error?e.message:"Please request a new reset link.");}finally{setBusy(false);}}
+ async function updatePassword(){if(password.length<PASSWORD_MIN_LENGTH)return Alert.alert("Password too short",`Use at least ${PASSWORD_MIN_LENGTH} characters.`);if(password!==confirmPassword)return Alert.alert("Passwords do not match","Enter the same password in both fields.");setBusy(true);try{const{error}=await supabase.auth.updateUser({password});if(error)throw error;Alert.alert("Password updated","Your password has been changed.");router.replace("/home");}catch(e){Alert.alert("Unable to update password",e instanceof Error?e.message:"Please request a new reset link.");}finally{setBusy(false);}}
  async function verifyOtp(){
   if(otp.trim().length<4)return Alert.alert("Enter OTP","Please enter the OTP you received.");
   setBusy(true);
@@ -52,7 +55,7 @@ export default function AuthScreen(){
  }
  async function mobileLogin(){
   if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
-  if(password.length<8)return Alert.alert("Enter PIN/password","Use at least 8 characters.");
+  if(password.length<PASSWORD_MIN_LENGTH)return Alert.alert("Enter PIN/password","Use at least ${PASSWORD_MIN_LENGTH} characters.");
   setBusy(true);
   try{
    const {data,error}=await supabase.functions.invoke("mobile-login",{body:{phone:"+91"+phone.replace(/\D/g,"").slice(-10),password}});
@@ -75,7 +78,7 @@ export default function AuthScreen(){
   }
   if(fullName.trim().length<2)return Alert.alert("Enter your name","Please enter your full name before creating your account.");
   if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
-  if(password.length<8)return Alert.alert("PIN/password too short","Use at least 8 characters.");
+  if(password.length<PASSWORD_MIN_LENGTH)return Alert.alert("PIN/password too short","Use at least ${PASSWORD_MIN_LENGTH} characters.");
   if(password!==confirmPassword)return Alert.alert("PIN/passwords do not match","Enter the same PIN/password in both fields.");
   if(!process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH)return Alert.alert("OTP setup incomplete","KAMPRO's MSG91 widget token has not been configured for this build. Please configure EXPO_PUBLIC_MSG91_TOKEN_AUTH in the mobile build environment.");
   setFeedback(null);
@@ -116,7 +119,7 @@ export default function AuthScreen(){
   finally{setBusy(false);}
  }
  async function updateMobilePin(){
-  if(password.length<8)return Alert.alert("PIN/password too short","Use at least 8 characters.");
+  if(password.length<PASSWORD_MIN_LENGTH)return Alert.alert("PIN/password too short","Use at least ${PASSWORD_MIN_LENGTH} characters.");
   if(password!==confirmPassword)return Alert.alert("PIN/passwords do not match","Enter the same PIN/password in both fields.");
   setBusy(true);
   try{const{error}=await supabase.auth.updateUser({password});if(error)throw error;Alert.alert("PIN/password updated","Your mobile login credential has been updated.");setPinRecoveryReady(false);setMobileRecovery(false);setPassword("");setConfirmPassword("");setOtp("");setSent(false);router.replace("/home");}
@@ -125,7 +128,7 @@ export default function AuthScreen(){
  }
  async function emailLogin(){
   if(!email.trim()||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())){const message="Please enter a valid email address.";setFeedback({kind:"error",text:message});Alert.alert("Check your email",message);return;}
-  if(password.length<8)return setFeedback({kind:"error",text:"Password must be at least 8 characters long."});
+  if(password.length<PASSWORD_MIN_LENGTH)return setFeedback({kind:"error",text:`Password must be at least ${PASSWORD_MIN_LENGTH} characters long.`});
   setFeedback(null);
   setBusy(true);
   try{const{error}=await supabase.auth.signInWithPassword({email:email.trim(),password});if(error)throw error;router.replace("/home");}
@@ -143,7 +146,7 @@ export default function AuthScreen(){
   setFeedback(null);
   if(fullName.trim().length<2){const message="Enter your full name before creating an account.";setFeedback({kind:"error",text:message});Alert.alert("Name required",message);return;}
   if(!email.trim()||!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())){const message="Please enter a valid email address.";setFeedback({kind:"error",text:message});Alert.alert("Check your email",message);return;}
-  if(password.length<8){const message="Password must be at least 8 characters long.";setFeedback({kind:"error",text:message});Alert.alert("Password too short",message);return;}
+  if(password.length<PASSWORD_MIN_LENGTH){const message="Password must be at least ${PASSWORD_MIN_LENGTH} characters long.";setFeedback({kind:"error",text:message});Alert.alert("Password too short",message);return;}
   setBusy(true);
   try{
    const{data,error}=await supabase.auth.signUp({email:email.trim(),password,options:{data:{initial_mode:mode,full_name:fullName.trim()},emailRedirectTo:getAuthRedirect()}});
