@@ -16,46 +16,66 @@ export function ErrorBoundary({error,retry}:{error:Error;retry:()=>void}){return
 export default function Jobs(){
  const{user,mode}=useAuth(); const {t}=useKamproLanguage(); const routeParams=useLocalSearchParams<{created?:string|string[];requestId?:string|string[]}>(); const created=Array.isArray(routeParams.created)?routeParams.created[0]:routeParams.created; const requestId=Array.isArray(routeParams.requestId)?routeParams.requestId[0]:routeParams.requestId;
  const[cancelTarget,setCancelTarget]=useState<any|null>(null); const[cancelBusy,setCancelBusy]=useState(false); const[cancelMessage,setCancelMessage]=useState(""); const[rehireBusyId,setRehireBusyId]=useState<string|null>(null);
- const[jobs,setJobs]=useState<any[]>([]); const[requests,setRequests]=useState<any[]>([]); const[loading,setLoading]=useState(true); const[notice,setNotice]=useState(!!created);
- useFocusEffect(useCallback(()=>{void load();return undefined},[user?.id,mode]));
+ const[jobs,setJobs]=useState<any[]>([]); const[requests,setRequests]=useState<any[]>([]); const[loading,setLoading]=useState(true); const[notice,setNotice]=useState(!!created); const[loadError,setLoadError]=useState("");
+ useFocusEffect(useCallback(()=>{
+  let active=true;
+  void load();
+  const jobColumn=mode==="customer"?"customer_id":"professional_id";
+  const requestColumn=jobColumn;
+  const jobChannel=supabase.channel("my-jobs-"+user?.id+"-"+mode).on("postgres_changes",{event:"*",schema:"public",table:"jobs",filter:jobColumn+"=eq."+user?.id},()=>{if(active)void load()}).subscribe();
+  const requestChannel=supabase.channel("my-requests-"+user?.id+"-"+mode).on("postgres_changes",{event:"*",schema:"public",table:"service_requests",filter:requestColumn+"=eq."+user?.id},()=>{if(active)void load()}).subscribe();
+  const refreshTimer=setInterval(()=>{if(active)void load()},15000);
+  return()=>{active=false;clearInterval(refreshTimer);void supabase.removeChannel(jobChannel);void supabase.removeChannel(requestChannel)};
+ },[user?.id,mode]));
  async function load(){
-  if(!user){setJobs([]);setRequests([]);setLoading(false);return;}
-  setLoading(true);
-  // Load jobs and requests independently. A failure in the accepted-jobs query
-  // or profile-name lookup must not hide a newly created service request.
-  const jobResult=await supabase.from("jobs").select("*").or(`customer_id.eq.${user.id},professional_id.eq.${user.id}`).order("created_at",{ascending:false});
-  if(jobResult.error){
-   console.error("KAMPRO My Jobs accepted-job query failed:",jobResult.error.message);
-   setJobs([]);
-  }else setJobs(jobResult.data||[]);
-
+  if(!user){setJobs([]);setRequests([]);setLoading(false);setLoadError("");return;}
+  setLoading(true);setLoadError("");
+  const isCustomer=mode==="customer";
+  let jobQueryFailed=false;
   try{
-   const isCustomer=mode==="customer";
-   const requestQuery=supabase.from("service_requests")
-    .select("id,title,description,preferred_date,preferred_time,location_text,status,created_at,professional_id,customer_id")
-    .eq(isCustomer?"customer_id":"professional_id",user.id)
-    .in("status",["requested","submitted"])
-    .order("created_at",{ascending:false});
-   const{data:rq,error:requestError}=await requestQuery;
-   if(requestError)throw requestError;
-   const ids=[...new Set((rq||[]).map((x:any)=>isCustomer?x.professional_id:x.customer_id).filter(Boolean))];
+   // Separate equality filters are more predictable than an OR expression and
+   // keep each role scoped to its own jobs under row-level security.
+   const jobResult=await supabase.from("jobs").select("*").eq(isCustomer?"customer_id":"professional_id",user.id).order("created_at",{ascending:false});
+   if(jobResult.error){
+    jobQueryFailed=true;
+    console.error("KAMPRO My Jobs query failed:",jobResult.error.message);
+    setJobs([]);
+    setLoadError("Your job list could not be refreshed. Pending requests are shown below when available. Tap refresh to try again.");
+   }else setJobs(jobResult.data||[]);
+  }catch(e:any){
+   jobQueryFailed=true;setJobs([]);setLoadError("Your job list could not be refreshed. Tap refresh to try again.");
+   console.error("KAMPRO My Jobs query threw:",e?.message||e);
+  }
+  try{
+   let rq:any[]=[];
+   if(isCustomer){
+    const{data,error}=await supabase.from("service_requests")
+     .select("id,title,description,preferred_date,preferred_time,location_text,status,created_at,professional_id,customer_id")
+     .eq("customer_id",user.id).in("status",["requested","submitted"]).order("created_at",{ascending:false});
+    if(error)throw error;
+    rq=data||[];
+   }else{
+    // Pending requests are intentionally exposed through this scoped RPC;
+    // direct table reads are restricted by RLS to accepted requests with jobs.
+    const{data,error}=await supabase.rpc("get_professional_requests");
+    if(error)throw error;
+    rq=(data||[]).filter((x:any)=>["requested","submitted"].includes(String(x.status)));
+   }
+   const ids=[...new Set(rq.map((x:any)=>isCustomer?x.professional_id:x.customer_id).filter(Boolean))];
    const names:Record<string,string>={};
    if(ids.length){
     const profileQuery=isCustomer
      ?supabase.from("profiles").select("id,display_name,full_name").in("id",ids)
-     :supabase.from("profiles").select("id,full_name").in("id",ids);
+     :supabase.from("profiles").select("id,display_name,full_name").in("id",ids);
     const{data:profiles,error:profileError}=await profileQuery;
-    // Names are supplementary. Keep the request visible even if profile RLS
-    // or a missing profile row prevents the name lookup.
     if(profileError)console.warn("KAMPRO My Jobs profile names unavailable:",profileError.message);
     (profiles||[]).forEach((p:any)=>{names[p.id]=p.display_name||p.full_name||(isCustomer?"Professional":"Customer")});
    }
-   setRequests((rq||[]).map((x:any)=>({...x,[isCustomer?"professional_name":"customer_name"]:names[isCustomer?x.professional_id:x.customer_id]||(isCustomer?"Professional":"Customer")})));
+   setRequests(rq.map((x:any)=>({...x,[isCustomer?"professional_name":"customer_name"]:names[isCustomer?x.professional_id:x.customer_id]||(isCustomer?"Professional":"Customer")})));
   }catch(e:any){
    console.error("KAMPRO My Jobs request query failed:",e?.message||e);
    setRequests([]);
-   if(jobResult.error)Alert.alert("Unable to load My Jobs",e?.message||"Please check your connection and try again.");
-   else Alert.alert("Some job requests could not be loaded",e?.message||"Please refresh and try again.");
+   if(!jobQueryFailed)setLoadError("Job requests could not be loaded. Tap refresh to try again.");
   }finally{setLoading(false);}
  }
  async function rehire(job:any){if(!job?.id||!job?.professional_id||rehireBusyId)return;setRehireBusyId(job.id);try{const{data,error}=await supabase.rpc("rehire_professional",{p_job_id:job.id});if(error){const noCredits=/no connection credits/i.test(error.message||"");if(noCredits){Alert.alert("Connection credit required","Rehiring this professional uses 1 connection credit. Get a connection package to continue.",[{text:"Not now",style:"cancel"},{text:"Get connections",onPress:()=>router.push("/connection-packages")}]);}else Alert.alert("Rehire unavailable",error.message||"Please try again.");return;}if(!data){Alert.alert("Rehire unavailable","The new request was not created. Please try again.");return;}router.push({pathname:"/jobs",params:{created:"1",requestId:String(data)}});}catch(e:any){Alert.alert("Rehire unavailable",e?.message||"Please try again.");}finally{setRehireBusyId(null);}}
