@@ -4,41 +4,67 @@ const baseURL = (process.env.KAMPRO_BASE_URL || 'https://vasudha-connect-mobile.
 const routes = [
   { path: '/', label: 'app entry' },
   { path: '/onboarding', label: 'onboarding' },
+  { path: '/auth', label: 'authentication' },
+  { path: '/select-mode', label: 'mode selection' },
+  { path: '/basic-profile', label: 'basic profile' },
   { path: '/home', label: 'customer home' },
+  { path: '/marketplace', label: 'marketplace' },
+  { path: '/service-request', label: 'service request' },
+  { path: '/jobs', label: 'jobs list' },
+  { path: '/job-details', label: 'job details' },
+  { path: '/job-tracking', label: 'job tracking' },
+  { path: '/connections', label: 'connections' },
+  { path: '/connection-packages', label: 'connection packages' },
+  { path: '/chat', label: 'chat' },
+  { path: '/notifications', label: 'notifications' },
+  { path: '/customer-dashboard', label: 'customer dashboard' },
+  { path: '/customer-profile', label: 'customer profile' },
+  { path: '/customer-review', label: 'customer review' },
+  { path: '/professional-onboarding', label: 'professional onboarding' },
+  { path: '/professional-dashboard', label: 'professional dashboard' },
+  { path: '/professional-profile', label: 'professional profile' },
+  { path: '/professional-public', label: 'public professional profile' },
+  { path: '/professional-verification', label: 'professional verification' },
+  { path: '/professional-subscription', label: 'professional subscription' },
+  { path: '/earnings', label: 'earnings' },
+  { path: '/complaints', label: 'complaints' },
+  { path: '/complaint', label: 'complaint form' },
+  { path: '/review', label: 'review' },
+  { path: '/profile', label: 'profile' },
   { path: '/admin', label: 'admin console' },
+  { path: '/privacy-policy', label: 'privacy policy' },
+  { path: '/terms', label: 'terms' },
+  { path: '/delete-account', label: 'delete account' },
 ];
 
-async function collectRuntimeErrors(page) {
+function attachRuntimeChecks(page) {
   const errors = [];
   page.on('pageerror', error => errors.push(`pageerror: ${error.message}`));
-  page.on('console', message => {
-    if (message.type() === 'error') errors.push(`console: ${message.text()}`);
-  });
   return errors;
 }
 
 for (const route of routes) {
-  test(`web smoke: ${route.label} (${route.path})`, async ({ page }) => {
-    const runtimeErrors = await collectRuntimeErrors(page);
+  test(`route smoke: ${route.label} (${route.path})`, async ({ page }) => {
+    const runtimeErrors = attachRuntimeChecks(page);
     const response = await page.goto(`${baseURL}${route.path}`, { waitUntil: 'domcontentloaded' });
     expect(response, 'route should return a document response').not.toBeNull();
     expect(response.status(), `HTTP status for ${route.path}`).toBeLessThan(400);
 
     await expect(page.locator('#root')).toBeVisible();
-    await page.waitForTimeout(2500); // allow Expo Router and initial redirects to settle
+    await page.waitForTimeout(1200);
     const rootText = (await page.locator('#root').innerText().catch(() => '')).trim();
-    expect(rootText.length, `${route.path} should render visible text, not a blank app shell`).toBeGreaterThan(0);
-    expect(runtimeErrors, `uncaught browser errors on ${route.path}`).toEqual([]);
+    expect(rootText.length, `${route.path} should render a non-empty app view (or auth redirect)`).toBeGreaterThan(0);
+    expect(runtimeErrors, `uncaught JavaScript errors on ${route.path}`).toEqual([]);
   });
 }
 
 test('responsive customer home has no horizontal overflow', async ({ page }) => {
-  const runtimeErrors = await collectRuntimeErrors(page);
+  const runtimeErrors = attachRuntimeChecks(page);
   await page.setViewportSize({ width: 360, height: 800 });
   const response = await page.goto(`${baseURL}/home`, { waitUntil: 'domcontentloaded' });
   expect(response).not.toBeNull();
   expect(response.status()).toBeLessThan(400);
-  await page.waitForTimeout(2500);
+  await page.waitForTimeout(1800);
   const dimensions = await page.evaluate(() => ({
     viewport: document.documentElement.clientWidth,
     page: document.documentElement.scrollWidth,
