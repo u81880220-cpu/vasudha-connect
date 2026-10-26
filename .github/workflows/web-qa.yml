@@ -37,7 +37,7 @@ jobs:
       - name: Run KAMPRO web smoke tests
         env:
           KAMPRO_BASE_URL: https://vasudha-connect-mobile.vercel.app
-        run: npx playwright test tests/web-qa --reporter=list
+        run: npx playwright test tests/web-qa --reporter=list,html
 
       - name: Upload Playwright report and failure artifacts
         if: always()
