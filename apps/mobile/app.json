@@ -2,7 +2,7 @@
   "expo": {
     "name": "KAMPRO",
     "slug": "vasudha-connect",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "orientation": "portrait",
     "scheme": "vasudhaconnect",
     "userInterfaceStyle": "light",
@@ -13,7 +13,7 @@
     ],
     "android": {
       "package": "com.vasudha.connect",
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "POST_NOTIFICATIONS",
         "ACCESS_COARSE_LOCATION",
