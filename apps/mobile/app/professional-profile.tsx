@@ -17,38 +17,20 @@ export default function ProfessionalProfile(){
  const[p,setP]=useState<any>({headline:"",about:"",years_experience:"0",service_radius_km:"10",is_available:false,verification_status:"pending"});
  const[serviceSelection,setServiceSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:null,serviceName:null,subServiceId:null,subServiceName:null});
  const[selectedSubServices,setSelectedSubServices]=useState<any[]>([]);
- const[areas,setAreas]=useState<any[]>([]);
+ 
  const[phone,setPhone]=useState("");const[phone2,setPhone2]=useState("");const[avatarUrl,setAvatarUrl]=useState<string|null>(null);
- const[port,setPort]=useState({title:"",description:"",media_url:""}),[area,setArea]=useState({label:"",city:"",state:"",radius_km:"10"}),[baseLocation,setBaseLocation]=useState<{latitude:number;longitude:number}|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false);
+ const[port,setPort]=useState({title:"",description:"",media_url:""}),[baseLocation,setBaseLocation]=useState<{latitude:number;longitude:number}|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[locationLabel,setLocationLabel]=useState("");
  useEffect(()=>{if(uid)load()},[uid]);
  async function load(){
   setLoading(true);
-  const[q,a,ct,pss,pr]=await Promise.all([
+  const[q,ct,pss,pr]=await Promise.all([
    supabase.from("professional_profiles").select("headline,about,years_experience,service_radius_km,is_available,verification_status,base_latitude,base_longitude").eq("user_id",uid).maybeSingle(),
-   supabase.from("service_areas").select("id,label,city,state,latitude,longitude,radius_km,is_primary").eq("professional_id",uid).order("created_at"),
    supabase.from("user_contact_details").select("phone,phone_2").eq("user_id",uid).maybeSingle(),
    supabase.from("professional_sub_services").select("sub_service_id").eq("professional_id",uid),
    supabase.from("profiles").select("avatar_url").eq("id",uid).maybeSingle()
   ]);
   if(q.data){setP({...q.data,years_experience:String(q.data.years_experience||0),service_radius_km:String(q.data.service_radius_km||10)});if(q.data.base_latitude!=null&&q.data.base_longitude!=null)setBaseLocation({latitude:Number(q.data.base_latitude),longitude:Number(q.data.base_longitude)});}
   setPhone(ct.data?.phone||"");setPhone2(ct.data?.phone_2||"");setAvatarUrl(pr.data?.avatar_url||null);
-  let loadedAreas=a.data||[];
-  // Repair older service areas that were saved without coordinates so they can be used as marketplace fallback.
-  for(const savedArea of loadedAreas){
-   if(savedArea.latitude!=null&&savedArea.longitude!=null)continue;
-   const query=[savedArea.label,savedArea.city,savedArea.state,"India"].filter(Boolean).join(", ");
-   try{
-    const response=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=${encodeURIComponent(query)}`,{headers:{Accept:"application/json"}});
-    if(!response.ok)continue;
-    const places=await response.json();const place=Array.isArray(places)?places[0]:null;
-    if(place&&Number.isFinite(Number(place.lat))&&Number.isFinite(Number(place.lon))){
-     const latitude=Number(place.lat),longitude=Number(place.lon);
-     const{error:areaUpdateError}=await supabase.from("service_areas").update({latitude,longitude,is_primary:loadedAreas.length===1?true:savedArea.is_primary}).eq("id",savedArea.id);
-     if(!areaUpdateError){savedArea.latitude=latitude;savedArea.longitude=longitude;if(loadedAreas.length===1)savedArea.is_primary=true;}
-    }
-   }catch{}
-  }
-  setAreas(loadedAreas);
   const ids=(pss.data||[]).map((x:any)=>x.sub_service_id);
   if(ids.length){const{data:catalog}=await supabase.from("service_catalogue_sub_services").select("id,name,service_id,service_catalogue_services(name)").in("id",ids);setSelectedSubServices((catalog||[]).map((x:any)=>({id:x.id,name:x.name,serviceId:x.service_id,serviceName:x.service_catalogue_services?.name||"Service"})));}else setSelectedSubServices([]);
   setLoading(false);
@@ -76,18 +58,6 @@ export default function ProfessionalProfile(){
   }catch(e:any){Alert.alert("Save failed",e?.message||"Something went wrong while saving. Please try again.");}
   finally{setSaving(false);}
  }
- async function addArea(){
-  if(!area.label.trim()&&!area.city.trim())return Alert.alert("Service area","Enter an area or city.");
-  let latitude:number|null=null,longitude:number|null=null;
-  const query=[area.label.trim(),area.city.trim(),area.state.trim(),"India"].filter(Boolean).join(", ");
-  try{
-   const response=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=in&q=${encodeURIComponent(query)}`,{headers:{Accept:"application/json"}});
-   if(response.ok){const places=await response.json();const place=Array.isArray(places)?places[0]:null;if(place&&Number.isFinite(Number(place.lat))&&Number.isFinite(Number(place.lon))){latitude=Number(place.lat);longitude=Number(place.lon);}}
-  }catch{}
-  if(latitude==null||longitude==null)return Alert.alert("Service area","We couldn't locate this area. Check the spelling and include the city and state so customers can find you.");
-  const{error}=await supabase.from("service_areas").insert({professional_id:uid,label:area.label.trim()||area.city.trim(),city:area.city.trim()||null,state:area.state.trim()||null,latitude,longitude,radius_km:Number(area.radius_km)||10,is_primary:areas.length===0});
-  if(error)Alert.alert("Area",error.message);else{setArea({label:"",city:"",state:"",radius_km:"10"});await load();Alert.alert("Service area saved","Location coordinates are set for customer search.")}
- }
  async function addPortfolio(){
   if(!port.title.trim())return Alert.alert("Portfolio","Enter a title.");
   const{error}=await supabase.from("portfolio_items").insert({professional_id:uid,title:port.title.trim(),description:port.description.trim()||null,media_url:port.media_url.trim()||null});
@@ -110,8 +80,8 @@ export default function ProfessionalProfile(){
    </View>
    <Text style={s.section}>Services you provide</Text>
    <View style={s.card}><Text style={s.helper}>Choose the exact Category → Service → Sub-service combinations you provide. You can add multiple services.</Text><ServicePicker requestService value={serviceSelection} onChange={v=>{setServiceSelection(v);if(v.subServiceId&&!selectedSubServices.some(x=>x.id===v.subServiceId))setSelectedSubServices(z=>[...z,{id:v.subServiceId,name:v.subServiceName||"Sub-service",serviceId:v.serviceId,serviceName:v.serviceName||"Service"}]);}}/><View style={s.selectedList}>{selectedSubServices.length===0?<Text style={s.muted}>No exact services selected yet.</Text>:selectedSubServices.map((x:any,i:number)=><View key={x.id} style={s.selectedService}><View style={{flex:1}}><Text style={s.bold}>{x.serviceName}</Text><Text style={s.muted}>{x.name}{i===0?" · Primary":""}</Text></View><Pressable onPress={()=>setSelectedSubServices(z=>z.filter(y=>y.id!==x.id))}><Text style={s.remove}>Remove</Text></Pressable></View>)}</View></View>
-   <Text style={s.section}>Service areas</Text>
-   <View style={s.card}>{areas.map(x=><View key={x.id} style={s.list}><View style={{flex:1}}><Text style={s.bold}>{x.label}</Text><Text style={s.muted}>{[x.city,x.state].filter(Boolean).join(", ")} · {x.radius_km} km</Text></View><Pressable onPress={async()=>{await supabase.from("service_areas").delete().eq("id",x.id);load()}}><Text style={s.remove}>Remove</Text></Pressable></View>)}<TextInput style={s.i} placeholder="Area / locality" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={area.label} onChangeText={v=>setArea({...area,label:v})}/><View style={s.inline}><TextInput style={[s.i,s.half]} placeholder="City" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={area.city} onChangeText={v=>setArea({...area,city:v})}/><TextInput style={[s.i,s.half]} placeholder="State" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={area.state} onChangeText={v=>setArea({...area,state:v})}/></View><TextInput style={s.i} placeholder="Radius km" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" keyboardType="number-pad" value={area.radius_km} onChangeText={v=>setArea({...area,radius_km:v})}/><Pressable style={s.secondary} onPress={addArea}><Text style={s.secondaryText}>+ Add service area</Text></Pressable></View>
+   <Text style={s.section}>Map location</Text>
+   <View style={s.card}><Text style={s.helper}>Your saved GPS location is used for nearby customer search. Your precise home address is not shown as a public address.</Text><Text style={s.bold}>{locationLabel|| (baseLocation?"GPS coordinates saved":"Location not set")}</Text><Pressable style={s.secondary} onPress={async()=>{try{const permission=await Location.requestForegroundPermissionsAsync();if(permission.status!=="granted"){Alert.alert("Location permission","Allow location access to update your map location.");return;}const pos=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});const coords={latitude:pos.coords.latitude,longitude:pos.coords.longitude};setBaseLocation(coords);const g=(await Location.reverseGeocodeAsync(coords))[0];setLocationLabel([g?.district||g?.city||g?.subregion||"GPS location",g?.region].filter(Boolean).join(", "));Alert.alert("Location captured","Tap Save profile to update your KAMPRO map location.");}catch{Alert.alert("Location unavailable","Enable GPS and try again.");}}}><Text style={s.secondaryText}>Refresh GPS location</Text></Pressable></View>
    <Text style={s.section}>Portfolio</Text>
    <View style={s.card}><Text style={s.helper}>Show customers examples of your work. New items go through moderation.</Text><TextInput style={s.i} placeholder="Work sample title" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={port.title} onChangeText={v=>setPort({...port,title:v})}/><TextInput style={s.i} placeholder="Description" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={port.description} onChangeText={v=>setPort({...port,description:v})}/><TextInput style={s.i} placeholder="Public image/link (optional)" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={port.media_url} onChangeText={v=>setPort({...port,media_url:v})}/><Pressable style={s.secondary} onPress={addPortfolio}><Text style={s.secondaryText}>+ Add portfolio item</Text></Pressable></View>
    <Text style={s.section}>Verification</Text>
