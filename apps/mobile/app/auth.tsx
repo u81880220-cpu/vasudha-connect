@@ -61,8 +61,14 @@ export default function AuthScreen(){
    const {data,error}=await supabase.functions.invoke("mobile-login",{body:{phone:"+91"+phone.replace(/\D/g,"").slice(-10),password}});
    if(error)throw new Error(error.message||"Mobile sign-in request failed.");
    if(!data?.access_token||!data?.refresh_token)throw new Error(typeof data?.error==="string"?data.error:"We couldn't sign you in. Check your details and try again.");
-   const {error:sessionError}=await supabase.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token});
+   const {data:sessionData,error:sessionError}=await supabase.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token});
    if(sessionError)throw sessionError;
+   const signedInUser=sessionData.session?.user;
+   if(signedInUser){
+    const normalizedPhone="+91"+phone.replace(/\D/g,"").slice(-10);
+    const {error:contactError}=await supabase.from("user_contact_details").upsert({user_id:signedInUser.id,phone:normalizedPhone,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+    if(contactError)console.warn("KAMPRO: mobile number profile sync failed",contactError.message);
+   }
    router.replace("/home");
   }catch(e){Alert.alert("Sign-in unsuccessful",e instanceof Error?e.message:friendlyAuthError(e,"login"));}
   finally{setBusy(false);}
@@ -100,8 +106,13 @@ export default function AuthScreen(){
    if(!data?.success)throw new Error(typeof data?.error==="string"?data.error:"KAMPRO could not complete registration.");
    const {data:loginData,error:loginError}=await supabase.functions.invoke("mobile-login",{body:{phone:enteredPhone,password}});
    if(loginError||!loginData?.access_token||!loginData?.refresh_token)throw new Error("Your account was created and your mobile was verified, but automatic sign-in failed. Please sign in using the same mobile number and password.");
-   const {error:sessionError}=await supabase.auth.setSession({access_token:loginData.access_token,refresh_token:loginData.refresh_token});
+   const {data:sessionData,error:sessionError}=await supabase.auth.setSession({access_token:loginData.access_token,refresh_token:loginData.refresh_token});
    if(sessionError)throw new Error("Account created, but automatic sign-in could not be completed. Please sign in again.");
+   const signedInUser=sessionData.session?.user;
+   if(signedInUser){
+    const {error:contactError}=await supabase.from("user_contact_details").upsert({user_id:signedInUser.id,phone:enteredPhone,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+    if(contactError)console.warn("KAMPRO: registration succeeded but mobile profile sync failed",contactError.message);
+   }
    const {error:modeError}=await supabase.rpc("switch_app_mode",{p_mode:mode});
    if(modeError)throw new Error("Account created, but account type setup did not finish. Please sign in again.");
    router.replace("/home");
