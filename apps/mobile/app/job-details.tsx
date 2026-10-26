@@ -12,6 +12,17 @@ export function ErrorBoundary({error,retry}:{error:Error;retry:()=>void}){return
 export default function JobDetails(){
  const routeParams=useLocalSearchParams<{jobId?:string|string[]}>();const jobId=Array.isArray(routeParams.jobId)?routeParams.jobId[0]:routeParams.jobId;const{mode}=useAuth();const[job,setJob]=useState<any>(null);const[request,setRequest]=useState<any>(null);const[privateData,setPrivateData]=useState<any>({});const[loading,setLoading]=useState(true);
  useEffect(()=>{if(jobId)void load();else{setJob(null);setLoading(false)}},[jobId]);
+ // Refresh the details screen after the other participant accepts or advances the job.
+ useEffect(()=>{
+  if(!jobId)return;
+  let active=true;
+  const refresh=()=>{if(active)void load()};
+  const channel=supabase.channel("job-details-status-"+String(jobId))
+   .on("postgres_changes",{event:"UPDATE",schema:"public",table:"jobs",filter:"id=eq."+String(jobId)},refresh)
+   .subscribe();
+  const interval=setInterval(refresh,15000);
+  return()=>{active=false;clearInterval(interval);void supabase.removeChannel(channel)};
+ },[jobId,mode]);
  async function load(){
   if(!jobId)return;
   setLoading(true);
