@@ -31,7 +31,12 @@ export default function JobTracking(){
   return()=>{active=false;clearInterval(interval);void supabase.removeChannel(channel)};
  },[jobId,user?.id,mode]);
  useEffect(()=>{if(!jobId||mode!=="professional"||!job||!["worker_accepted","on_the_way","arrived","work_started"].includes(job.status))return;let watcher:Location.LocationSubscription|undefined;let active=true;(async()=>{try{const perm=await Location.requestForegroundPermissionsAsync();if(!active)return;if(perm.status!=="granted"){console.warn("KAMPRO live tracking: location permission not granted");return;}watcher=await Location.watchPositionAsync({accuracy:Location.Accuracy.Balanced,timeInterval:10000,distanceInterval:10},async pos=>{if(!active)return;const{error}=await supabase.rpc("update_professional_live_location",{p_job_id:jobId,p_latitude:pos.coords.latitude,p_longitude:pos.coords.longitude,p_accuracy_m:pos.coords.accuracy??null});if(error)console.error("KAMPRO live location update failed:",error.message);});}catch(e){console.error("KAMPRO live tracking could not start:",e);}})();return()=>{active=false;watcher?.remove()}},[jobId,mode,job?.status]);
- useEffect(()=>{if(!jobId)return; let active=true; const tick=async()=>{try{const{data,error}=await supabase.rpc("get_job_live_location",{p_job_id:String(jobId)});if(error)console.warn("KAMPRO live location lookup failed:",error.message);if(active)setLive(Array.isArray(data)?data[0]||null:data||null);}catch(e){console.warn("KAMPRO live location polling failed:",e);}}; void tick(); const t=setInterval(()=>{void tick()},15000); return()=>{active=false;clearInterval(t)}},[jobId]);
+ useEffect(()=>{if(!jobId)return; let active=true; const tick=async()=>{try{const{data,error}=await supabase.rpc("get_job_live_location",{p_job_id:String(jobId)});if(error)console.warn("KAMPRO live location lookup failed:",error.message);let point=Array.isArray(data)?data[0]||null:data||null;if(!point){
+    // Fallback to the same participant-protected table policy if the RPC returns no row.
+    const{data:fallback,error:fallbackError}=await supabase.from("job_live_locations").select("job_id,professional_id,latitude,longitude,accuracy_m,updated_at").eq("job_id",String(jobId)).maybeSingle();
+    if(fallbackError)console.warn("KAMPRO live location fallback unavailable:",fallbackError.message);
+    point=fallback||null;
+   }if(active)setLive(point);}catch(e){console.warn("KAMPRO live location polling failed:",e);}}; void tick(); const t=setInterval(()=>{void tick()},15000); return()=>{active=false;clearInterval(t)}},[jobId]);
  async function load(){
   if(!jobId){setJob(null);setPrivateData({});setLoading(false);return;}
   if(!job)setLoading(true);
