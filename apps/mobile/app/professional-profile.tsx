@@ -19,7 +19,7 @@ export default function ProfessionalProfile(){
  const[selectedSubServices,setSelectedSubServices]=useState<any[]>([]);
  
  const[phone,setPhone]=useState("");const[phone2,setPhone2]=useState("");const[fullName,setFullName]=useState("");const[avatarUrl,setAvatarUrl]=useState<string|null>(null);
- const[port,setPort]=useState({title:"",description:"",media_url:""}),[baseLocation,setBaseLocation]=useState<{latitude:number;longitude:number}|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[locationLabel,setLocationLabel]=useState("");
+ const[port,setPort]=useState({title:"",description:"",media_url:""}),[baseLocation,setBaseLocation]=useState<{latitude:number;longitude:number}|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[locationLabel,setLocationLabel]=useState(""),[saveMessage,setSaveMessage]=useState<{type:"success"|"error";text:string}|null>(null);
  useEffect(()=>{if(uid)load()},[uid]);
  async function load(){
   setLoading(true);
@@ -36,7 +36,8 @@ export default function ProfessionalProfile(){
   setLoading(false);
  }
  async function save(){
-  if(!uid){Alert.alert("Save failed","Please sign in again before saving your profile.");return;}
+  setSaveMessage(null);
+  if(!uid){setSaveMessage({type:"error",text:"Please sign in again before saving your profile."});Alert.alert("Save failed","Please sign in again before saving your profile.");return;}
   if(saving)return;
   setSaving(true);
   try{
@@ -59,8 +60,9 @@ export default function ProfessionalProfile(){
    if(deleteError)throw new Error("Existing service selections could not be updated: "+deleteError.message);
    if(selectedSubServices.length){const{error:serviceError}=await supabase.from("professional_sub_services").insert(selectedSubServices.map((x,i)=>({professional_id:uid,sub_service_id:x.id,years_experience:Number(p.years_experience)||0,is_primary:i===0})));if(serviceError)throw new Error("Service selections could not be saved: "+serviceError.message);}
    await load();
+   setSaveMessage({type:"success",text:"Profile saved successfully. Your details and selected services have been updated."});
    Alert.alert("Saved successfully","Your professional profile has been updated.");
-  }catch(e:any){Alert.alert("Save failed",e?.message||"Something went wrong while saving. Please try again.");}
+  }catch(e:any){const message=e?.message||"Something went wrong while saving. Please try again.";setSaveMessage({type:"error",text:message});Alert.alert("Save failed",message);}
   finally{setSaving(false);}
  }
  async function addPortfolio(){
@@ -74,6 +76,7 @@ export default function ProfessionalProfile(){
    <Text style={s.t}>My Professional Profile</Text><Text style={s.sub}>Build a trusted profile that helps customers choose you.</Text><View style={s.completion}><Text style={s.completionTitle}>Profile checklist</Text><Text style={s.completionText}>{[!!fullName.trim(),!!phone.trim(),!!p.headline?.trim(),!!selectedSubServices.length,!!baseLocation,p.verification_status==="verified"].filter(Boolean).length} of 6 key items complete · Verification is reviewed separately.</Text></View>
    <ProfilePhotoPicker userId={uid} avatarUrl={avatarUrl} onUploaded={setAvatarUrl} />
    {loading?<Text style={s.muted}>Loading profile…</Text>:null}
+   {saveMessage?<View accessibilityRole="alert" style={[s.saveNotice,saveMessage.type==="success"?s.saveSuccess:s.saveError]}><Text style={s.saveNoticeText}>{saveMessage.text}</Text></View>:null}
    <View style={s.status}><View><Text style={s.statusTitle}>Professional profile</Text><Text style={s.statusSub}>Verification: {p.verification_status||"pending"}</Text></View><View style={[s.dot,{backgroundColor:p.is_available?"#FF4B1F":"#aebbb7"}]}/></View>
    <Text style={s.section}>Profile details</Text><View style={s.card}><Text style={s.l}>Professional name *</Text><TextInput style={s.i} value={fullName} onChangeText={setFullName} placeholder="Your name" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" autoCapitalize="words"/><Text style={s.l}>Primary phone number *</Text><TextInput style={s.i} keyboardType="phone-pad" placeholder="+91 98765 43210" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={phone} onChangeText={setPhone}/><Text style={s.l}>Alternate phone number (optional)</Text><TextInput style={s.i} keyboardType="phone-pad" placeholder="Alternate number" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={phone2} onChangeText={setPhone2}/><Text style={s.helper}>Your contact number is shared with a customer only after they unlock your profile.</Text></View>
    <View style={s.card}>
