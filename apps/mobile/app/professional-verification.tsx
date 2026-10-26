@@ -96,7 +96,7 @@ export default function ProfessionalVerification() {
   return <SafeAreaView style={s.safe}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
     <View style={s.top}><Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={()=>router.back()} style={s.back}><Text style={s.backText}>‹</Text></Pressable><Text style={s.topTitle}>KAMPRO</Text><View style={s.topSpacer}/></View>
     <Text style={s.title}>Professional Verification</Text>
-    <Text style={s.sub}>Build trust before customers connect with you.</Text>
+    <Text style={s.sub}>Upload an identity document to complete required registration. Admin approval is still required before customers can discover your profile.</Text>
     <View style={s.score}><Text style={s.scoreTitle}>Profile completeness</Text><Text style={s.scoreValue}>{completeness}%</Text><Text style={s.muted}>Complete your professional details and submit verification.</Text></View>
     <Text style={s.label}>Headline</Text><TextInput style={s.input} value={headline} onChangeText={setHeadline} placeholder="Experienced electrician" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" placeholderTextColor="#6B7280" selectionColor="#FF4B1F"/>
     <Text style={s.label}>About</Text><TextInput style={[s.input, s.multi]} value={about} onChangeText={setAbout} placeholder="Experience, services and strengths" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" multiline/>
@@ -104,10 +104,10 @@ export default function ProfessionalVerification() {
     <Pressable onPress={saveProfile} style={s.save}><Text style={s.saveText}>Save professional details</Text></Pressable>
     <View style={s.status}><Text style={s.label}>Verification status</Text><Text style={s.badge}>{status.toUpperCase()}</Text></View>
     {docs.length > 0 ? <View style={s.docs}><Text style={s.label}>Submission history</Text>{docs.map(d => <View key={d.id} style={s.doc}><Text style={s.docTitle}>{d.document_type} · {String(d.status).toUpperCase()}</Text>{d.reviewer_note ? <Text style={s.muted}>{d.reviewer_note}</Text> : null}</View>)}</View> : null}
-    <Text style={s.label}>Verification document type</Text><TextInput style={s.input} value={docType} onChangeText={setDocType} placeholderTextColor="#6B7280" selectionColor="#FF4B1F"/>
-    <Pressable disabled={busy} onPress={pickDocument} style={s.primary}><Text style={s.button}>{busy ? "Uploading..." : "Choose & upload document"}</Text></Pressable>
+    <Text style={s.label}>Identity document * (required)</Text><TextInput style={s.input} value={docType} onChangeText={setDocType} placeholderTextColor="#6B7280" selectionColor="#FF4B1F"/>
+    <Pressable disabled={busy} onPress={pickDocument} style={s.primary}><Text style={s.button}>{busy ? "Uploading..." : docs.some(d=>["pending","approved","verified"].includes(String(d.status).toLowerCase())) ? "Upload / replace identity document" : "Choose & upload identity document *"}</Text></Pressable>
     {docName ? <Text style={s.file}>Selected: {docName}</Text> : null}
-    <Text style={s.note}>Accepted: JPG, PNG or PDF • Maximum 10 MB. Documents are stored privately and are not public marketplace files.</Text>
+    <Text style={s.note}>Required to complete professional registration. Accepted: JPG, PNG or PDF • Maximum 10 MB. Upload must finish successfully. Documents are stored privately and are not public marketplace files.</Text>
     <Text style={s.note}>Admin approval is required before your profile appears in nearby customer search.</Text>
   </ScrollView></SafeAreaView>;
 }
