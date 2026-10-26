@@ -27,10 +27,12 @@ export default function AdminScreen(){
   const{data:subscriptionPlans}=await supabase.rpc("admin_subscription_plans");
   const{data:offers,error:offersError}=await supabase.from("marketing_offers").select("*").order("created_at",{ascending:false});
   const{data:serviceRequests,error:serviceRequestsError}=await supabase.from("professional_service_requests").select("*").order("created_at",{ascending:false});
+  const{data:homeServiceSettings,error:homeServiceSettingsError}=await supabase.rpc("admin_home_service_settings");
+  if(homeServiceSettingsError)setMessage("Home service settings: "+homeServiceSettingsError.message);
   if(configurationError)setMessage(configurationError.message);
   if(offersError)setMessage("Offers: "+offersError.message);
   if(serviceRequestsError)setMessage("Service requests: "+serviceRequestsError.message);
-  setData({...Object.fromEntries(results),offers:offers||[],serviceRequests:serviceRequests||[],configuration:{...(configuration||{settings:[],flags:[],locations:[],packages:[],categories:[]}),subscriptionPlans:subscriptionPlans||[]}});
+  setData({...Object.fromEntries(results),offers:offers||[],serviceRequests:serviceRequests||[],homeServiceSettings:homeServiceSettings||[],configuration:{...(configuration||{settings:[],flags:[],locations:[],packages:[],categories:[]}),subscriptionPlans:subscriptionPlans||[]}});
  }
  async function loadOffers(){const{data:offers,error}=await supabase.from("marketing_offers").select("*").order("created_at",{ascending:false});if(error)setMessage(error.message);else setData((v:any)=>({...v,offers:offers||[]}));}
  async function editOffer(x:any=null){
@@ -62,7 +64,8 @@ export default function AdminScreen(){
  async function portfolioReview(id:string,decision:"approved"|"rejected"){const note=window.prompt(decision==="rejected"?"Reason for rejection (optional):":"Admin note (optional):")||null;await act("admin_review_portfolio",{p_portfolio_id:id,p_decision:decision,p_note:note},"Portfolio updated.",loadPortfolio,"portfolio",id);}
  async function complaintReview(id:string,status:string){const note=window.prompt("Admin note (optional):")||null;await act("admin_review_complaint",{p_complaint_id:id,p_status:status,p_note:note},"Complaint updated.",loadComplaints,"complaint",id);}
  async function loadPros(){const{data,error}=await supabase.rpc("admin_marketplace_professionals");if(error)setMessage(error.message);else setData((v:any)=>({...v,pros:data||[]}))}
- async function loadServices(){const{data,error}=await supabase.rpc("admin_service_catalogue");if(error)setMessage(error.message);else setData((v:any)=>({...v,services:data||[]}))}
+ async function loadServices(){const[{data,error},{data:homeServiceSettings, error:homeSettingsError}]=await Promise.all([supabase.rpc("admin_service_catalogue"),supabase.rpc("admin_home_service_settings")]);if(error)setMessage(error.message);if(homeSettingsError)setMessage("Home service settings: "+homeSettingsError.message);setData((v:any)=>({...v,services:data||[],homeServiceSettings:homeServiceSettings||[]}))}
+ async function setHomeService(id:string,show:boolean,order:number){setMessage("");const{error}=await supabase.rpc("admin_set_home_service",{p_service_id:id,p_show_on_home:show,p_home_display_order:order});if(error){setMessage("Could not update home page service: "+error.message);return;}setMessage(show?"Service will appear on the home page.":"Service hidden from the home page.");await loadServices();}
  async function setServiceStatus(id:string,active:boolean){await act("admin_set_service_status",{p_service_id:id,p_active:active},active?"Service activated.":"Service deactivated.",loadServices,"service",id)}
  async function setSubServiceStatus(id:string,active:boolean){await act("admin_set_sub_service_status",{p_sub_service_id:id,p_active:active},active?"Sub-service activated.":"Sub-service deactivated.",loadServices,"sub_service",id)}
  async function editCatalogueService(x:any=null){const name=window.prompt("Service name",x?.service_name||"")||"";if(!name.trim())return;const description=window.prompt("Description",x?.service_description||"")||"";const categories=data.configuration.categories||[];let categoryId=x?.category_id||null;if(!categoryId&&categories.length){const choice=window.prompt("Category: "+categories.map((q:any)=>q.name).join(", "),categories[0].name);const found=categories.find((q:any)=>q.name.toLowerCase()===String(choice||"").trim().toLowerCase());categoryId=found?.id||null}if(!categoryId){setMessage("Select a valid category.");return}const status=window.confirm("Keep service active?")?"active":"inactive";await act("admin_save_catalogue_service",{p_action:x?.service_id?"update":"create",p_service_id:x?.service_id||null,p_category_id:categoryId,p_name:name.trim(),p_slug:x?.service_slug||null,p_icon:x?.service_icon||null,p_description:description.trim()||null,p_status:status,p_sort_order:Number(x?.service_sort_order||0)},"Service saved.",loadServices,"service",x?.service_id)}
@@ -116,9 +119,11 @@ export default function AdminScreen(){
             <View style={{flex:1}}>
               <Text style={s.rowTitle}>{rows[0].service_name}</Text>
               <Text style={s.muted}>{rows[0].service_status} • {rows.reduce((n:any,x:any)=>n+Number(x.professional_count||0),0)} professional assignments</Text>
+              {(()=>{const homeSetting=(data.homeServiceSettings||[]).find((q:any)=>q.service_id===rows[0].service_id);return <Text style={s.muted}>Home page: {homeSetting?.show_on_home?"Shown":"Hidden"} • Order {homeSetting?.home_display_order??100}</Text>})()}
             </View>
             <View style={s.actions}>
               <Pressable style={s.secondary} onPress={()=>editCatalogueService(rows[0])}><Text>Edit</Text></Pressable>
+              {(()=>{const homeSetting=(data.homeServiceSettings||[]).find((q:any)=>q.service_id===rows[0].service_id);return <><Pressable style={s.secondary} onPress={()=>setHomeService(rows[0].service_id,!homeSetting?.show_on_home,Number(homeSetting?.home_display_order??100))}><Text>{homeSetting?.show_on_home?"Hide from Home":"Show on Home"}</Text></Pressable><Pressable style={s.secondary} onPress={()=>{const raw=window.prompt("Home page display order (smaller numbers appear first)",String(homeSetting?.home_display_order??100));if(raw===null)return;const order=Number(raw);if(!Number.isInteger(order)||order<1){setMessage("Enter a whole number of 1 or higher.");return;}void setHomeService(rows[0].service_id,Boolean(homeSetting?.show_on_home),order)}}><Text>Set Home Order</Text></Pressable></>})()}
               <Pressable style={s.danger} onPress={()=>deleteCatalogueService(rows[0])}><Text style={s.dangerText}>Delete</Text></Pressable>
               <Pressable style={rows[0].service_status==="active"?s.danger:s.primary} onPress={()=>setServiceStatus(rows[0].service_id,rows[0].service_status!=="active")}><Text style={rows[0].service_status==="active"?s.dangerText:s.primaryText}>{rows[0].service_status==="active"?"Deactivate":"Activate"}</Text></Pressable>
             </View>
