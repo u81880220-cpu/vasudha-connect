@@ -1,0 +1,50 @@
+name: KAMPRO Web Automated QA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "tests/web-qa/**"
+      - ".github/workflows/web-qa.yml"
+      - "package.json"
+
+permissions:
+  contents: read
+
+jobs:
+  web-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install project dependencies
+        run: npm install
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save @playwright/test
+          npx playwright install --with-deps chromium
+
+      - name: Run KAMPRO web smoke tests
+        env:
+          KAMPRO_BASE_URL: https://vasudha-connect-mobile.vercel.app
+        run: npx playwright test tests/web-qa --reporter=list
+
+      - name: Upload Playwright report and failure artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kampro-web-qa-report
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
