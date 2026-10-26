@@ -1,6 +1,8 @@
 import { View, Text, StyleSheet } from "react-native";
 export default function JobLocationMap({latitude,longitude,label}:{latitude?:number|null;longitude?:number|null;label?:string|null}){
- if(latitude==null||longitude==null)return <View style={s.map}><View style={s.route}/><Text style={s.mapText}>{label||"Service location"}</Text></View>;
- return <View style={s.map}><View style={s.route}/><Text style={s.mapText}>📍 {label||"Service location"} · {Number(latitude).toFixed(5)}, {Number(longitude).toFixed(5)}</Text></View>;
+ const lat=latitude==null?NaN:Number(latitude),lng=longitude==null?NaN:Number(longitude);
+ const valid=Number.isFinite(lat)&&Number.isFinite(lng)&&lat>=-90&&lat<=90&&lng>=-180&&lng<=180&&!(lat===0&&lng===0);
+ if(!valid)return <View style={s.map}><View style={s.route}/><Text style={s.mapText}>{label||"Service location"} · Map coordinates unavailable</Text></View>;
+ return <View style={s.map}><View style={s.route}/><Text style={s.mapText}>📍 {label||"Service location"} · {lat.toFixed(5)}, {lng.toFixed(5)}</Text></View>;
 }
 const s=StyleSheet.create({map:{height:180,borderRadius:18,marginTop:14,backgroundColor:"#e9f3ef",overflow:"hidden",alignItems:"center",justifyContent:"center"},route:{width:"70%",height:3,backgroundColor:"#087D65",transform:[{rotate:"-18deg"}]},mapText:{position:"absolute",bottom:12,backgroundColor:"#fff",paddingHorizontal:10,paddingVertical:6,borderRadius:10,fontWeight:"800"}});
