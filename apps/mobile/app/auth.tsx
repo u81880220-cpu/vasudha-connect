@@ -1,8 +1,9 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import * as WebBrowser from "expo-web-browser";
+import * as ExpoLinking from "expo-linking";
 import { Msg91RegistrationWidget } from "../src/components/Msg91RegistrationWidget";
-import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase,getAuthRedirect } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
@@ -176,7 +177,7 @@ export default function AuthScreen(){
  async function google(){
   setBusy(true);
   try{
-   const redirectTo=Platform.OS==="web"?getAuthRedirect():Linking.createURL("auth/callback");
+   const redirectTo=Platform.OS==="web"?getAuthRedirect():ExpoLinking.createURL("auth/callback");
    const{data,error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo,skipBrowserRedirect:true}});
    if(error)throw error;
    if(!data.url)throw new Error("Google sign-in did not return an authorization URL. Enable Google under Supabase Dashboard → Authentication → Sign In / Providers and add its OAuth client credentials.");
