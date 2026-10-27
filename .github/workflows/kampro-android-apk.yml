@@ -42,7 +42,6 @@ jobs:
           test -d "$ANDROID_HOME/platforms"
           echo "Android SDK is available at $ANDROID_HOME"
           java -version
-          adb version
 
       - name: Install JavaScript dependencies
         run: npm install --no-audit --no-fund
