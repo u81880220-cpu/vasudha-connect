@@ -1,4 +1,5 @@
 name: KAMPRO Android Release
+# Release signing validation run after configuring repository secrets.
 
 on:
   push:
