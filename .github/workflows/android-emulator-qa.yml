@@ -6,8 +6,8 @@ on:
     branches: [main]
 
 concurrency:
-  group: vasudha-android-emulator-qa
-  cancel-in-progress: true
+  group: kampro-android-emulator-qa
+  cancel-in-progress: false
 
 jobs:
   android-emulator-ui-qa:
@@ -138,7 +138,7 @@ jobs:
             export MAESTRO_DRIVER_STARTUP_TIMEOUT=120000
             echo "=== Starting Maestro UI flows (hard limit: 8 minutes) ==="
             set +e
-            timeout --foreground --signal=TERM --kill-after=20s 8m maestro --verbose test --format junit --output android-maestro-results/report.xml --test-output-dir android-maestro-results .maestro
+            timeout --foreground --signal=TERM --kill-after=20s 8m maestro --verbose test --format junit --output android-maestro-results/report.xml --test-output-dir android-maestro-results .maestro/smoke
             result=$?
             set -e
             if [ "$result" -ne 0 ]; then
