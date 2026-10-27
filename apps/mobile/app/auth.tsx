@@ -60,19 +60,21 @@ export default function AuthScreen(){
   const roboTestMode=process.env.EXPO_PUBLIC_KAMPRO_ROBO_TEST_MODE==="true";
   const roboTestNumber=normalizedDigits==="6504992804";
   if(roboTestMode&&roboTestNumber){
-   // Test-build-only shortcut for the dedicated disposable Firebase Robo test accounts.
-   // It signs in to a real, pre-provisioned Supabase test account; it does not create a fake session.
-   const testEmail=mode==="professional"?process.env.EXPO_PUBLIC_KAMPRO_ROBO_PROFESSIONAL_EMAIL:process.env.EXPO_PUBLIC_KAMPRO_ROBO_CUSTOMER_EMAIL;
-   const testPassword=mode==="professional"?process.env.EXPO_PUBLIC_KAMPRO_ROBO_PROFESSIONAL_PASSWORD:process.env.EXPO_PUBLIC_KAMPRO_ROBO_CUSTOMER_PASSWORD;
-   if(!testEmail||!testPassword)return Alert.alert("Test login not configured","The dedicated KAMPRO Robo test account is not configured in this test build.");
+   // Only present in the separate Robo test APK. Ignore Robo's typed PIN and use
+   // the dedicated test account's real mobile-login credential to obtain a real Supabase session.
+   const roboPassword=process.env.EXPO_PUBLIC_KAMPRO_ROBO_TEST_MOBILE_PASSWORD;
+   if(!roboPassword)return Alert.alert("Test login not configured","Set the dedicated KAMPRO Robo test mobile password in GitHub Actions secrets.");
    setBusy(true);
    try{
-    const {error}=await supabase.auth.signInWithPassword({email:testEmail,password:testPassword});
-    if(error)throw error;
+    const {data,error}=await supabase.functions.invoke("mobile-login",{body:{phone:"+91"+normalizedDigits,password:roboPassword}});
+    if(error)throw new Error(error.message||"Test mobile sign-in request failed.");
+    if(!data?.access_token||!data?.refresh_token)throw new Error(typeof data?.error==="string"?data.error:"The test account could not sign in.");
+    const {error:sessionError}=await supabase.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token});
+    if(sessionError)throw sessionError;
     const {error:modeError}=await supabase.rpc("switch_app_mode",{p_mode:mode});
     if(modeError)throw modeError;
     router.replace("/home");
-   }catch(e){Alert.alert("Test sign-in unsuccessful",e instanceof Error?e.message:"Please check the dedicated test account configuration.");}
+   }catch(e){Alert.alert("Test sign-in unsuccessful",e instanceof Error?e.message:"Check the dedicated test mobile account.");}
    finally{setBusy(false);}
    return;
   }
