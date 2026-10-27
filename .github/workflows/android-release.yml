@@ -65,13 +65,86 @@ jobs:
           GOOGLE_MAPS_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
         run: npx expo prebuild --platform android --non-interactive
 
+      - name: Configure release signing
+        working-directory: apps/mobile/android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ANDROID_KEYSTORE_BASE64:-}" || { echo "::error::Missing ANDROID_KEYSTORE_BASE64 secret"; exit 1; }
+          test -n "${ANDROID_KEYSTORE_PASSWORD:-}" || { echo "::error::Missing ANDROID_KEYSTORE_PASSWORD secret"; exit 1; }
+          test -n "${ANDROID_KEY_ALIAS:-}" || { echo "::error::Missing ANDROID_KEY_ALIAS secret"; exit 1; }
+          test -n "${ANDROID_KEY_PASSWORD:-}" || { echo "::error::Missing ANDROID_KEY_PASSWORD secret"; exit 1; }
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/kampro-upload.jks"
+          keytool -list -keystore "$RUNNER_TEMP/kampro-upload.jks" -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
+          echo "KAMPRO_KEYSTORE_FILE=$RUNNER_TEMP/kampro-upload.jks" >> "$GITHUB_ENV"
+          echo "KAMPRO_KEY_ALIAS=$ANDROID_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "KAMPRO_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "KAMPRO_KEY_PASSWORD=$ANDROID_KEY_PASSWORD" >> "$GITHUB_ENV"
+
+      - name: Configure generated Gradle release signing
+        working-directory: apps/mobile/android
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path("app/build.gradle")
+          s = p.read_text()
+          if "kamproUpload" in s:
+              raise SystemExit("Unexpected existing KAMPRO signing configuration")
+          m = re.search(r'(?m)^\\s*buildTypes\\s*\\{', s)
+          if not m:
+              raise SystemExit("Cannot locate buildTypes block")
+          indent = re.match(r'\\s*', m.group(0)).group(0)
+          config = (
+              indent + "signingConfigs {\\n" +
+              indent + "    kamproUpload {\\n" +
+              indent + '        storeFile file(System.getenv("KAMPRO_KEYSTORE_FILE"))\\n' +
+              indent + '        storePassword System.getenv("KAMPRO_KEYSTORE_PASSWORD")\\n' +
+              indent + '        keyAlias System.getenv("KAMPRO_KEY_ALIAS")\\n' +
+              indent + '        keyPassword System.getenv("KAMPRO_KEY_PASSWORD")\\n' +
+              indent + "    }\\n" + indent + "}\\n\\n"
+          )
+          s = s[:m.start()] + config + s[m.start():]
+          start = s.find("buildTypes {")
+          tail = s[start:]
+          m = re.search(r'(?m)^\\s*release\\s*\\{', tail)
+          if not m:
+              raise SystemExit("Cannot locate release build type")
+          pos = m.end()
+          depth = 1
+          i = pos
+          while i < len(tail) and depth:
+              if tail[i] == "{": depth += 1
+              elif tail[i] == "}": depth -= 1
+              i += 1
+          if depth: raise SystemExit("Invalid Gradle release block")
+          body = tail[pos:i-1]
+          body = re.sub(r'(?m)^\\s*signingConfig\\s+signingConfigs\\.\\w+\\s*\\n?', '', body)
+          body = "\\n            signingConfig signingConfigs.kamproUpload\\n" + body
+          p.write_text(s[:start] + tail[:pos] + body + tail[i-1:])
+          PY
+
       - name: Build release APK and AAB
         working-directory: apps/mobile/android
         env:
           EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
           EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
           GOOGLE_MAPS_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew assembleRelease bundleRelease --no-daemon
+
+      - name: Verify AAB signing
+        working-directory: apps/mobile/android
+        run: |
+          jarsigner -verify app/build/outputs/bundle/release/app-release.aab
+          keytool -printcert -jarfile app/build/outputs/bundle/release/app-release.aab | grep -q "CN=KAMPRO Upload"
 
       - name: Build installable debug APK
         working-directory: apps/mobile/android
