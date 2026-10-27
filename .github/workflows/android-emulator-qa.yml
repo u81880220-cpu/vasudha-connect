@@ -125,7 +125,7 @@ jobs:
           disk-size: 8G
           emulator-boot-timeout: 1200
           script: |
-            set -uo pipefail
+            set -eu
             mkdir -p android-maestro-results
             echo "=== Emulator health before Maestro ==="
             adb devices -l
