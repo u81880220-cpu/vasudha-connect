@@ -97,23 +97,23 @@ jobs:
           s = p.read_text()
           if "kamproUpload" in s:
               raise SystemExit("Unexpected existing KAMPRO signing configuration")
-          m = re.search(r'(?m)^\\s*buildTypes\\s*\\{', s)
+          m = re.search(r'(?m)^\s*buildTypes\s*\\{', s)
           if not m:
               raise SystemExit("Cannot locate buildTypes block")
-          indent = re.match(r'\\s*', m.group(0)).group(0)
+          indent = re.match(r'\s*', m.group(0)).group(0)
           config = (
-              indent + "signingConfigs {\\n" +
-              indent + "    kamproUpload {\\n" +
-              indent + '        storeFile file(System.getenv("KAMPRO_KEYSTORE_FILE"))\\n' +
-              indent + '        storePassword System.getenv("KAMPRO_KEYSTORE_PASSWORD")\\n' +
-              indent + '        keyAlias System.getenv("KAMPRO_KEY_ALIAS")\\n' +
-              indent + '        keyPassword System.getenv("KAMPRO_KEY_PASSWORD")\\n' +
-              indent + "    }\\n" + indent + "}\\n\\n"
+              indent + "signingConfigs {\n" +
+              indent + "    kamproUpload {\n" +
+              indent + '        storeFile file(System.getenv("KAMPRO_KEYSTORE_FILE"))\n' +
+              indent + '        storePassword System.getenv("KAMPRO_KEYSTORE_PASSWORD")\n' +
+              indent + '        keyAlias System.getenv("KAMPRO_KEY_ALIAS")\n' +
+              indent + '        keyPassword System.getenv("KAMPRO_KEY_PASSWORD")\n' +
+              indent + "    }\n" + indent + "}\n\n"
           )
           s = s[:m.start()] + config + s[m.start():]
           start = s.find("buildTypes {")
           tail = s[start:]
-          m = re.search(r'(?m)^\\s*release\\s*\\{', tail)
+          m = re.search(r'(?m)^\s*release\s*\\{', tail)
           if not m:
               raise SystemExit("Cannot locate release build type")
           pos = m.end()
@@ -125,8 +125,8 @@ jobs:
               i += 1
           if depth: raise SystemExit("Invalid Gradle release block")
           body = tail[pos:i-1]
-          body = re.sub(r'(?m)^\\s*signingConfig\\s+signingConfigs\\.\\w+\\s*\\n?', '', body)
-          body = "\\n            signingConfig signingConfigs.kamproUpload\\n" + body
+          body = re.sub(r'(?m)^\s*signingConfig\s+signingConfigs\\.\\w+\s*\n?', '', body)
+          body = "\n            signingConfig signingConfigs.kamproUpload\n" + body
           p.write_text(s[:start] + tail[:pos] + body + tail[i-1:])
           PY
 
