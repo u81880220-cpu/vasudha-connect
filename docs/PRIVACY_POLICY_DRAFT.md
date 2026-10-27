@@ -2,11 +2,11 @@
 
 **IMPORTANT:** This is a working draft, not yet a publish-ready legal policy. Before publishing, confirm the actual data flows in the current app, backend, analytics, payment, OTP, maps, notification, and identity-verification providers. Replace all bracketed fields. Do not enter this draft in Google Play until those checks are complete.
 
-**Effective date:** [Insert publication date]  
+**Effective date:** 27 October 2026  
 **App:** KAMPRO  
 **Publisher/legal entity:** [Insert publisher's legal name]  
-**Contact:** [Insert monitored support/privacy email]  
-**Public website:** [Insert public website URL]
+**Contact:** ashishgaur381@gmail.com  
+**Public website:** Not yet available; publish this policy on a public HTTPS page before Play Store submission.
 
 ## 1. Scope
 This policy explains how the publisher of KAMPRO handles information when customers and service professionals use the KAMPRO mobile application. It must be updated if the app's practices or service providers change.
@@ -30,7 +30,7 @@ Describe every recipient category and provider that receives personal informatio
 Users can manage location and notification permissions in their device settings. Explain whether the app remains usable without each optional permission and what functionality is affected. State whether location is collected only while the app is in use or otherwise, based on verified implementation.
 
 ## 6. Retention and deletion
-Specify retention periods or the criteria used to determine them for accounts, job records, messages, location data, uploaded documents, payment records, and security logs. Explain how users can request account and data deletion: [Insert working deletion instructions and URL/contact]. State any legally required retention exceptions.
+Specify retention periods or the criteria used to determine them for accounts, job records, messages, location data, uploaded documents, payment records, and security logs. Explain how users can request account and data deletion: Users can request account and personal-data deletion by emailing ashishgaur381@gmail.com from their registered email address or including their registered mobile number in the request. The publisher should verify the request and respond; this contact route must be tested before publication.. State any legally required retention exceptions.
 
 ## 7. Security
 Describe the safeguards actually implemented, such as access controls, transport encryption, and restricted administrative access. No security measure should be claimed unless verified.
@@ -42,7 +42,7 @@ State the intended age group and whether the app is directed to children. Explai
 Explain how users can access, correct, or delete their information, withdraw permissions, and contact the publisher with privacy questions, subject to applicable law.
 
 ## 10. Changes and contact
-We may update this policy when the app or its practices change. The current version will be available at [Insert public HTTPS privacy-policy URL]. For privacy questions or requests, contact [Insert monitored privacy/support email].
+We may update this policy when the app or its practices change. The current version will be available at The final public HTTPS URL must be inserted after hosting is enabled.. For privacy questions or requests, contact [Insert monitored privacy/support email].
 
 ---
 ## Publication checklist
