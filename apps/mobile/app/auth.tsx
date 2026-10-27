@@ -55,11 +55,31 @@ export default function AuthScreen(){
   finally{setBusy(false);}
  }
  async function mobileLogin(){
-  if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
+  const normalizedDigits=phone.replace(/\D/g,"").slice(-10);
+  if(normalizedDigits.length<10)return Alert.alert("Enter mobile number","Please enter a valid 10-digit mobile number.");
+  const roboTestMode=process.env.EXPO_PUBLIC_KAMPRO_ROBO_TEST_MODE==="true";
+  const roboTestNumber=normalizedDigits==="6504992804";
+  if(roboTestMode&&roboTestNumber){
+   // Test-build-only shortcut for the dedicated disposable Firebase Robo test accounts.
+   // It signs in to a real, pre-provisioned Supabase test account; it does not create a fake session.
+   const testEmail=mode==="professional"?process.env.EXPO_PUBLIC_KAMPRO_ROBO_PROFESSIONAL_EMAIL:process.env.EXPO_PUBLIC_KAMPRO_ROBO_CUSTOMER_EMAIL;
+   const testPassword=mode==="professional"?process.env.EXPO_PUBLIC_KAMPRO_ROBO_PROFESSIONAL_PASSWORD:process.env.EXPO_PUBLIC_KAMPRO_ROBO_CUSTOMER_PASSWORD;
+   if(!testEmail||!testPassword)return Alert.alert("Test login not configured","The dedicated KAMPRO Robo test account is not configured in this test build.");
+   setBusy(true);
+   try{
+    const {error}=await supabase.auth.signInWithPassword({email:testEmail,password:testPassword});
+    if(error)throw error;
+    const {error:modeError}=await supabase.rpc("switch_app_mode",{p_mode:mode});
+    if(modeError)throw modeError;
+    router.replace("/home");
+   }catch(e){Alert.alert("Test sign-in unsuccessful",e instanceof Error?e.message:"Please check the dedicated test account configuration.");}
+   finally{setBusy(false);}
+   return;
+  }
   if(password.length<PASSWORD_MIN_LENGTH)return Alert.alert("Enter PIN/password","Use at least ${PASSWORD_MIN_LENGTH} characters.");
   setBusy(true);
   try{
-   const {data,error}=await supabase.functions.invoke("mobile-login",{body:{phone:"+91"+phone.replace(/\D/g,"").slice(-10),password}});
+   const {data,error}=await supabase.functions.invoke("mobile-login",{body:{phone:"+91"+normalizedDigits,password}});
    if(error)throw new Error(error.message||"Mobile sign-in request failed.");
    if(!data?.access_token||!data?.refresh_token)throw new Error(typeof data?.error==="string"?data.error:"We couldn't sign you in. Check your details and try again.");
    const {data:sessionData,error:sessionError}=await supabase.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token});
