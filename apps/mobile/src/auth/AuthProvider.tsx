@@ -15,13 +15,14 @@ export function AuthProvider({children}:PropsWithChildren){
  useEffect(()=>{
    let mounted=true;
 
-   supabase.auth.getSession().then(({data})=>{
+   supabase.auth.getSession().then(({data,error})=>{
      if(!mounted)return;
+     if(error)console.warn("KAMPRO session restore:",error.message);
      setSession(data.session);
      setLoading(false);
      if(data.session){ void loadMode(data.session.user.id,data.session.user.user_metadata?.initial_mode); void registerForPushNotifications(data.session.user.id).catch(()=>{}); }
-   }).catch(()=>{
-     if(mounted)setLoading(false);
+   }).catch((error)=>{
+     if(mounted){console.warn("KAMPRO session restore failed",error);setLoading(false);}
    });
 
    const{data:listener}=supabase.auth.onAuthStateChange((_event,next)=>{
