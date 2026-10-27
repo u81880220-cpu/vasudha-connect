@@ -32,26 +32,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Validate dedicated Robo test account secrets
+      - name: Validate dedicated Robo test mobile credential
         env:
-          ROBO_CUSTOMER_EMAIL: ${{ secrets.KAMPRO_ROBO_CUSTOMER_EMAIL }}
-          ROBO_CUSTOMER_PASSWORD: ${{ secrets.KAMPRO_ROBO_CUSTOMER_PASSWORD }}
-          ROBO_PROFESSIONAL_EMAIL: ${{ secrets.KAMPRO_ROBO_PROFESSIONAL_EMAIL }}
-          ROBO_PROFESSIONAL_PASSWORD: ${{ secrets.KAMPRO_ROBO_PROFESSIONAL_PASSWORD }}
+          ROBO_TEST_MOBILE_PASSWORD: ${{ secrets.KAMPRO_ROBO_TEST_MOBILE_PASSWORD }}
         run: |
-          test -n "$ROBO_CUSTOMER_EMAIL" || (echo "Missing KAMPRO_ROBO_CUSTOMER_EMAIL secret" && exit 1)
-          test -n "$ROBO_CUSTOMER_PASSWORD" || (echo "Missing KAMPRO_ROBO_CUSTOMER_PASSWORD secret" && exit 1)
-          test -n "$ROBO_PROFESSIONAL_EMAIL" || (echo "Missing KAMPRO_ROBO_PROFESSIONAL_EMAIL secret" && exit 1)
-          test -n "$ROBO_PROFESSIONAL_PASSWORD" || (echo "Missing KAMPRO_ROBO_PROFESSIONAL_PASSWORD secret" && exit 1)
+          test -n "$ROBO_TEST_MOBILE_PASSWORD" || (echo "Missing KAMPRO_ROBO_TEST_MOBILE_PASSWORD secret" && exit 1)
 
       - name: Generate Android project
         working-directory: apps/mobile
         env:
           EXPO_PUBLIC_KAMPRO_ROBO_TEST_MODE: "true"
-          EXPO_PUBLIC_KAMPRO_ROBO_CUSTOMER_EMAIL: ${{ secrets.KAMPRO_ROBO_CUSTOMER_EMAIL }}
-          EXPO_PUBLIC_KAMPRO_ROBO_CUSTOMER_PASSWORD: ${{ secrets.KAMPRO_ROBO_CUSTOMER_PASSWORD }}
-          EXPO_PUBLIC_KAMPRO_ROBO_PROFESSIONAL_EMAIL: ${{ secrets.KAMPRO_ROBO_PROFESSIONAL_EMAIL }}
-          EXPO_PUBLIC_KAMPRO_ROBO_PROFESSIONAL_PASSWORD: ${{ secrets.KAMPRO_ROBO_PROFESSIONAL_PASSWORD }}
+          EXPO_PUBLIC_KAMPRO_ROBO_TEST_MOBILE_PASSWORD: ${{ secrets.KAMPRO_ROBO_TEST_MOBILE_PASSWORD }}
           EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
           EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
           GOOGLE_MAPS_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
@@ -61,10 +52,7 @@ jobs:
         working-directory: apps/mobile/android
         env:
           EXPO_PUBLIC_KAMPRO_ROBO_TEST_MODE: "true"
-          EXPO_PUBLIC_KAMPRO_ROBO_CUSTOMER_EMAIL: ${{ secrets.KAMPRO_ROBO_CUSTOMER_EMAIL }}
-          EXPO_PUBLIC_KAMPRO_ROBO_CUSTOMER_PASSWORD: ${{ secrets.KAMPRO_ROBO_CUSTOMER_PASSWORD }}
-          EXPO_PUBLIC_KAMPRO_ROBO_PROFESSIONAL_EMAIL: ${{ secrets.KAMPRO_ROBO_PROFESSIONAL_EMAIL }}
-          EXPO_PUBLIC_KAMPRO_ROBO_PROFESSIONAL_PASSWORD: ${{ secrets.KAMPRO_ROBO_PROFESSIONAL_PASSWORD }}
+          EXPO_PUBLIC_KAMPRO_ROBO_TEST_MOBILE_PASSWORD: ${{ secrets.KAMPRO_ROBO_TEST_MOBILE_PASSWORD }}
           EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
           EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
           GOOGLE_MAPS_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
