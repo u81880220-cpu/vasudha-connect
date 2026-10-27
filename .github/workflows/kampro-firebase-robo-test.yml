@@ -1,0 +1,79 @@
+name: KAMPRO Firebase Robo Test APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-robo-test-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout test-only branch
+        uses: actions/checkout@v4
+        with:
+          ref: firebase-robo-test-mode
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Validate dedicated Robo test account secrets
+        env:
+          ROBO_CUSTOMER_EMAIL: ${{ secrets.KAMPRO_ROBO_CUSTOMER_EMAIL }}
+          ROBO_CUSTOMER_PASSWORD: ${{ secrets.KAMPRO_ROBO_CUSTOMER_PASSWORD }}
+          ROBO_PROFESSIONAL_EMAIL: ${{ secrets.KAMPRO_ROBO_PROFESSIONAL_EMAIL }}
+          ROBO_PROFESSIONAL_PASSWORD: ${{ secrets.KAMPRO_ROBO_PROFESSIONAL_PASSWORD }}
+        run: |
+          test -n "$ROBO_CUSTOMER_EMAIL" || (echo "Missing KAMPRO_ROBO_CUSTOMER_EMAIL secret" && exit 1)
+          test -n "$ROBO_CUSTOMER_PASSWORD" || (echo "Missing KAMPRO_ROBO_CUSTOMER_PASSWORD secret" && exit 1)
+          test -n "$ROBO_PROFESSIONAL_EMAIL" || (echo "Missing KAMPRO_ROBO_PROFESSIONAL_EMAIL secret" && exit 1)
+          test -n "$ROBO_PROFESSIONAL_PASSWORD" || (echo "Missing KAMPRO_ROBO_PROFESSIONAL_PASSWORD secret" && exit 1)
+
+      - name: Generate Android project
+        working-directory: apps/mobile
+        env:
+          EXPO_PUBLIC_KAMPRO_ROBO_TEST_MODE: "true"
+          EXPO_PUBLIC_KAMPRO_ROBO_CUSTOMER_EMAIL: ${{ secrets.KAMPRO_ROBO_CUSTOMER_EMAIL }}
+          EXPO_PUBLIC_KAMPRO_ROBO_CUSTOMER_PASSWORD: ${{ secrets.KAMPRO_ROBO_CUSTOMER_PASSWORD }}
+          EXPO_PUBLIC_KAMPRO_ROBO_PROFESSIONAL_EMAIL: ${{ secrets.KAMPRO_ROBO_PROFESSIONAL_EMAIL }}
+          EXPO_PUBLIC_KAMPRO_ROBO_PROFESSIONAL_PASSWORD: ${{ secrets.KAMPRO_ROBO_PROFESSIONAL_PASSWORD }}
+          EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
+          EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
+          GOOGLE_MAPS_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
+        run: npx expo prebuild --platform android --non-interactive
+
+      - name: Build dedicated Robo test APK
+        working-directory: apps/mobile/android
+        env:
+          EXPO_PUBLIC_KAMPRO_ROBO_TEST_MODE: "true"
+          EXPO_PUBLIC_KAMPRO_ROBO_CUSTOMER_EMAIL: ${{ secrets.KAMPRO_ROBO_CUSTOMER_EMAIL }}
+          EXPO_PUBLIC_KAMPRO_ROBO_CUSTOMER_PASSWORD: ${{ secrets.KAMPRO_ROBO_CUSTOMER_PASSWORD }}
+          EXPO_PUBLIC_KAMPRO_ROBO_PROFESSIONAL_EMAIL: ${{ secrets.KAMPRO_ROBO_PROFESSIONAL_EMAIL }}
+          EXPO_PUBLIC_KAMPRO_ROBO_PROFESSIONAL_PASSWORD: ${{ secrets.KAMPRO_ROBO_PROFESSIONAL_PASSWORD }}
+          EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
+          EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
+          GOOGLE_MAPS_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Upload clearly labelled test-only APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kampro-firebase-robo-test-only-apk
+          path: apps/mobile/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 7
