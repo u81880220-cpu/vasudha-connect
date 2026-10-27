@@ -14,7 +14,7 @@ import { ProfilePhotoPicker } from "../src/components/ProfilePhotoPicker";
 
 export default function ProfessionalProfile(){
  const{session}=useAuth();const uid=session?.user.id;
- const[p,setP]=useState<any>({headline:"",about:"",years_experience:"0",service_radius_km:"10",is_available:false,verification_status:"pending"});
+ const[p,setP]=useState<any>({headline:"",about:"",years_experience:"0",service_radius_km:"10",is_available:true,verification_status:"pending"});
  const[serviceSelection,setServiceSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:null,serviceName:null,subServiceId:null,subServiceName:null});
  const[selectedSubServices,setSelectedSubServices]=useState<any[]>([]);
  
