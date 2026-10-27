@@ -40,7 +40,8 @@
     "react-native-cashfree-pg-sdk": "^2.2.2",
     "cashfree-pg-api-contract": "^2.2.0",
     "@msg91comm/sendotp-react-native": "^3.1.0",
-    "expo-web-browser": "~15.0.8"
+    "expo-web-browser": "~15.0.8",
+    "expo-linking": "~8.0.8"
   },
   "engines": {
     "node": "22.x"
