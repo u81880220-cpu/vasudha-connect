@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
+import * as WebBrowser from "expo-web-browser";
 import { Msg91RegistrationWidget } from "../src/components/Msg91RegistrationWidget";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase,getAuthRedirect } from "../src/lib/supabase";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
@@ -175,10 +176,34 @@ export default function AuthScreen(){
  async function google(){
   setBusy(true);
   try{
-   const{data,error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo:getAuthRedirect(),skipBrowserRedirect:Platform.OS==="web"}});
+   const redirectTo=Platform.OS==="web"?getAuthRedirect():Linking.createURL("auth/callback");
+   const{data,error}=await supabase.auth.signInWithOAuth({provider:"google",options:{redirectTo,skipBrowserRedirect:true}});
    if(error)throw error;
    if(!data.url)throw new Error("Google sign-in did not return an authorization URL. Enable Google under Supabase Dashboard → Authentication → Sign In / Providers and add its OAuth client credentials.");
-   if(Platform.OS==="web")window.location.assign(data.url);
+   if(Platform.OS==="web"){window.location.assign(data.url);return;}
+   const result=await WebBrowser.openAuthSessionAsync(data.url,redirectTo);
+   if(result.type==="success"&&result.url){
+    const callbackUrl=new URL(result.url);
+    const errorDescription=callbackUrl.searchParams.get("error_description");
+    if(errorDescription)throw new Error(errorDescription);
+    const code=callbackUrl.searchParams.get("code");
+    if(code){
+     const{error:exchangeError}=await supabase.auth.exchangeCodeForSession(code);
+     if(exchangeError)throw exchangeError;
+     router.replace("/home");
+    }else if(callbackUrl.hash.includes("access_token=")){
+     const params=new URLSearchParams(callbackUrl.hash.replace(/^#/,""));
+     const access_token=params.get("access_token"),refresh_token=params.get("refresh_token");
+     if(!access_token||!refresh_token)throw new Error("Google returned an incomplete sign-in session.");
+     const{error:sessionError}=await supabase.auth.setSession({access_token,refresh_token});
+     if(sessionError)throw sessionError;
+     router.replace("/home");
+    }else{
+     throw new Error("Google returned to KAMPRO without a sign-in code. Check the Supabase OAuth redirect URL configuration.");
+    }
+   }else if(result.type==="cancel"||result.type==="dismiss") {
+    // The user closed the browser; keep them on the sign-in screen.
+   }
   }catch(e){Alert.alert("Google sign in unavailable",e instanceof Error?e.message:"Please configure Google in Supabase Auth.");}
   finally{setBusy(false);}
  }
@@ -204,7 +229,7 @@ export default function AuthScreen(){
   )}
   {method==="mobile"&&feedback&&<Text accessibilityRole="alert" style={[s.feedback,feedback.kind==="error"?s.feedbackError:s.feedbackSuccess]}>{feedback.text}</Text>}
   <View style={s.or}><View style={s.line}/><Text style={s.orText}>or</Text><View style={s.line}/></View>
-  {Platform.OS==="web"&&<Pressable disabled={busy} onPress={google} style={s.google}><Text style={s.googleG}>G</Text><Text style={s.googleText}>Continue with Google</Text></Pressable>}
+  {<Pressable accessibilityRole="button" disabled={busy} onPress={google} style={[s.google,busy&&s.primaryBusy]}><Text style={s.googleG}>G</Text><Text style={s.googleText}>{busy?"Connecting…":"Continue with Google"}</Text></Pressable>}
   <Text style={s.terms}>By continuing, you agree to our{"\n"}Terms & Conditions and Privacy Policy</Text>
   {showMsg91Widget&&<Msg91RegistrationWidget visible={showMsg91Widget} onClose={()=>setShowMsg91Widget(false)} onCompletion={(result)=>{void completeMsg91Registration(result as {success?:boolean;identifier?:string;message?:string});}} widgetId={process.env.EXPO_PUBLIC_MSG91_WIDGET_ID||""} tokenAuth={process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH||""} />}
   <Pressable onPress={()=>router.replace({pathname:"/select-mode",params:{mode}})}><Text style={s.switch}>{mode==="customer"?"Use KAMPRO as a Professional":"Use KAMPRO as a Customer"}</Text></Pressable>
