@@ -143,23 +143,36 @@ function MarketplaceScreen(){
       if(selectedManualPlace){
         coords={latitude:selectedManualPlace.latitude,longitude:selectedManualPlace.longitude};
         resolvedLabel=selectedManualPlace.shortLabel;
-      }else if(Platform.OS==="web"){
-        const response=await fetch(
-          `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=in&q=${encodeURIComponent(value)}`,
-          {headers:{Accept:"application/json"}}
-        );
-        if(!response.ok)throw new Error("Geocoding request failed");
-        const results=await response.json();
-        const p=Array.isArray(results)?results[0]:null;
-        if(p&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))){
-          coords={latitude:Number(p.lat),longitude:Number(p.lon)};
-          const a=p.address||{};
-          resolvedLabel=[a.city||a.town||a.village||a.suburb||a.county||p.name,a.state||a.region,"India"].filter(Boolean).join(", ");
-        }
       }else{
-        const places=await Location.geocodeAsync(value);
-        const p=places?.[0];
-        if(p)coords={latitude:p.latitude,longitude:p.longitude};
+        // Use the same place-search provider on Android, iOS and web.
+        // Native geocoding can fail for valid Indian city names even when
+        // the autocomplete suggestions already returned a match.
+        try{
+          const response=await fetch(
+            `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=in&q=${encodeURIComponent(value)}`,
+            {headers:{Accept:"application/json"}}
+          );
+          if(response.ok){
+            const results=await response.json();
+            const p=Array.isArray(results)?results[0]:null;
+            if(p&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))){
+              coords={latitude:Number(p.lat),longitude:Number(p.lon)};
+              const a=p.address||{};
+              resolvedLabel=[a.city||a.town||a.village||a.suburb||a.county||a.state_district||p.name,a.state||a.region,"India"].filter(Boolean).join(", ");
+            }
+          }
+        }catch{
+          // Fall back to the device geocoder if the network geocoder is unavailable.
+        }
+        if(!coords){
+          try{
+            const places=await Location.geocodeAsync(value);
+            const p=places?.[0];
+            if(p)coords={latitude:p.latitude,longitude:p.longitude};
+          }catch{
+            // A clear validation message is shown below if neither provider resolves it.
+          }
+        }
       }
       if(!coords)throw new Error("Location not found");
       setLocationError("");
