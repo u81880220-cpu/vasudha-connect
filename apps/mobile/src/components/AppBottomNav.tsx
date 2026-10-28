@@ -1,5 +1,6 @@
 import { router,usePathname } from "expo-router";
 import { Pressable,StyleSheet,Text,View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { KAMPRO } from "./kamproTheme";
 import { useKamproLanguage } from "../i18n/LanguageProvider";
 
@@ -13,9 +14,10 @@ const tabs=[
 type NavKey = "home" | "map" | "jobs" | "chat" | "connections" | "profile";
 export function AppBottomNav({active}: {active?: NavKey}){
   const path=usePathname();
+  const insets=useSafeAreaInsets();
   const {t}=useKamproLanguage();
   return (
-    <View style={s.bar}>
+    <View style={[s.bar,{paddingBottom:Math.max(insets.bottom,8),minHeight:68+Math.max(insets.bottom,8)}]}>
       {tabs.map(([href,icon,key])=>{
         const label=t(key);
         const isActive=path===href || (active==="map" && href==="/marketplace") || ((active==="chat" || active==="connections") && href==="/connections") || (active==="home" && href==="/home") || ((active==="chat" || active==="connections") && href==="/connections") || (active==="profile" && href==="/profile");
@@ -40,7 +42,7 @@ export function AppBottomNav({active}: {active?: NavKey}){
 const s=StyleSheet.create({
   bar:{
     width:"100%",
-    height:76,
+    minHeight:68,
     flexDirection:"row",
     borderTopWidth:1,
     borderTopColor:KAMPRO.border,
