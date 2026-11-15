@@ -4,13 +4,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { useAuth } from "../src/auth/AuthProvider";
-import { startCashfreeCheckout } from "../src/lib/cashfree-checkout";
+import { startRazorpayCheckout } from "../src/lib/razorpay-checkout";
 
 type Plan={plan_id:string;code:string;name:string;description?:string|null;price_inr:number;billing_interval:string};
 type Sub={plan_name:string;price_inr:number;billing_interval:string;status:string;started_at?:string|null;current_period_start?:string|null;current_period_end?:string|null;cancelled_at?:string|null;plan_id?:string};
 type Payment={id:string;amount_inr:number;status:string;provider?:string|null;created_at:string;provider_order_id?:string|null;provider_payment_id?:string|null};
 
-const TEST_PAYMENT_MODE=(process.env.EXPO_PUBLIC_PAYMENT_PROVIDER||"test").toLowerCase()==="test";
+const TEST_PAYMENT_MODE=false;
 
 export default function ProfessionalSubscription(){
  const{user}=useAuth();const[plans,setPlans]=useState<Plan[]>([]);const[sub,setSub]=useState<Sub|null>(null);const[payments,setPayments]=useState<Payment[]>([]);const[loading,setLoading]=useState(true);const[creating,setCreating]=useState<string|null>(null);
@@ -28,40 +28,30 @@ export default function ProfessionalSubscription(){
   setPayments((pay||[]) as Payment[]);
   setLoading(false);
  }
- async function openCheckout(data:any,description:string){
-  if(!data?.payment_session_id||!data?.cashfree_order_id){
-   Alert.alert("Payment unavailable","Cashfree did not return a valid payment session. No payment was taken.");return;
-  }
-  startCashfreeCheckout(data,description,()=>{
-   Alert.alert("Payment submitted","KAMPRO will activate your subscription only after Cashfree confirms payment on the server.");
-   void load();
-  },(message:string)=>{
-   Alert.alert("Payment not completed",message);
-  });
- }
  async function subscribe(planId:string,name:string){
   setCreating(planId);
-  if(TEST_PAYMENT_MODE){
-   const{error}=await supabase.rpc("activate_free_professional_subscription",{p_plan_id:planId});
-   setCreating(null);
-   if(error){Alert.alert("Unable to activate QA subscription",error.message);return}
-   const selectedPlan=plans.find(p=>p.plan_id===planId);
-   if(selectedPlan){
-    setSub({
-     plan_name:selectedPlan.name,
-     price_inr:selectedPlan.price_inr,
-     billing_interval:selectedPlan.billing_interval,
-     status:"active",
-     current_period_end:new Date(Date.now()+30*24*60*60*1000).toISOString(),
-    });
-   }
-   Alert.alert("QA subscription active","Free test subscription activated for 30 days. No real payment was charged.");
-   return;
-  }
-  const{data,error}=await supabase.functions.invoke("create-cashfree-subscription-order",{body:{plan_id:planId}});
-  setCreating(null);
-  if(error){Alert.alert("Unable to start subscription",error.message);return}
-  await openCheckout(data,name);
+  try{
+   const{data,error}=await supabase.functions.invoke("create-razorpay-order",{body:{kind:"subscription",plan_id:planId}});
+   if(error)throw error;
+   if(!data?.razorpay_order_id||!data?.key_id)throw new Error(data?.error||"Razorpay did not return a valid order.");
+   const result=await startRazorpayCheckout({
+    key:data.key_id,amount:data.amount,currency:data.currency||"INR",
+    name:data.name||"KAMPRO",description:data.description||name,
+    order_id:data.razorpay_order_id,prefill:data.prefill||{},
+    theme:data.theme||{color:"#FF4B1F"}
+   });
+   const{data:verified,error:verifyError}=await supabase.functions.invoke("verify-razorpay-payment",{
+    body:{kind:"subscription",local_order_id:data.local_order_id,
+     razorpay_order_id:result.razorpay_order_id||data.razorpay_order_id,
+     razorpay_payment_id:result.razorpay_payment_id,razorpay_signature:result.razorpay_signature}
+   });
+   if(verifyError)throw verifyError;
+   if(!verified?.success)throw new Error(verified?.error||"Payment could not be verified.");
+   Alert.alert("Subscription activated","Your KAMPRO professional subscription is now active.");
+   await load();
+  }catch(e){
+   Alert.alert("Payment not completed",e instanceof Error?e.message:"Please try again.");
+  }finally{setCreating(null);}
  }
  return <SafeAreaView style={s.safe} edges={["top"]}><ScrollView contentContainerStyle={s.container}>
   <Text style={s.title}>Professional Subscription</Text>
