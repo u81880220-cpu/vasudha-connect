@@ -6,6 +6,18 @@ const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
 const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const keyId = Deno.env.get("RAZORPAY_KEY_ID") || "";
 const keySecret = Deno.env.get("RAZORPAY_KEY_SECRET") || "";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 
 async function hmacHex(message: string, secret: string) {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -20,37 +32,38 @@ function safeEqual(a: string, b: string) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== "POST") return Response.json({ error: "Method not allowed" }, { status: 405 });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   try {
-    if (!keyId || !keySecret) return Response.json({ error: "Razorpay credentials are not configured." }, { status: 503 });
+    if (!keyId || !keySecret) return json({ error: "Razorpay credentials are not configured." }, 503);
     const authorization = req.headers.get("Authorization");
-    if (!authorization) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (!authorization) return json({ error: "Unauthorized" }, 401);
     const userClient = createClient(url, anon, { global: { headers: { Authorization: authorization } } });
     const { data: { user } } = await userClient.auth.getUser();
-    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    if (!user) return json({ error: "Unauthorized" }, 401);
     const { kind, local_order_id, razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
     if (!["connection", "subscription"].includes(kind) || !local_order_id || !razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return Response.json({ error: "Missing payment verification fields" }, { status: 400 });
+      return json({ error: "Missing payment verification fields" }, 400);
     }
     const expected = await hmacHex(razorpay_order_id + "|" + razorpay_payment_id, keySecret);
-    if (!safeEqual(expected, String(razorpay_signature))) return Response.json({ error: "Payment signature verification failed" }, { status: 400 });
+    if (!safeEqual(expected, String(razorpay_signature))) return json({ error: "Payment signature verification failed" }, 400);
 
     const admin = createClient(url, service);
     const table = kind === "connection" ? "connection_payment_orders" : "professional_subscription_payment_orders";
     const ownerCol = kind === "connection" ? "customer_id" : "professional_id";
     const { data: order, error: orderError } = await admin.from(table).select("*").eq("id", local_order_id).eq(ownerCol, user.id).maybeSingle();
     if (orderError) throw orderError;
-    if (!order || order.provider_order_id !== razorpay_order_id) return Response.json({ error: "Payment order does not match this account." }, { status: 403 });
-    if (order.status === "paid") return Response.json({ success: true, already_processed: true });
+    if (!order || order.provider_order_id !== razorpay_order_id) return json({ error: "Payment order does not match this account." }, 403);
+    if (order.status === "paid") return json({ success: true, already_processed: true });
     const response = await fetch("https://api.razorpay.com/v1/payments/" + encodeURIComponent(razorpay_payment_id), {
       headers: { Authorization: "Basic " + btoa(keyId + ":" + keySecret) }
     });
     const payment = await response.json();
-    if (!response.ok) return Response.json({ error: "Unable to confirm payment with Razorpay", details: payment }, { status: 502 });
+    if (!response.ok) return json({ error: "Unable to confirm payment with Razorpay", details: payment }, 502);
     if (payment.order_id !== razorpay_order_id || Number(payment.amount) !== Math.round(Number(order.amount_inr) * 100) || payment.currency !== "INR") {
-      return Response.json({ error: "Payment amount or order details do not match." }, { status: 400 });
+      return json({ error: "Payment amount or order details do not match." }, 400);
     }
-    if (payment.status !== "captured") return Response.json({ error: "Payment is not captured yet. Current status: " + payment.status }, { status: 409 });
+    if (payment.status !== "captured") return json({ error: "Payment is not captured yet. Current status: " + payment.status }, 409);
 
     if (kind === "connection") {
       const { error } = await admin.from(table).update({ status: "paid", provider: "razorpay", provider_payment_id: razorpay_payment_id, paid_at: new Date().toISOString(), metadata: { ...(order.metadata || {}), razorpay_signature_verified: true } }).eq("id", local_order_id);
@@ -63,8 +76,8 @@ Deno.serve(async (req) => {
       });
       if (error) throw error;
     }
-    return Response.json({ success: true, kind, local_order_id });
+    return json({ success: true, kind, local_order_id });
   } catch (error) {
-    return Response.json({ error: error instanceof Error ? error.message : "Payment verification failed" }, { status: 500 });
+    return json({ error: error instanceof Error ? error.message : "Payment verification failed" }, 500);
   }
 });
