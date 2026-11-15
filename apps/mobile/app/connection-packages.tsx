@@ -3,7 +3,7 @@ import { Alert, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } fr
 import { Link } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { createConnectionPayment } from "../src/services/payment";
-import { startCashfreeCheckout } from "../src/lib/cashfree-checkout";
+import { startRazorpayCheckout } from "../src/lib/razorpay-checkout";
 import { KAMPRO } from "../src/components/kamproTheme";
 
 type P = {
@@ -48,46 +48,41 @@ export default function ConnectionPackages() {
     setLoading(false);
   }
 
-  async function openCashfree(data: any, packageName: string) {
-    if (!data?.payment_session_id || !data?.cashfree_order_id) {
-      Alert.alert("Payment unavailable", "Cashfree did not return a valid payment session. No payment was taken.");
-      return;
-    }
-    startCashfreeCheckout(data, packageName, () => {
-      Alert.alert("Payment submitted", "Connection credits will be added only after Cashfree confirms the payment on the server.");
-      void load();
-    }, (message: string) => Alert.alert("Payment not completed", message));
-  }
-
   async function startPayment(code: string, packageName: string) {
     setCreating(code);
-    const provider = (process.env.EXPO_PUBLIC_PAYMENT_PROVIDER || "test") as "test" | "cashfree";
-
     try {
-      if (provider === "test") {
-        const result = await createConnectionPayment(code, "test");
-        setCreating(null);
-        if (result.status === "paid") {
-          Alert.alert("Test payment successful", "Connection credits were added. This is a free QA payment and does not charge money.");
-          await load();
-        } else {
-          Alert.alert("Test payment pending", "The test order was created but was not settled.");
-        }
-        return;
-      }
-
-      const { data, error } = await supabase.functions.invoke(
-        "create-cashfree-order",
-        { body: { package_code: code } }
-      );
-      setCreating(null);
+      const { data, error } = await supabase.functions.invoke("create-razorpay-order", {
+        body: { kind: "connection", package_code: code }
+      });
       if (error) throw error;
-      // Use the platform-specific checkout helper on both web and native.
-      // Payment is still credited only by the verified server-side webhook.
-      await openCashfree(data, packageName);
+      if (!data?.razorpay_order_id || !data?.key_id) throw new Error(data?.error || "Razorpay did not return a valid order.");
+      const result = await startRazorpayCheckout({
+        key: data.key_id,
+        amount: data.amount,
+        currency: data.currency || "INR",
+        name: data.name || "KAMPRO",
+        description: data.description || packageName,
+        order_id: data.razorpay_order_id,
+        prefill: data.prefill || {},
+        theme: data.theme || { color: "#FF4B1F" }
+      });
+      const { data: verified, error: verifyError } = await supabase.functions.invoke("verify-razorpay-payment", {
+        body: {
+          kind: "connection",
+          local_order_id: data.local_order_id,
+          razorpay_order_id: result.razorpay_order_id || data.razorpay_order_id,
+          razorpay_payment_id: result.razorpay_payment_id,
+          razorpay_signature: result.razorpay_signature
+        }
+      });
+      if (verifyError) throw verifyError;
+      if (!verified?.success) throw new Error(verified?.error || "Payment could not be verified.");
+      Alert.alert("Payment successful", "Your connection credits have been added to your KAMPRO account.");
+      await load();
     } catch (e) {
+      Alert.alert("Payment not completed", e instanceof Error ? e.message : "Please try again.");
+    } finally {
       setCreating(null);
-      Alert.alert("Unable to start payment", e instanceof Error ? e.message : "Please try again.");
     }
   }
 
