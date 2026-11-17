@@ -35,7 +35,7 @@ export default function Onboarding(){
     <View style={s.activeDot}/><View style={s.dot}/><View style={s.dot}/>
    </View>
 
-   <Pressable style={s.button} onPress={()=>router.replace("/select-mode")}>
+   <Pressable style={s.button} onPress={()=>router.push("/select-mode")}>
     <Text style={s.buttonText}>Get Started</Text>
    </Pressable>
 
