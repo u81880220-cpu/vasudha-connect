@@ -11,6 +11,7 @@ type RequestRow = {
   customer_id: string;
   title?: string | null;
   service_name?: string | null;
+  sub_service_name?: string | null;
   description?: string | null;
   preferred_date?: string | null;
   preferred_time?: string | null;
@@ -38,7 +39,7 @@ export default function ProfessionalRequests() {
     setLoading(true);
     setError("");
     try {
-      const { data, error: rpcError } = await supabase.rpc("get_professional_requests");
+      const { data, error: rpcError } = await supabase.rpc("get_professional_requests_with_service");
       if (rpcError) throw rpcError;
       const pending = ((data || []) as RequestRow[])
         .filter((r) => ["requested", "submitted"].includes(String(r.status)))
@@ -107,9 +108,10 @@ export default function ProfessionalRequests() {
         requests.length === 0 ? <View style={s.empty}><Text style={s.emptyIcon}>✓</Text><Text style={s.heading}>No pending requests</Text><Text style={s.muted}>New customer service requests will appear here. Pull back to Home or refresh to check again.</Text></View> :
         requests.map((r) => <View key={r.id} style={[s.card, selectedId === r.id && s.selected]}>
           {selectedId === r.id ? <Text style={s.selectedLabel}>Request opened from Home</Text> : null}
-          <View style={s.row}><Text style={s.cardTitle}>{r.title || r.service_name || "New service request"}</Text><Text style={s.pending}>PENDING</Text></View>
+          <View style={s.row}><Text style={s.cardTitle}>{r.service_name || r.title || "New service request"}</Text><Text style={s.pending}>PENDING</Text></View>
           <Text style={s.customer}>Customer: {r.customer_name || "Customer"}</Text>
-          {r.description ? <Text style={s.body}>Work details: {r.description}</Text> : null}
+          <Text style={s.body}>Work type: {[r.service_name, r.sub_service_name].filter(Boolean).join(" · ") || "Service details unavailable"}</Text>
+          <Text style={s.body}>Customer instructions: {r.description?.trim() || "No additional instructions provided."}</Text>
           {r.preferred_date || r.preferred_time ? <Text style={s.body}>Preferred time: {[r.preferred_date, r.preferred_time].filter(Boolean).join(" · ")}</Text> : null}
           {r.location_text ? <Text style={s.body}>Location: {r.location_text}</Text> : null}
           <Text style={s.muted}>Received: {new Date(r.created_at).toLocaleString()}</Text>
