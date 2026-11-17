@@ -14,7 +14,7 @@ export default function SelectMode(){
    <Text style={s.title}>How do you want to use{"\n"}KAMPRO?</Text>
    <Text style={s.sub}>Choose your role to get started.</Text>
 
-   <Pressable style={s.card} onPress={()=>router.replace({pathname:"/auth",params:{mode:"customer"}})}>
+   <Pressable style={s.card} onPress={()=>router.push({pathname:"/auth",params:{mode:"customer"}})}>
     <View style={[s.iconBox,s.customerBox]}><Text style={s.icon}>⌕</Text></View>
     <View style={s.copy}>
      <Text style={s.cardTitle}>I need a professional</Text>
