@@ -1,6 +1,6 @@
 import * as Location from "expo-location";
 import React,{ useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../src/lib/supabase";
@@ -334,7 +334,7 @@ function MarketplaceScreen(){
         <View style={s.modalBackdrop}>
           <View style={s.filterSheet}>
             <View style={s.sheetHead}><Text style={s.sheetTitle}>Filter Professionals</Text><Pressable onPress={()=>setFiltersOpen(false)}><Text style={s.close}>×</Text></Pressable></View>
-            <View style={s.filterNotice}><Text style={s.filterNoticeText}>KAMPRO shows only admin-verified professionals who are currently available for work.</Text></View>
+            <Text style={s.filterHint}>KAMPRO shows only admin-verified professionals who are currently available for work.</Text>
             <Text style={s.filterLabel}>Minimum rating</Text>
             <View style={s.ratingRow}>{[0,4,4.5,5].map(x=><Pressable key={x} onPress={()=>setMinRating(x)} style={[s.ratingChip,minRating===x&&s.ratingChipOn]}><Text style={minRating===x?s.ratingOn:s.ratingText}>{x===0?"Any":x.toFixed(1)+"+"}</Text></Pressable>)}</View>
             <Text style={s.filterHint}>Distance: {radius} km</Text>
