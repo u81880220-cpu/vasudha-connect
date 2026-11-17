@@ -57,7 +57,7 @@ export default function Jobs(){
    }else{
     // Pending requests are intentionally exposed through this scoped RPC;
     // direct table reads are restricted by RLS to accepted requests with jobs.
-    const{data,error}=await supabase.rpc("get_professional_requests");
+    const{data,error}=await supabase.rpc("get_professional_requests_with_service");
     if(error)throw error;
     rq=(data||[]).filter((x:any)=>["requested","submitted"].includes(String(x.status)));
    }
@@ -90,10 +90,11 @@ export default function Jobs(){
    {!loading&&mode==="professional"&&jobs.length>0?<View style={s.summary}><Text style={s.summaryText}>Completed jobs: {jobs.filter((j:any)=>j.status==="customer_confirmed").length}</Text></View>:null}{loading?<View style={s.state}><ActivityIndicator size="small" color="#FF4B1F"/><Text style={s.muted}>Loading jobs…</Text></View>:
     jobs.length===0&&requests.length===0?<View style={s.empty}><View style={s.emptyIcon}><Text>✓</Text></View><Text style={s.emptyTitle}>No jobs yet</Text><Text style={s.emptyText}>{mode==="customer"?"Your accepted services will appear here.":"Jobs assigned to you will appear here."}</Text></View>:
     requests.map(r=><View key={`request-${r.id}`} style={s.card}>
-      <View style={s.cardTop}><View style={{flex:1}}><Text style={s.name}>{r.title||"Service request"}</Text><Text style={s.id}>REQUEST · {String(r.id).slice(0,8).toUpperCase()}</Text>{requestId===r.id?<Text style={s.highlightRequest}>Selected request details</Text>:null}</View></View>
+      <View style={s.cardTop}><View style={{flex:1}}><Text style={s.name}>{r.service_name||r.title||"Service request"}</Text><Text style={s.id}>REQUEST · {String(r.id).slice(0,8).toUpperCase()}</Text>{requestId===r.id?<Text style={s.highlightRequest}>Selected request details</Text>:null}</View></View>
       <View style={s.badge}><View style={s.badgeDot}/><Text style={s.badgeText}>{r.status==="submitted"||r.status==="requested"?"Pending professional acceptance":"Request status: "+r.status}</Text></View>
-      <Text style={s.requestService}>{mode==="customer"?"Professional: "+(r.professional_name||"Awaiting assignment"):"Requested by: "+(r.customer_name||"Customer")}</Text>
-      {r.description?<Text style={s.muted}>Work details: {r.description}</Text>:null}
+      <Text style={s.requestService}>{mode==="customer"?"Professional: "+(r.professional_name||"Awaiting assignment"):"Customer: "+(r.customer_name||"Customer")}</Text>
+       {mode==="professional"?<Text style={s.muted}>Work type: {[r.service_name,r.sub_service_name].filter(Boolean).join(" · ")||"Service details unavailable"}</Text>:null}
+      {r.description?<Text style={s.muted}>Customer instructions: {r.description}</Text>:<Text style={s.muted}>Customer instructions: No additional instructions provided.</Text>}{mode==="professional"?<Text style={s.muted}>Work type: {[r.service_name,r.sub_service_name].filter(Boolean).join(" · ")||"Service details unavailable"}</Text>:null}
       {r.preferred_date||r.preferred_time?<Text style={s.muted}>Preferred schedule: {[r.preferred_date,r.preferred_time].filter(Boolean).join(" · ")}</Text>:null}
       {r.location_text?<Text style={s.muted}>Service location: {r.location_text}</Text>:null}
       {mode==="customer"&&r.professional_id?<><Pressable onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:r.professional_id}})}><Text style={s.detailsLink}>View professional profile →</Text></Pressable><Pressable onPress={async()=>{const{data,error}=await supabase.rpc("get_or_create_conversation",{p_professional_id:r.professional_id});if(error){Alert.alert("Chat unavailable",error.message);return;}router.push({pathname:"/chat",params:{conversationId:data,otherName:r.professional_name||"Professional",professionalId:r.professional_id}})}} style={s.trackBtn}><Text style={s.trackText}>Message Professional</Text></Pressable></>:null}
