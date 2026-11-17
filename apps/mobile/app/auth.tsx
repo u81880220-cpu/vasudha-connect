@@ -239,7 +239,7 @@ export default function AuthScreen(){
   {<Pressable accessibilityRole="button" disabled={busy} onPress={google} style={[s.google,busy&&s.primaryBusy]}><Text style={s.googleG}>G</Text><Text style={s.googleText}>{busy?"Connecting…":"Continue with Google"}</Text></Pressable>}
   <Text style={s.terms}>By continuing, you agree to our{"\n"}Terms & Conditions and Privacy Policy</Text>
   {showMsg91Widget&&<Msg91RegistrationWidget visible={showMsg91Widget} onClose={()=>setShowMsg91Widget(false)} onCompletion={(result)=>{void completeMsg91Registration(result as {success?:boolean;identifier?:string;message?:string});}} widgetId={process.env.EXPO_PUBLIC_MSG91_WIDGET_ID||""} tokenAuth={process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH||""} />}
-  {accountMode==="login"&&<Pressable onPress={()=>router.replace("/select-mode")}><Text style={s.switch}>Choose Customer or Professional</Text></Pressable>}
+  {accountMode==="login"&&<Pressable onPress={()=>router.push("/select-mode")}><Text style={s.switch}>Choose Customer or Professional</Text></Pressable>}
  </ScrollView></KeyboardAvoidingView></SafeAreaView>
 }
 
