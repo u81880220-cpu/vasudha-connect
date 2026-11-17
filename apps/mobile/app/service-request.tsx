@@ -115,7 +115,7 @@ export default function ServiceRequest(){
    });
    if(error)throw error;
    if(!requestId)throw new Error("The server did not confirm that the request was created. Please open My Jobs and check before trying again.");
-   router.replace({pathname:"/jobs",params:{created:"1",requestId:String(requestId)}});
+   router.replace({pathname:"/customer-request-details",params:{requestId:String(requestId)}});
   }catch(e:any){
    setSubmitMessage(e?.message||"The job request could not be created. Please try again.");
   }finally{
