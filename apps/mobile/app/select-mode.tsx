@@ -23,7 +23,7 @@ export default function SelectMode(){
     <Text style={s.arrow}>›</Text>
    </Pressable>
 
-   <Pressable style={s.card} onPress={()=>router.replace({pathname:"/auth",params:{mode:"professional"}})}>
+   <Pressable style={s.card} onPress={()=>router.push({pathname:"/auth",params:{mode:"professional"}})}>
     <View style={[s.iconBox,s.proBox]}><Text style={s.icon}>⚒</Text></View>
     <View style={s.copy}>
      <Text style={s.cardTitle}>I am a professional</Text>
