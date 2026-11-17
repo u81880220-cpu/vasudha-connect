@@ -194,7 +194,7 @@ function ProfessionalHome(){
   (async()=>{
    const[{data:profile},{data:incoming},{data:connections},{data:jobs},{data:reviews},{data:userProfile}]=await Promise.all([
     supabase.from("professional_profiles").select("trust_score,verification_status,is_available").eq("user_id",session.user.id).maybeSingle(),
-    supabase.rpc("get_professional_requests"),
+    supabase.rpc("get_professional_requests_with_service"),
     supabase.from("professional_connections").select("id").eq("professional_id",session.user.id).gt("expires_at",new Date().toISOString()),
     supabase.from("jobs").select("id,status").eq("professional_id",session.user.id),
     supabase.from("customer_job_reviews").select("punctuality,work_quality,professional_behaviour,communication,value_for_money,reliability,safety_care").eq("professional_id",session.user.id),
@@ -231,7 +231,7 @@ function ProfessionalHome(){
   if(!session?.user.id)return;
   let active=true;
   async function refreshIncoming(){
-   const{data:incoming}=await supabase.rpc("get_professional_requests");
+   const{data:incoming}=await supabase.rpc("get_professional_requests_with_service");
    if(!active)return;
    const pendingIncoming=(incoming||[]).filter((x:any)=>["requested","submitted"].includes(x.status));
    const ids=[...new Set(pendingIncoming.map((x:any)=>x.customer_id).filter(Boolean))];
@@ -305,7 +305,7 @@ function ProfessionalHome(){
    <View style={s.incomingBannerTop}><Text style={s.incomingBannerTitle}>New job requests</Text><View style={s.incomingCount}><Text style={s.incomingCountText}>{incomingJobs.length}</Text></View></View>
    <Text style={s.incomingBannerHint}>Customers are waiting for your response.</Text>
    {incomingJobs.slice(0,3).map(r=><Pressable key={r.id} accessibilityRole="button" accessibilityLabel={"Open request "+(r.title||"New service request")} onPress={()=>router.push({pathname:"/professional-requests",params:{requestId:String(r.id)}})} style={s.incomingRequestRow}>
-    <View style={{flex:1,minWidth:0}}><Text style={s.incomingRequestTitle} numberOfLines={2}>{r.title||r.service_name||"New service request"}</Text><Text style={s.meta}>Customer: {r.customer_name||"Customer"}</Text><Text style={s.meta}>Received {r.created_at?new Date(r.created_at).toLocaleString():"Just now"}</Text></View><Text style={s.incomingOpen}>Review →</Text>
+    <View style={{flex:1,minWidth:0}}><Text style={s.incomingRequestTitle} numberOfLines={2}>{r.service_name||r.title||"New service request"}</Text><Text style={s.meta}>Customer: {r.customer_name||"Customer"}</Text><Text style={s.meta}>Work type: {[r.service_name,r.sub_service_name].filter(Boolean).join(" · ")||"Service details unavailable"}</Text><Text style={s.meta}>Received {r.created_at?new Date(r.created_at).toLocaleString():"Just now"}</Text></View><Text style={s.incomingOpen}>Review →</Text>
    </Pressable>)}
    {incomingJobs.length>3?<Pressable onPress={()=>router.push("/professional-requests")}><Text style={s.incomingViewAll}>View all {incomingJobs.length} requests →</Text></Pressable>:null}
   </View>:null}
