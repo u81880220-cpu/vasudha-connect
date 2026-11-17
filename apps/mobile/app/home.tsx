@@ -304,10 +304,10 @@ function ProfessionalHome(){
   {incomingJobs.length>0?<View style={s.incomingBanner}>
    <View style={s.incomingBannerTop}><Text style={s.incomingBannerTitle}>New job requests</Text><View style={s.incomingCount}><Text style={s.incomingCountText}>{incomingJobs.length}</Text></View></View>
    <Text style={s.incomingBannerHint}>Customers are waiting for your response.</Text>
-   {incomingJobs.slice(0,3).map(r=><Pressable key={r.id} accessibilityRole="button" accessibilityLabel={"Open request "+(r.title||"New service request")} onPress={()=>router.push({pathname:"/jobs",params:{requestId:String(r.id)}})} style={s.incomingRequestRow}>
+   {incomingJobs.slice(0,3).map(r=><Pressable key={r.id} accessibilityRole="button" accessibilityLabel={"Open request "+(r.title||"New service request")} onPress={()=>router.push({pathname:"/professional-requests",params:{requestId:String(r.id)}})} style={s.incomingRequestRow}>
     <View style={{flex:1,minWidth:0}}><Text style={s.incomingRequestTitle} numberOfLines={2}>{r.title||r.service_name||"New service request"}</Text><Text style={s.meta}>Customer: {r.customer_name||"Customer"}</Text><Text style={s.meta}>Received {r.created_at?new Date(r.created_at).toLocaleString():"Just now"}</Text></View><Text style={s.incomingOpen}>Review →</Text>
    </Pressable>)}
-   {incomingJobs.length>3?<Pressable onPress={()=>router.push("/professional-dashboard")}><Text style={s.incomingViewAll}>View all {incomingJobs.length} requests →</Text></Pressable>:null}
+   {incomingJobs.length>3?<Pressable onPress={()=>router.push("/professional-requests")}><Text style={s.incomingViewAll}>View all {incomingJobs.length} requests →</Text></Pressable>:null}
   </View>:null}
   {activeJob?<Pressable accessibilityRole="button" accessibilityLabel="Open active job" onPress={()=>router.push({pathname:"/job-tracking",params:{jobId:String(activeJob.id)}})} style={s.activeJobHero}><View style={s.activeJobIcon}><Text>📍</Text></View><View style={{flex:1,minWidth:0}}><Text style={s.activeJobTitle}>Active job · Open now</Text><Text style={s.name} numberOfLines={2}>{activeJob.title||"Professional service"}</Text><Text style={s.meta}>Status: {String(activeJob.status||"worker_accepted").replaceAll("_"," ")} · {new Date(activeJob.created_at||activeJob.updated_at).toLocaleString()}</Text></View><Text style={s.view}>Open →</Text></Pressable>:null}
   <Text style={s.heading}>{t("growBusiness")}</Text><Text style={s.heading}>{t("getMoreCustomers")}</Text>
