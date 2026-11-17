@@ -52,8 +52,8 @@ function MarketplaceScreen(){
   const[selectedManualPlace,setSelectedManualPlace]=useState<{latitude:number;longitude:number;label:string;shortLabel:string}|null>(null);
   const[locationBusy,setLocationBusy]=useState(false);
   const[locationError,setLocationError]=useState("");
-  const[verifiedOnly,setVerifiedOnly]=useState(false);
-  const[availableOnly,setAvailableOnly]=useState(false);
+  const verifiedOnly=true;
+  const availableOnly=true;
   const[minRating,setMinRating]=useState(0);
   const professionalSearchAliases:Record<string,string[]>={
     carpenter:["carpentry","woodwork","woodworker","furniture repair","door repair","cabinet maker","बढ़ई","लकड़ी का काम"],
@@ -72,7 +72,7 @@ function MarketplaceScreen(){
   const searchedItems=items.filter((item)=>{const q=query.trim().toLowerCase();if(!q)return true;const terms=relatedSearchTerms(q);return [item.display_name,item.headline,item.city,item.state,...(item.skills||[]).map((s:any)=>s.name)].filter(Boolean).some((v)=>relatedSearchTerms(String(v)).some(term=>term.includes(q)||terms.some(qterm=>qterm.includes(term)||term.includes(qterm))));});
   const visibleItems=[...searchedItems].filter(x=>(!verifiedOnly||x.verification_status==="verified")&&(!availableOnly||x.is_available)&&(Math.round(x.trust_score)/20)>=minRating).sort((a,b)=>{const tw=Number(marketplaceConfig?.trust_weight??0.5),dw=Number(marketplaceConfig?.distance_weight??0.3),aw=Number(marketplaceConfig?.availability_weight??0.2);const score=(x:any)=>tw*(Number(x.trust_score||0)/100)+dw*(1/(1+Number(x.distance_km||0)))+aw*(x.is_available?1:0);return score(b)-score(a)});
 
-  useEffect(()=>{(async()=>{const{data}=await supabase.rpc("marketplace_configuration");const cfg=data||{};setMarketplaceConfig(cfg);setRadius(Math.min(Number(cfg.default_radius_km||25),Number(cfg.max_radius_km||50)));setVerifiedOnly(cfg.verified_only_default===true);setAvailableOnly(cfg.available_only_default===true);setMinRating(Number(cfg.min_rating||0));})();},[]);
+  useEffect(()=>{(async()=>{const{data}=await supabase.rpc("marketplace_configuration");const cfg=data||{};setMarketplaceConfig(cfg);setRadius(Math.min(Number(cfg.default_radius_km||25),Number(cfg.max_radius_km||50)));setMinRating(Number(cfg.min_rating||0));})();},[]);
   useEffect(()=>{if(cachedMarketplaceLocation){setUserCoords(cachedMarketplaceLocation.coords);setLocationLabel(cachedMarketplaceLocation.label);setLoading(false);void searchProfessionals(cachedMarketplaceLocation.coords);}else{void requestLocation();}},[]);
   useEffect(()=>{if(userCoords) searchProfessionals(userCoords);},[selection.categoryId,selection.serviceId,selection.subServiceId,radius]);
   useEffect(()=>{if(!userCoords||query.trim().length===0)return;const timer=setTimeout(()=>{void searchProfessionals(userCoords);},250);return()=>clearTimeout(timer);},[query,userCoords]);
@@ -334,8 +334,7 @@ function MarketplaceScreen(){
         <View style={s.modalBackdrop}>
           <View style={s.filterSheet}>
             <View style={s.sheetHead}><Text style={s.sheetTitle}>Filter Professionals</Text><Pressable onPress={()=>setFiltersOpen(false)}><Text style={s.close}>×</Text></Pressable></View>
-            <View style={s.filterRow}><Text style={s.filterLabel}>Verified only</Text><Switch value={verifiedOnly} onValueChange={setVerifiedOnly} trackColor={{false:"#CBD0D8",true:"#FF4B1F"}} /></View>
-            <View style={s.filterRow}><Text style={s.filterLabel}>Available now</Text><Switch value={availableOnly} onValueChange={setAvailableOnly} trackColor={{false:"#CBD0D8",true:"#FF4B1F"}} /></View>
+            <View style={s.filterNotice}><Text style={s.filterNoticeText}>KAMPRO shows only admin-verified professionals who are currently available for work.</Text></View>
             <Text style={s.filterLabel}>Minimum rating</Text>
             <View style={s.ratingRow}>{[0,4,4.5,5].map(x=><Pressable key={x} onPress={()=>setMinRating(x)} style={[s.ratingChip,minRating===x&&s.ratingChipOn]}><Text style={minRating===x?s.ratingOn:s.ratingText}>{x===0?"Any":x.toFixed(1)+"+"}</Text></Pressable>)}</View>
             <Text style={s.filterHint}>Distance: {radius} km</Text>
