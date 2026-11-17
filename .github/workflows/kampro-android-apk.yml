@@ -20,6 +20,7 @@ jobs:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
       EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
+      EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -27,10 +28,14 @@ jobs:
       - name: Verify required mobile build configuration
         run: |
           if [ -z "$EXPO_PUBLIC_MSG91_TOKEN_AUTH" ]; then
-            echo "::error::Missing GitHub Actions secret EXPO_PUBLIC_MSG91_TOKEN_AUTH. Add the MSG91 widget Token Auth in repository Settings > Secrets and variables > Actions."
+            echo "::error::Missing GitHub Actions secret EXPO_PUBLIC_MSG91_TOKEN_AUTH."
             exit 1
           fi
-          echo "MSG91 widget token is configured."
+          if [ -z "$EXPO_PUBLIC_MSG91_WIDGET_ID" ]; then
+            echo "::error::Missing GitHub Actions secret EXPO_PUBLIC_MSG91_WIDGET_ID. Add the MSG91 widget ID in repository Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          echo "MSG91 widget configuration is present."
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
