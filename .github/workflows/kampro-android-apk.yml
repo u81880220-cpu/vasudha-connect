@@ -13,15 +13,24 @@ permissions:
 
 jobs:
   build-android-apk:
-    name: Build installable Android APK
+    name: Build installable Android Release APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Verify required mobile build configuration
+        run: |
+          if [ -z "$EXPO_PUBLIC_MSG91_TOKEN_AUTH" ]; then
+            echo "::error::Missing GitHub Actions secret EXPO_PUBLIC_MSG91_TOKEN_AUTH. Add the MSG91 widget Token Auth in repository Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          echo "MSG91 widget token is configured."
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -59,7 +68,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kampro-android-apk
+          name: kampro-android-release-apk
           path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
