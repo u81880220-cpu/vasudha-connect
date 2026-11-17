@@ -16,6 +16,25 @@ type Method="mobile"|"email";
 // Keep client-side validation aligned with the mobile-login and msg91-register Edge Functions.
 const PASSWORD_MIN_LENGTH = 6;
 
+async function edgeFunctionError(error: unknown, fallback: string): Promise<Error> {
+ const e = error as { message?: string; context?: { clone?: () => { json?: () => Promise<unknown> }; json?: () => Promise<unknown> } };
+ const response = e?.context;
+ if (response) {
+  try {
+   const readable = typeof response.clone === "function" ? response.clone() : response;
+   const payload = typeof readable.json === "function" ? await readable.json() : null;
+   if (payload && typeof payload === "object") {
+    const details = payload as { error?: unknown; message?: unknown };
+    if (typeof details.error === "string" && details.error.trim()) return new Error(details.error);
+    if (typeof details.message === "string" && details.message.trim()) return new Error(details.message);
+   }
+  } catch {
+   // Keep a safe fallback when the Edge Function response is not JSON.
+  }
+ }
+ return new Error(e?.message || fallback);
+}
+
 function friendlyAuthError(error: unknown, flow: "login" | "signup" | "reset" | "general" = "general") {
  const e = error as { message?: string; code?: string; status?: number };
  const message = (e?.message ?? "").toLowerCase();
@@ -63,7 +82,7 @@ export default function AuthScreen(){
   setBusy(true);
   try{
    const {data,error}=await supabase.functions.invoke("mobile-login",{body:{phone:"+91"+phone.replace(/\D/g,"").slice(-10),password}});
-   if(error)throw new Error(error.message||"Mobile sign-in request failed.");
+   if(error)throw await edgeFunctionError(error,"Mobile sign-in request failed.");
    if(!data?.access_token||!data?.refresh_token)throw new Error(typeof data?.error==="string"?data.error:"We couldn't sign you in. Check your details and try again.");
    const {data:sessionData,error:sessionError}=await supabase.auth.setSession({access_token:data.access_token,refresh_token:data.refresh_token});
    if(sessionError)throw sessionError;
@@ -107,7 +126,7 @@ export default function AuthScreen(){
   setBusy(true);
   try{
    const {data,error}=await supabase.functions.invoke("msg91-register",{body:{accessToken,phone:enteredPhone,password,fullName:fullName.trim(),mode}});
-   if(error)throw new Error(error.message||"Registration service request failed.");
+   if(error)throw await edgeFunctionError(error,"Registration service request failed.");
    if(!data?.success)throw new Error(typeof data?.error==="string"?data.error:"KAMPRO could not complete registration.");
    const {data:loginData,error:loginError}=await supabase.functions.invoke("mobile-login",{body:{phone:enteredPhone,password}});
    if(loginError||!loginData?.access_token||!loginData?.refresh_token)throw new Error("Your account was created and your mobile was verified, but automatic sign-in failed. Please sign in using the same mobile number and password.");
