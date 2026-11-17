@@ -24,9 +24,10 @@ export function AppBottomNav({active}: {active?: NavKey}){
         return (
           <Pressable
             key={href}
+            testID={`bottom-nav-${key}`}
             accessibilityRole="button"
             accessibilityState={{selected:isActive}}
-            onPress={()=>router.navigate(href)}
+            onPress={()=>{if(href==="/home"){if(path!=="/home")router.dismissTo("/home");return;}router.navigate(href);}}
             style={({pressed})=>[s.item,pressed&&s.pressed]}
           >
             <View style={[s.iconPill,isActive&&s.iconPillActive]}>
