@@ -117,11 +117,11 @@ export default function AuthScreen(){
  }
  async function completeMsg91Registration(result: {success?:boolean; identifier?:string; message?:string}){
   setShowMsg91Widget(false);
-  if(!result?.success)return Alert.alert("Mobile verification failed",result?.message||"MSG91 could not verify this mobile number. Please try again.");
+  if(!result?.success){setMobileRecovery(false);return Alert.alert("Mobile verification failed",result?.message||"MSG91 could not verify this mobile number. Please try again.");}
   const enteredPhone="+91"+phone.replace(/\D/g,"").slice(-10);
   const verifiedDigits=(result.identifier||"").replace(/\D/g,"");
   const normalizedVerified=verifiedDigits.length===10?"91"+verifiedDigits:verifiedDigits;
-  if(normalizedVerified!==enteredPhone.replace(/\D/g,""))return Alert.alert("Mobile number mismatch","The number verified by MSG91 does not match the number entered. Please retry with the same number.");
+  if(normalizedVerified!==enteredPhone.replace(/\D/g,"")){setMobileRecovery(false);return Alert.alert("Mobile number mismatch","The number verified by MSG91 does not match the number entered. Please retry with the same number.");}
   const accessToken=result.message||"";
   if(accessToken.length<20)return Alert.alert("Verification response incomplete","MSG91 did not return a valid verification token. Please retry.");
   if(mobileRecovery){setRecoveryAccessToken(accessToken);setMobileRecovery(false);setPinRecoveryReady(true);setOtp("");setFeedback({kind:"success",text:"Mobile verified. Choose a new password."});return;}
@@ -150,6 +150,7 @@ export default function AuthScreen(){
  }
  async function startMobileRecovery(){
   if(phone.replace(/\D/g,"").length<10)return Alert.alert("Enter mobile number","Enter the mobile number linked to your KAMPRO account first.");
+  if(Platform.OS==="web")return Alert.alert("Use KAMPRO Android app","Mobile password recovery through MSG91 is currently supported in the Android app. Please open KAMPRO on your Android phone.");
   if(!process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH||!process.env.EXPO_PUBLIC_MSG91_WIDGET_ID)return Alert.alert("Recovery unavailable","Mobile recovery is not configured in this app build. Please contact KAMPRO support.");
   setRecoveryAccessToken("");setPinRecoveryReady(false);setMobileRecovery(true);setShowMsg91Widget(true);
  }
@@ -262,7 +263,7 @@ export default function AuthScreen(){
   <View style={s.or}><View style={s.line}/><Text style={s.orText}>or</Text><View style={s.line}/></View>
   {<Pressable accessibilityRole="button" disabled={busy} onPress={google} style={[s.google,busy&&s.primaryBusy]}><Text style={s.googleG}>G</Text><Text style={s.googleText}>{busy?"Connecting…":"Continue with Google"}</Text></Pressable>}
   <Text style={s.terms}>By continuing, you agree to our{"\n"}Terms & Conditions and Privacy Policy</Text>
-  {showMsg91Widget&&<Msg91RegistrationWidget visible={showMsg91Widget} onClose={()=>setShowMsg91Widget(false)} onCompletion={(result)=>{void completeMsg91Registration(result as {success?:boolean;identifier?:string;message?:string});}} widgetId={process.env.EXPO_PUBLIC_MSG91_WIDGET_ID||""} tokenAuth={process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH||""} />}
+  {showMsg91Widget&&<Msg91RegistrationWidget visible={showMsg91Widget} onClose={()=>{setShowMsg91Widget(false);setMobileRecovery(false);}} onCompletion={(result)=>{void completeMsg91Registration(result as {success?:boolean;identifier?:string;message?:string});}} widgetId={process.env.EXPO_PUBLIC_MSG91_WIDGET_ID||""} tokenAuth={process.env.EXPO_PUBLIC_MSG91_TOKEN_AUTH||""} />}
   {accountMode==="login"&&<Pressable onPress={()=>router.push("/select-mode")}><Text style={s.switch}>Choose Customer or Professional</Text></Pressable>}
  </ScrollView></KeyboardAvoidingView></SafeAreaView>
 }
