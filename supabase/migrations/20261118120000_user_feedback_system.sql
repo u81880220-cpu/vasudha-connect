@@ -12,7 +12,7 @@ alter table public.user_feedback enable row level security;
 revoke all on public.user_feedback from anon;
 grant select,insert,update on public.user_feedback to authenticated;
 drop policy if exists "feedback users insert own" on public.user_feedback;
-create policy "feedback users insert own" on public.user_feedback for insert to authenticated with check (user_id=(select auth.uid()));
+create policy "feedback users insert own" on public.user_feedback for insert to authenticated with check (user_id=(select auth.uid()) and status='new' and admin_note is null);
 drop policy if exists "feedback users read own or admin" on public.user_feedback;
 create policy "feedback users read own or admin" on public.user_feedback for select to authenticated using (user_id=(select auth.uid()) or public.is_admin());
 drop policy if exists "feedback admin update" on public.user_feedback;
