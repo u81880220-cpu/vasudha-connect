@@ -2,15 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { supabase } from "../src/lib/supabase";
 
-type Tab="dashboard"|"professionals"|"verification"|"customers"|"services"|"serviceRequests"|"connections"|"subscriptions"|"packages"|"offers"|"operations"|"payments"|"notifications"|"communication"|"analytics"|"complaints"|"feedback"|"portfolio"|"audit"|"configuration";
-const tabs:Tab[]=["dashboard","professionals","verification","customers","services","serviceRequests","connections","subscriptions","packages","offers","operations","payments","notifications","communication","analytics","complaints","feedback","portfolio","audit","configuration"];
+type Tab="dashboard"|"professionals"|"verification"|"customers"|"services"|"serviceRequests"|"connections"|"subscriptions"|"packages"|"offers"|"operations"|"payments"|"notifications"|"communication"|"broadcast"|"analytics"|"complaints"|"feedback"|"portfolio"|"audit"|"configuration";
+const tabs:Tab[]=["dashboard","professionals","verification","customers","services","serviceRequests","connections","subscriptions","packages","offers","operations","payments","notifications","communication","broadcast","analytics","complaints","feedback","portfolio","audit","configuration"];
 
 export default function AdminScreen(){
  const[session,setSession]=useState<any>(null),[admin,setAdmin]=useState(false),[loading,setLoading]=useState(true);
  const[email,setEmail]=useState(""),[password,setPassword]=useState(""),[message,setMessage]=useState("");
  const[tab,setTab]=useState<Tab>("dashboard");
- const[search,setSearch]=useState(""),[filter,setFilter]=useState("all"),[selectedRecord,setSelectedRecord]=useState<any>(null),[proDetail,setProDetail]=useState<any>(null),[proDetailLoading,setProDetailLoading]=useState(false),[customerDetail,setCustomerDetail]=useState<any>(null),[customerDetailLoading,setCustomerDetailLoading]=useState(false),[workDetail,setWorkDetail]=useState<any>(null),[workDetailLoading,setWorkDetailLoading]=useState(false);
- const[data,setData]=useState<any>({pros:[],verification:[],customers:[],services:[],connections:[],subscriptions:[],operations:[],payments:[],notifications:[],templates:[],analytics:null,complaints:[],feedback:[],portfolio:[],audit:[],configuration:{settings:[],flags:[],locations:[],packages:[],categories:[],subscriptionPlans:[]},subscriptionPayments:[],offers:[],serviceRequests:[]});
+ const[search,setSearch]=useState(""),[filter,setFilter]=useState("all"),[broadcastTitle,setBroadcastTitle]=useState(""),[broadcastMessage,setBroadcastMessage]=useState(""),[broadcastAudience,setBroadcastAudience]=useState("both"),[broadcastChannel,setBroadcastChannel]=useState("both"),[broadcastCity,setBroadcastCity]=useState(""),[broadcastUserIds,setBroadcastUserIds]=useState(""),[broadcastSchedule,setBroadcastSchedule]=useState("");[selectedRecord,setSelectedRecord]=useState<any>(null),[proDetail,setProDetail]=useState<any>(null),[proDetailLoading,setProDetailLoading]=useState(false),[customerDetail,setCustomerDetail]=useState<any>(null),[customerDetailLoading,setCustomerDetailLoading]=useState(false),[workDetail,setWorkDetail]=useState<any>(null),[workDetailLoading,setWorkDetailLoading]=useState(false);
+ const[data,setData]=useState<any>({pros:[],verification:[],customers:[],services:[],connections:[],subscriptions:[],operations:[],payments:[],notifications:[],templates:[],broadcasts:[],analytics:null,complaints:[],feedback:[],portfolio:[],audit:[],configuration:{settings:[],flags:[],locations:[],packages:[],categories:[],subscriptionPlans:[]},subscriptionPayments:[],offers:[],serviceRequests:[]});
 
  useEffect(()=>{let mounted=true;
   supabase.auth.getSession().then(async({data:d})=>{if(!mounted)return;setSession(d.session);if(d.session)await checkAdmin();setLoading(false)});
@@ -21,7 +21,7 @@ export default function AdminScreen(){
  async function checkAdmin(){const{data,error}=await supabase.rpc("is_admin");if(error){setAdmin(false);setMessage(error.message);return}setAdmin(Boolean(data));if(data)await loadAll()}
  async function login(){setMessage("");setLoading(true);const{error}=await supabase.auth.signInWithPassword({email,password});if(error)setMessage(error.message);else await checkAdmin();setLoading(false)}
  async function loadAll(){
-  const calls:[string,string][]=[["pros","admin_marketplace_professionals"],["verification","admin_pending_verifications"],["customers","admin_customer_reputation"],["services","admin_service_catalogue"],["connections","admin_connections"],["operations","admin_job_operations"],["subscriptions","admin_subscription_list"],["subscriptionPayments","admin_subscription_payment_orders"],["templates","admin_notification_templates"],["analytics","admin_analytics"],["payments","admin_payment_orders"],["notifications","admin_notifications"],["complaints","admin_complaints"],["portfolio","admin_portfolio_moderation"],["audit","admin_audit_log"]];
+  const calls:[string,string][]=[["pros","admin_marketplace_professionals"],["verification","admin_pending_verifications"],["customers","admin_customer_reputation"],["services","admin_service_catalogue"],["connections","admin_connections"],["operations","admin_job_operations"],["subscriptions","admin_subscription_list"],["subscriptionPayments","admin_subscription_payment_orders"],["templates","admin_notification_templates"],["broadcasts","admin_broadcast_campaigns"],["analytics","admin_analytics"],["payments","admin_payment_orders"],["notifications","admin_notifications"],["complaints","admin_complaints"],["portfolio","admin_portfolio_moderation"],["audit","admin_audit_log"]];
   const results=await Promise.all(calls.map(async([key,fn])=>{const{data,error}=await supabase.rpc(fn);return[key,error?[]:data||[]]}));
   const{data:configuration,error:configurationError}=await supabase.rpc("admin_configuration");
   const{data:subscriptionPlans}=await supabase.rpc("admin_subscription_plans");
@@ -35,6 +35,21 @@ export default function AdminScreen(){
   if(serviceRequestsError)setMessage("Service requests: "+serviceRequestsError.message);
   if(feedbackError)setMessage("Feedback: "+feedbackError.message);
   setData({...Object.fromEntries(results),offers:offers||[],serviceRequests:serviceRequests||[],feedback:feedback||[],homeServiceSettings:homeServiceSettings||[],configuration:{...(configuration||{settings:[],flags:[],locations:[],packages:[],categories:[]}),subscriptionPlans:subscriptionPlans||[]}});
+ }
+ async function sendBroadcast(){
+  setMessage("");
+  const title=broadcastTitle.trim(), body=broadcastMessage.trim();
+  if(!title||!body){setMessage("Enter a notification title and message.");return;}
+  const selected=broadcastAudience==="selected"?broadcastUserIds.split(/[,\\s]+/).map(x=>x.trim()).filter(Boolean):null;
+  if(broadcastAudience==="selected"&&(!selected||!selected.length)){setMessage("Enter one or more user IDs for selected recipients.");return;}
+  let scheduledAt:string|null=null;
+  if(broadcastSchedule.trim()){const d=new Date(broadcastSchedule.trim());if(Number.isNaN(d.getTime())||d.getTime()<=Date.now()){setMessage("Enter a future date/time with timezone, e.g. 2026-11-20T10:00:00+05:30.");return;}scheduledAt=d.toISOString();}
+  const{error}=await supabase.rpc("admin_create_broadcast_campaign",{p_title:title,p_message:body,p_audience:broadcastAudience,p_delivery_channel:broadcastChannel,p_target_city:broadcastCity.trim()||null,p_selected_user_ids:selected,p_scheduled_at:scheduledAt});
+  if(error){setMessage("Campaign could not be created: "+error.message);return;}
+  setMessage(scheduledAt?"Campaign scheduled successfully.":"Campaign sent to eligible accounts. Push delivery depends on users having registered device tokens.");
+  setBroadcastTitle("");setBroadcastMessage("");setBroadcastSchedule("");
+  const{data:campaigns,error:campaignError}=await supabase.rpc("admin_broadcast_campaigns");
+  if(!campaignError)setData((v:any)=>({...v,broadcasts:campaigns||[]}));
  }
  async function loadOffers(){const{data:offers,error}=await supabase.from("marketing_offers").select("*").order("created_at",{ascending:false});if(error)setMessage(error.message);else setData((v:any)=>({...v,offers:offers||[]}));}
  async function editOffer(x:any=null){
@@ -236,6 +251,24 @@ export default function AdminScreen(){
   </View>
  </View>)}
  {!filtered("templates").length&&<Text style={s.muted}>No notification templates match the current filters.</Text>}
+ </Section>}
+ {tab==="broadcast"&&<Section title="Broadcast & Campaign Manager">
+  <Text style={s.muted}>Send announcements to customers, professionals or selected accounts. In-app messages are saved to the notification inbox; push messages are sent to registered devices.</Text>
+  <Text style={[s.sectionTitle,{marginTop:14}]}>Campaign title</Text>
+  <TextInput value={broadcastTitle} onChangeText={setBroadcastTitle} placeholder="e.g. Your subscription expires in 2 days" maxLength={100} style={s.input}/>
+  <Text style={[s.sectionTitle,{marginTop:14}]}>Message</Text>
+  <TextInput value={broadcastMessage} onChangeText={setBroadcastMessage} placeholder="Write your announcement…" multiline maxLength={1000} style={[s.input,{minHeight:100,textAlignVertical:"top"}]}/>
+  <Text style={[s.sectionTitle,{marginTop:14}]}>Audience</Text>
+  <View style={s.actions}>{[["customers","Customers"],["professionals","Professionals"],["both","Both"],["selected","Selected user IDs"]].map(([v,l])=><Pressable key={v} onPress={()=>setBroadcastAudience(v)} style={broadcastAudience===v?s.tabActive:s.tab}><Text style={broadcastAudience===v?s.tabTextActive:s.tabText}>{l}</Text></Pressable>)}</View>
+  {broadcastAudience==="selected"?<TextInput value={broadcastUserIds} onChangeText={setBroadcastUserIds} placeholder="Paste user UUIDs separated by commas" style={s.input}/>:null}
+  <TextInput value={broadcastCity} onChangeText={setBroadcastCity} placeholder="Optional city filter (e.g. Raebareli)" style={s.input}/>
+  <Text style={[s.sectionTitle,{marginTop:14}]}>Delivery channel</Text>
+  <View style={s.actions}>{[["push","Push only"],["in_app","In-app only"],["both","Both"]].map(([v,l])=><Pressable key={v} onPress={()=>setBroadcastChannel(v)} style={broadcastChannel===v?s.tabActive:s.tab}><Text style={broadcastChannel===v?s.tabTextActive:s.tabText}>{l}</Text></Pressable>)}</View>
+  <Text style={[s.sectionTitle,{marginTop:14}]}>Schedule (optional)</Text>
+  <TextInput value={broadcastSchedule} onChangeText={setBroadcastSchedule} placeholder="Blank = send now; or ISO date/time with timezone" style={s.input}/>
+  <Pressable style={s.primary} onPress={sendBroadcast}><Text style={s.primaryText}>{broadcastSchedule.trim()?"Schedule campaign":"Send campaign now"}</Text></Pressable>
+  <Text style={[s.sectionTitle,{marginTop:22}]}>Campaign history</Text>
+  {!data.broadcasts?.length?<Text style={s.muted}>No campaigns created yet.</Text>:data.broadcasts.map((x:any)=><View key={x.id} style={s.item}><View style={{flex:1}}><Text style={s.rowTitle}>{x.title}</Text><Text style={s.muted}>{x.audience} • {x.delivery_channel} • {x.target_city||"All cities"}</Text><Text style={s.muted}>{x.status} • {x.recipient_count||0} recipients • {x.scheduled_at?new Date(x.scheduled_at).toLocaleString():"—"}</Text>{x.last_error?<Text style={s.error}>{x.last_error}</Text>:null}</View><Text style={s.badge}>{x.status}</Text></View>)}
  </Section>}
  {tab==="notifications"&&<Section title="Notifications">{!filtered("notifications").length?<Text style={s.muted}>No notifications match the current filters.</Text>:filtered("notifications").map((x:any)=><Pressable key={x.id} style={s.item} onPress={()=>setSelectedRecord({type:"Notification",data:x})}><View style={{flex:1}}><Text style={s.rowTitle}>{x.title||"Notification"}</Text><Text style={s.muted}>{(x.user_name||"User")+" • "+(x.type||"notification")+" • "+(x.created_at?new Date(x.created_at).toLocaleString():"—")}</Text></View><Text style={s.badge}>{x.push_sent_at?"Sent":x.push_error?"Failed":"Pending"}</Text></Pressable>)}</Section>}
    {tab==="analytics"&&<Section title="Analytics">
