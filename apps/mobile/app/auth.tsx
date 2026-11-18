@@ -159,7 +159,7 @@ export default function AuthScreen(){
   if(recoveryAccessToken.length<20)return Alert.alert("Verify your mobile number","Please complete mobile verification again.");
   setBusy(true);
   try{
-   const{data,error}=await supabase.functions.invoke("mobile-password-recovery",{body:{accessToken:recoveryAccessToken,phone:"+91"+phone.replace(/\\D/g,"").slice(-10),newPassword:password}});
+   const{data,error}=await supabase.functions.invoke("mobile-password-recovery",{body:{accessToken:recoveryAccessToken,phone:"+91"+phone.replace(/\D/g,"").slice(-10),newPassword:password}});
    if(error)throw await edgeFunctionError(error,"Password recovery request failed.");
    if(!data?.success)throw new Error(typeof data?.error==="string"?data.error:"Unable to reset password. Please try again.");
    setPinRecoveryReady(false);setMobileRecovery(false);setRecoveryAccessToken("");setPassword("");setConfirmPassword("");setOtp("");setSent(false);setFeedback({kind:"success",text:"Password updated. Please sign in with your mobile number and new password."});Alert.alert("Password updated","Your password has been reset. Please sign in using your mobile number and new password.");
