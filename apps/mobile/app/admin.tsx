@@ -40,7 +40,7 @@ export default function AdminScreen(){
   setMessage("");
   const title=broadcastTitle.trim(), body=broadcastMessage.trim();
   if(!title||!body){setMessage("Enter a notification title and message.");return;}
-  const selected=broadcastAudience==="selected"?broadcastUserIds.split(/[,\\s]+/).map(x=>x.trim()).filter(Boolean):null;
+  const selected=broadcastAudience==="selected"?broadcastUserIds.split(/[,\s]+/).map(x=>x.trim()).filter(Boolean):null;
   if(broadcastAudience==="selected"&&(!selected||!selected.length)){setMessage("Enter one or more user IDs for selected recipients.");return;}
   let scheduledAt:string|null=null;
   if(broadcastSchedule.trim()){const d=new Date(broadcastSchedule.trim());if(Number.isNaN(d.getTime())||d.getTime()<=Date.now()){setMessage("Enter a future date/time with timezone, e.g. 2026-11-20T10:00:00+05:30.");return;}scheduledAt=d.toISOString();}
