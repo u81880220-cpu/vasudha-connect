@@ -130,6 +130,30 @@ Deno.serve(async (req: Request) => {
     return json({ error: "No KAMPRO account was found for this verified mobile number." }, 404);
   }
 
+  // Consume a hash of the provider token before changing credentials. This makes
+  // a verified MSG91 access token single-use without storing the raw token.
+  const tokenDigest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(accessToken));
+  const tokenHash = Array.from(new Uint8Array(tokenDigest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  let claimResponse: Response;
+  try {
+    claimResponse = await fetch(new URL("/rest/v1/mobile_password_recovery_claims", supabaseUrl), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceRoleKey,
+        Authorization: "Bearer " + serviceRoleKey,
+        "Content-Profile": "public",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({ token_hash: tokenHash, phone_e164: "+91" + requestedPhone.slice(-10) }),
+    });
+  } catch { return json({ error: "Password recovery is temporarily unavailable" }, 502); }
+  if (claimResponse.status === 409) return json({ error: "This verification has already been used. Please verify your mobile number again." }, 401);
+  if (!claimResponse.ok) {
+    console.error("mobile-password-recovery could not consume verification token", claimResponse.status);
+    return json({ error: "Password recovery is temporarily unavailable" }, 502);
+  }
+
   let updateResponse: Response;
   try {
     updateResponse = await fetch(new URL(`/auth/v1/admin/users/${matchedUser.id}`, supabaseUrl), {
