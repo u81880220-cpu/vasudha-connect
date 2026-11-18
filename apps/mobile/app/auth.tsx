@@ -62,7 +62,8 @@ export default function AuthScreen(){
  const [accountMode,setAccountMode]=useState<"login"|"signup">("login");
  const [sent,setSent]=useState(false); const [busy,setBusy]=useState(false); const [showMsg91Widget,setShowMsg91Widget]=useState(false); const [resetSent,setResetSent]=useState(false); const [confirmPassword,setConfirmPassword]=useState(""); const [mobileRecovery,setMobileRecovery]=useState(false); const [pinRecoveryReady,setPinRecoveryReady]=useState(false); const [feedback,setFeedback]=useState<{kind:"error"|"success";text:string}|null>(null); const isReset=params.mode==="reset-password";
 
- useEffect(()=>{const {data}=supabase.auth.onAuthStateChange((event,session)=>{if(event==="SIGNED_IN"&&session&&!isReset){setTimeout(()=>router.replace("/home"),0);}});return()=>data.subscription.unsubscribe();},[isReset]);
+ // Login handlers own navigation after successful authentication. Avoid a second
+ // SIGNED_IN-triggered router.replace racing with the explicit navigation below.
  useEffect(()=>{if(params.mode==="customer"||params.mode==="professional"){setMode(params.mode);setModeChosen(true);}},[params.mode]);
  async function updatePassword(){if(password.length<PASSWORD_MIN_LENGTH)return Alert.alert("Password too short",`Use at least ${PASSWORD_MIN_LENGTH} characters.`);if(password!==confirmPassword)return Alert.alert("Passwords do not match","Enter the same password in both fields.");setBusy(true);try{const{error}=await supabase.auth.updateUser({password});if(error)throw error;Alert.alert("Password updated","Your password has been changed.");router.replace("/home");}catch(e){Alert.alert("Unable to update password",e instanceof Error?e.message:"Please request a new reset link.");}finally{setBusy(false);}}
  async function verifyOtp(){
