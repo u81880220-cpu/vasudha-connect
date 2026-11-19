@@ -45,7 +45,7 @@ function friendlyAuthError(error: unknown, flow: "login" | "signup" | "reset" | 
  if (message.includes("password should be at least") || message.includes("password must be")) return `Password must be at least ${PASSWORD_MIN_LENGTH} characters long.`;
  if (message.includes("rate limit") || message.includes("too many requests")) return "Too many attempts. Please wait a little while and try again.";
  if (message.includes("network") || message.includes("fetch")) return "We couldn’t connect. Check your internet connection and try again.";
- if (flow === "reset") return "We couldn’t process the password reset request. Please try again shortly.";
+ if (flow === "reset") return e?.message?.trim() || "Password reset failed. Please try again shortly.";
  if (flow === "login") return "We couldn’t sign you in. Check your details and try again.";
  if (flow === "signup") return "We couldn’t create your account. Please check your details and try again.";
  return "Something went wrong. Please try again.";
@@ -180,7 +180,14 @@ export default function AuthScreen(){
   if(!email.trim()||!email.includes("@"))return Alert.alert("Enter your email","Enter the email address linked to your KAMPRO account first.");
   setBusy(true);
   try{const{error}=await supabase.auth.resetPasswordForEmail(email.trim(),{redirectTo:getAuthRedirect()+"?mode=reset-password"});if(error)throw error;setResetSent(true);Alert.alert("Check your email","If an account exists for this address, Supabase will send a password-reset link. Open it on this device or browser to choose a new password.");}
-  catch(e){Alert.alert("Password reset",friendlyAuthError(e,"reset"));}
+  catch(e){
+   const details=e as {message?:string;code?:string;status?:number};
+   const message=friendlyAuthError(e,"reset");
+   const diagnostic=[details?.code? `Code: ${details.code}`:null,details?.status? `HTTP: ${details.status}`:null].filter(Boolean).join(" · ");
+   console.warn("KAMPRO Android password reset request failed",{message:details?.message,code:details?.code,status:details?.status});
+   setFeedback({kind:"error",text:diagnostic?`${message} (${diagnostic})`:message});
+   Alert.alert("Password reset failed",diagnostic?`${message}\n\n${diagnostic}`:message);
+  }
   finally{setBusy(false);}
  }
  async function emailSignup(){
