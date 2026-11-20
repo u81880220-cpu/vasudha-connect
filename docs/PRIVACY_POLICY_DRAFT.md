@@ -5,7 +5,7 @@
 **Effective date:** 27 October 2026  
 **App:** KAMPRO  
 **Publisher/legal entity:** [Insert publisher's legal name]  
-**Contact:** ashishgaur381@gmail.com  
+**Contact:** kampro.pro1@gmail.com  
 **Public website:** Not yet available; publish this policy on a public HTTPS page before Play Store submission.
 
 ## 1. Scope
@@ -30,7 +30,7 @@ Describe every recipient category and provider that receives personal informatio
 Users can manage location and notification permissions in their device settings. Explain whether the app remains usable without each optional permission and what functionality is affected. State whether location is collected only while the app is in use or otherwise, based on verified implementation.
 
 ## 6. Retention and deletion
-Specify retention periods or the criteria used to determine them for accounts, job records, messages, location data, uploaded documents, payment records, and security logs. Explain how users can request account and data deletion: Users can request account and personal-data deletion by emailing ashishgaur381@gmail.com from their registered email address or including their registered mobile number in the request. The publisher should verify the request and respond; this contact route must be tested before publication.. State any legally required retention exceptions.
+Specify retention periods or the criteria used to determine them for accounts, job records, messages, location data, uploaded documents, payment records, and security logs. Explain how users can request account and data deletion: Users can request account and personal-data deletion by emailing kampro.pro1@gmail.com from their registered email address or including their registered mobile number in the request. The publisher should verify the request and respond; this contact route must be tested before publication.. State any legally required retention exceptions.
 
 ## 7. Security
 Describe the safeguards actually implemented, such as access controls, transport encryption, and restricted administrative access. No security measure should be claimed unless verified.
@@ -42,7 +42,7 @@ State the intended age group and whether the app is directed to children. Explai
 Explain how users can access, correct, or delete their information, withdraw permissions, and contact the publisher with privacy questions, subject to applicable law.
 
 ## 10. Changes and contact
-We may update this policy when the app or its practices change. The current version will be available at The final public HTTPS URL must be inserted after hosting is enabled.. For privacy questions or requests, contact [Insert monitored privacy/support email].
+We may update this policy when the app or its practices change. The current version will be available at The final public HTTPS URL must be inserted after hosting is enabled.. For privacy questions or requests, contact kampro.pro1@gmail.com.
 
 ---
 ## Publication checklist
