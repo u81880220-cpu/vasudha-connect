@@ -5,7 +5,7 @@ import { router } from "expo-router";
 
 export default function PrivacyPolicy({ kind }: { kind: "privacy" | "terms" }) {
   const privacy = true;
-  const email = "ashishgaur381@gmail.com";
+  const email = "kampro.pro1@gmail.com";
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
       <ScrollView contentContainerStyle={s.c}>
