@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
+import { supabase } from "./supabase";
 
 export type KamproLocation = {
   latitude: number;
@@ -102,6 +103,30 @@ export async function searchKamproLocations(
 
   const request = (async (): Promise<LocationSuggestion[]> => {
     let combined: LocationSuggestion[] = [];
+
+    // Prefer the authenticated server-side Google Places provider. Keeping the
+    // API key on the server avoids embedding it in the Android application.
+    // If Places is not configured or temporarily unavailable, use the OSM
+    // providers below rather than blocking the user.
+    try {
+      const { data, error } = await supabase.functions.invoke("location-search", { body: { query: q } });
+      const serverRows = Array.isArray(data?.suggestions) ? data.suggestions as LocationSuggestion[] : [];
+      if (!error && serverRows.length) {
+        const ranked = rankSuggestions(serverRows.filter(row =>
+          Number.isFinite(Number(row.latitude)) &&
+          Number.isFinite(Number(row.longitude)) &&
+          Boolean(String(row.label || "").trim()) &&
+          Boolean(String(row.detail || "").trim())
+        ), q);
+        if (ranked.length) {
+          searchCache.set(key, { at: Date.now(), rows: ranked });
+          onSuggestions?.(ranked);
+          return ranked;
+        }
+      }
+    } catch {
+      // Public geocoders remain available as a fallback.
+    }
     const publish = (rows: LocationSuggestion[]) => {
       const useful = rows.filter(row => {
         const detail = (row.label + " " + row.detail).toLocaleLowerCase();
@@ -119,18 +144,18 @@ export async function searchKamproLocations(
       }
     };
 
-    const photonUrl = "https://photon.komoot.io/api/?limit=30&lang=en&q=" + encodeURIComponent(q);
-    const nominatimUrl = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=20&countrycodes=in&q=" + encodeURIComponent(q);
+    const photonUrl = "https://photon.komoot.io/api/?limit=30&lang=en&lat=26.8467&lon=80.9462&zoom=5&q=" + encodeURIComponent(q);
+    const nominatimUrl = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=20&countrycodes=in&accept-language=en&q=" + encodeURIComponent(q + ", India");
 
     // Publish each provider's results as soon as it responds. Do not wait for
     // the slower provider before showing the first matching locality.
     await Promise.allSettled([
-      fetchJson(photonUrl, 4500).then(value => {
+      fetchJson(photonUrl, 3500).then(value => {
         const rows = ((value?.features || []).map((x: any) => fromPhoton(x, q)).filter(Boolean) as LocationSuggestion[]);
         publish(rows);
         return rows;
       }),
-      fetchJson(nominatimUrl, 5000).then(value => {
+      fetchJson(nominatimUrl, 4500).then(value => {
         const rows = (Array.isArray(value) ? value.map((x: any) => fromNominatim(x, q)).filter(Boolean) : []) as LocationSuggestion[];
         publish(rows);
         return rows;
