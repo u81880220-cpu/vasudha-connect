@@ -103,32 +103,36 @@ export async function searchKamproLocations(
   const request = (async (): Promise<LocationSuggestion[]> => {
     const photonUrl = "https://photon.komoot.io/api/?limit=20&lang=en&q=" + encodeURIComponent(q + ", India");
     const nominatimUrl = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=12&countrycodes=in&q=" + encodeURIComponent(q);
-    let combined: LocationSuggestion[] = [];
-    let firstUsefulResult = false;
 
-    const publish = (rows: LocationSuggestion[]) => {
-      const ranked = rankSuggestions(rows, q);
-      if (ranked.length) {
-        combined = ranked;
-        firstUsefulResult = true;
-        searchCache.set(key, { at: Date.now(), rows: ranked });
-        onSuggestions?.(ranked);
+    // Photon is the fast autocomplete provider used first while the user types.
+    // Publish its results immediately instead of waiting for a second network call.
+    try {
+      const photon = await fetchJson(photonUrl, 1800);
+      const photonRows = rankSuggestions(
+        ((photon?.features || []).map((x: any) => fromPhoton(x, q)).filter(Boolean) as LocationSuggestion[]),
+        q
+      );
+      if (photonRows.length) {
+        searchCache.set(key, { at: Date.now(), rows: photonRows });
+        onSuggestions?.(photonRows);
+        return photonRows;
       }
-    };
+    } catch {}
 
-    // Publish the first provider's matches immediately; do not make the UI wait
-    // for the slower provider before showing selectable address suggestions.
-    const photonTask = fetchJson(photonUrl, 1800).then((value) => {
-      publish([...combined, ...((value?.features || []).map((x: any) => fromPhoton(x, q)).filter(Boolean) as LocationSuggestion[])]);
-    }).catch(() => undefined);
-    const nominatimTask = fetchJson(nominatimUrl, 1800).then((value) => {
-      if (Array.isArray(value)) {
-        publish([...combined, ...(value.map((x: any) => fromNominatim(x, q)).filter(Boolean) as LocationSuggestion[])]);
+    // Use Nominatim only as a fallback. This avoids sending a request to its
+    // public service on every keystroke and reduces rate-limit failures.
+    try {
+      const nominatim = await fetchJson(nominatimUrl, 2200);
+      const nominatimRows = rankSuggestions(
+        (Array.isArray(nominatim) ? nominatim.map((x: any) => fromNominatim(x, q)).filter(Boolean) : []) as LocationSuggestion[],
+        q
+      );
+      if (nominatimRows.length) {
+        searchCache.set(key, { at: Date.now(), rows: nominatimRows });
+        onSuggestions?.(nominatimRows);
+        return nominatimRows;
       }
-    }).catch(() => undefined);
-
-    await Promise.all([photonTask, nominatimTask]);
-    if (firstUsefulResult && combined.length) return combined;
+    } catch {}
 
     // Last fallback for devices where external geocoding providers are unreachable.
     try {
@@ -153,7 +157,7 @@ export async function searchKamproLocations(
       // suppress suggestions for the next attempt.
       return [];
     }
-  })();
+  })();;
 
   searchInFlight.set(key, request);
   try { return await request; }
