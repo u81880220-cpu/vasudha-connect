@@ -73,7 +73,7 @@ function rankSuggestions(rows: LocationSuggestion[], query: string): LocationSug
       const label = (x.label + " " + x.detail).toLocaleLowerCase();
       const exact = label.includes(query.toLocaleLowerCase()) ? 100 : 0;
       const matched = tokens.filter(token => label.includes(token)).length * 12;
-      const locality = /khand|nagar|colony|sector|vihar|puram|marg|road|locality/i.test(x.label) ? 5 : 0;
+      const locality = /khand|nagar|colony|sector|vihar|puram|marg|road|locality|enclave|extension|phase|block/i.test(label) ? 30 : 0;
       const india = /india/i.test(label) ? 2 : 0;
       return exact + matched + locality + india;
     };
