@@ -1,5 +1,5 @@
 import {Link,router} from "expo-router";
-import {getKamproLocation,setKamproLocation,searchKamproLocations,resolveKamproLocation,getCurrentKamproLocation,type LocationSuggestion} from "../src/lib/kamproLocation";
+import {getKamproLocation,setKamproLocation,searchKamproLocations,getCurrentKamproLocation,type LocationSuggestion} from "../src/lib/kamproLocation";
 import {Alert,AppState,Image,KeyboardAvoidingView,Modal,Platform,Pressable,SafeAreaView,ScrollView,StyleSheet,Switch,Text,TextInput,View,ActivityIndicator,useWindowDimensions} from "react-native";
 import {useEffect,useState} from "react";
 import {useAuth} from "../src/auth/AuthProvider";
@@ -140,7 +140,7 @@ function CurrentLocationBar(){
        <View style={s.locationModalHeader}><Text style={s.locationModalTitle}>Choose your location</Text><Pressable onPress={()=>setModalOpen(false)}><Text style={s.locationModalClose}>×</Text></Pressable></View>
        <Text style={s.locationModalHint}>Find professionals around the place where you need the service.</Text>
        <Pressable style={s.locationGpsButton} disabled={loadingLocation} onPress={()=>{void detectLocation();}}><Text style={s.locationGpsButtonText}>⌖  Use my current GPS location</Text></Pressable>
-       <TextInput value={manualLocation} onChangeText={v=>{setManualLocation(v);setSelectedPlace(null);setError("");}} placeholder="Search city, locality or area" placeholderTextColor="#8B93A1" style={s.locationSearchInput} returnKeyType="search" onSubmitEditing={()=>{void applyManualLocation();}}/>
+       <TextInput value={manualLocation} onChangeText={v=>{setManualLocation(v);setSelectedPlace(null);setError("");}} placeholder="Search city, locality or area" placeholderTextColor="#8B93A1" style={s.locationSearchInput} returnKeyType="search" onSubmitEditing={()=>{setError(suggestions.length?"Please tap an address suggestion below.":"Wait for a matching address suggestion.");}}/>
        {suggestions.length>0?<ScrollView style={s.locationSuggestionList} keyboardShouldPersistTaps="always" keyboardDismissMode="none" nestedScrollEnabled>{suggestions.map((p,i)=><Pressable key={p.latitude+"-"+p.longitude+"-"+i} style={s.locationSuggestionItem} onPress={()=>{setSelectedPlace(p);setManualLocation(p.label);setSuggestions([]);setError("");}}><Text style={s.locationSuggestionTitle}>{p.label}</Text><Text style={s.locationSuggestionDetail} numberOfLines={2}>{p.detail}</Text></Pressable>)}</ScrollView>:null}
        {error?<Text accessibilityRole="alert" style={s.locationModalError}>{error}</Text>:null}
        <Pressable style={s.locationApplyButton} disabled={loadingLocation} onPress={applyManualLocation}><Text style={s.locationApplyText}>{loadingLocation?"Please wait…":"Use this location"}</Text></Pressable>
