@@ -25,7 +25,7 @@ export default function ServiceRequest(){
   if(query.length<3){setLocationSuggestions([]);return;}
   if(selectedLocation&&selectedLocation.label===query)return;
   let active=true;
-  const timer=setTimeout(async()=>{const rows=await searchKamproLocations(query);if(active)setLocationSuggestions(rows);},350);
+  const timer=setTimeout(async()=>{const rows=await searchKamproLocations(query);if(active)setLocationSuggestions(rows);},180);
   return()=>{active=false;clearTimeout(timer);};
  },[location,selectedLocation]);
  useEffect(()=>{let active=true;void resolveSelection(()=>active);return()=>{active=false}},[serviceId,subServiceId,serviceName]);
