@@ -94,9 +94,11 @@ function CurrentLocationBar(){
  }
  async function applyManualLocation(){
   if(loadingLocation)return;
-  setLoadingLocation(true);setError("");
+  setError("");
+  if(!selectedPlace){setError(suggestions.length?"Please tap an address suggestion before continuing.":"Wait for address suggestions, then select the correct place.");return;}
+  setLoadingLocation(true);
   try{
-   const place=selectedPlace||await resolveKamproLocation(manualLocation,suggestions);
+   const place=selectedPlace;
    const saved={latitude:place.latitude,longitude:place.longitude,label:place.label,manual:true};
    await setKamproLocation(saved);
    setLocationText(place.label);
