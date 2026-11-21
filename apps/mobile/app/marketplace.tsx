@@ -1,6 +1,5 @@
-import * as Location from "expo-location";
 import React,{ useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Dimensions, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../src/lib/supabase";
@@ -9,6 +8,7 @@ import { AppBottomNav } from "../src/components/AppBottomNav";
 import { ServicePicker, ServiceSelection } from "../src/components/ServicePicker";
 import { LanguageSwitch } from "../src/components/LanguageSwitch";
 import { useKamproLanguage } from "../src/i18n/LanguageProvider";
+import {getKamproLocation,setKamproLocation,searchKamproLocations,getCurrentKamproLocation,type LocationSuggestion} from "../src/lib/kamproLocation";
 
 type Professional={
   professional_id:string; display_name:string; headline:string|null; city:string|null; state:string|null;
@@ -48,8 +48,8 @@ function MarketplaceScreen(){
   const[locationPickerOpen,setLocationPickerOpen]=useState(false);
   const[locationLabel,setLocationLabel]=useState(cachedMarketplaceLocation?.label??"Detecting location…");
   const[manualLocation,setManualLocation]=useState("");
-  const[locationSuggestions,setLocationSuggestions]=useState<Array<{latitude:number;longitude:number;label:string;shortLabel:string}>>([]);
-  const[selectedManualPlace,setSelectedManualPlace]=useState<{latitude:number;longitude:number;label:string;shortLabel:string}|null>(null);
+  const[locationSuggestions,setLocationSuggestions]=useState<LocationSuggestion[]>([]);
+  const[selectedManualPlace,setSelectedManualPlace]=useState<LocationSuggestion|null>(null);
   const[locationBusy,setLocationBusy]=useState(false);
   const[locationError,setLocationError]=useState("");
   const verifiedOnly=true;
@@ -73,123 +73,57 @@ function MarketplaceScreen(){
   const visibleItems=[...searchedItems].filter(x=>(!verifiedOnly||x.verification_status==="verified")&&(!availableOnly||x.is_available)&&(Math.round(x.trust_score)/20)>=minRating).sort((a,b)=>{const tw=Number(marketplaceConfig?.trust_weight??0.5),dw=Number(marketplaceConfig?.distance_weight??0.3),aw=Number(marketplaceConfig?.availability_weight??0.2);const score=(x:any)=>tw*(Number(x.trust_score||0)/100)+dw*(1/(1+Number(x.distance_km||0)))+aw*(x.is_available?1:0);return score(b)-score(a)});
 
   useEffect(()=>{(async()=>{const{data}=await supabase.rpc("marketplace_configuration");const cfg=data||{};setMarketplaceConfig(cfg);setRadius(Math.min(Number(cfg.default_radius_km||25),Number(cfg.max_radius_km||50)));setMinRating(Number(cfg.min_rating||0));})();},[]);
-  useEffect(()=>{if(cachedMarketplaceLocation){setUserCoords(cachedMarketplaceLocation.coords);setLocationLabel(cachedMarketplaceLocation.label);setLoading(false);void searchProfessionals(cachedMarketplaceLocation.coords);}else{void requestLocation();}},[]);
+  useEffect(()=>{let active=true;(async()=>{const shared=await getKamproLocation();if(!active)return;if(shared){const coords={latitude:shared.latitude,longitude:shared.longitude};setUserCoords(coords);setLocationLabel(shared.label);cachedMarketplaceLocation={coords,label:shared.label,manual:shared.manual};setLoading(false);void searchProfessionals(coords);}else if(cachedMarketplaceLocation){setUserCoords(cachedMarketplaceLocation.coords);setLocationLabel(cachedMarketplaceLocation.label);setLoading(false);void searchProfessionals(cachedMarketplaceLocation.coords);}else{void requestLocation();}})();return()=>{active=false};},[]);
   useEffect(()=>{if(userCoords) searchProfessionals(userCoords);},[selection.categoryId,selection.serviceId,selection.subServiceId,radius]);
   useEffect(()=>{if(!userCoords||query.trim().length===0)return;const timer=setTimeout(()=>{void searchProfessionals(userCoords);},250);return()=>clearTimeout(timer);},[query,userCoords]);
   useEffect(()=>{
     const query=manualLocation.trim();
-    if(query.length<3){setLocationSuggestions([]);return;}
-    if(selectedManualPlace?.shortLabel===query)return;
+    if(query.length<2){setLocationSuggestions([]);return;}
+    if(selectedManualPlace&&selectedManualPlace.label===query)return;
+    let active=true;
     const timer=setTimeout(async()=>{
-      try{
-        const response=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&countrycodes=in&q=${encodeURIComponent(query)}`,{headers:{Accept:"application/json"}});
-        if(!response.ok)throw new Error("Location search failed");
-        const results=await response.json();
-        const suggestions=(Array.isArray(results)?results:[]).filter((p:any)=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))).map((p:any)=>{
-          const a=p.address||{};
-          const locality=a.city||a.town||a.village||a.suburb||a.county||a.state_district||p.name||query;
-          const state=a.state||a.region||"";
-          const country=a.country||"India";
-          const shortLabel=[locality,state,country].filter(Boolean).join(", ");
-          return {latitude:Number(p.lat),longitude:Number(p.lon),label:String(p.display_name||shortLabel),shortLabel};
-        });
-        setLocationSuggestions(suggestions);
-      }catch{setLocationSuggestions([]);}
-    },450);
-    return ()=>clearTimeout(timer);
-  },[manualLocation]);
+      // Keep the picker list stable while both geocoders respond. Streaming
+      // partial arrays caused the sheet to resize/reorder repeatedly on mobile.
+      const rows=await searchKamproLocations(query);
+      if(active)setLocationSuggestions(rows);
+    }, 300);
+    return()=>{active=false;clearTimeout(timer);};
+  },[manualLocation,selectedManualPlace]);
 
   async function requestLocation(){
-    setLoading(true);
-    setLocationBusy(true);
+    if(locationBusy)return;
+    setLoading(true);setLocationBusy(true);setLocationError("");
     try{
-      const permission=await Location.requestForegroundPermissionsAsync();
-      if(permission.status!=="granted"){
-        setLocationLabel("Location permission required");
-        setLoading(false);
-        return;
-      }
-      let pos=await Location.getLastKnownPositionAsync({maxAge:120000,requiredAccuracy:1500}).catch(()=>null);
-      if(!pos){pos=await Promise.race([Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced}),new Promise<never>((_,reject)=>setTimeout(()=>reject(new Error("Location timed out")),12000))]);}
-      const coords={latitude:pos.coords.latitude,longitude:pos.coords.longitude};
-      setUserCoords(coords);
-      cachedMarketplaceLocation={coords,label:"Current location",manual:false};
-      const places=await Location.reverseGeocodeAsync(coords).catch(()=>[]);
-      const p=places?.[0];
-      const city=p?.city||p?.district||p?.subregion||p?.region||"Current location";
-      const state=p?.region&&p.region!==city?p.region:"";
-      const label=state?city+", "+state:city;
-      setLocationLabel(label);
-      cachedMarketplaceLocation={coords,label,manual:false};
+      const point=await getCurrentKamproLocation();
+      const coords={latitude:point.latitude,longitude:point.longitude};
+      setUserCoords(coords);setLocationLabel(point.label);
+      cachedMarketplaceLocation={coords,label:point.label,manual:false};
+      await setKamproLocation({...point,manual:false});
       await searchProfessionals(coords);
-    }catch{
+    }catch(e:any){
       setLocationLabel("Unable to detect location");
+      setLocationError(e?.message||"GPS could not detect your location. Search manually.");
       setLoading(false);
-    }finally{
-      setLocationBusy(false);
-    }
+    }finally{setLocationBusy(false);}
   }
 
   async function changeLocationManually(){
     const value=manualLocation.trim();
     if(locationBusy)return;
-    if(value.length<3){setLocationError("Enter a full city or area name (at least 3 characters).");return;}
-    setLocationError("");
-    setLocationBusy(true);
-    setLoading(true);
+    if(value.length<3){setLocationError("Enter a city, locality or area (at least 3 characters).");return;}
+    if(!selectedManualPlace){setLocationError(locationSuggestions.length?"Please tap an address suggestion before continuing.":"Wait for address suggestions, then select the correct place.");return;}
+    setLocationError("");setLocationBusy(true);setLoading(true);
     try{
-      let coords:Coords|null=null;
-      let resolvedLabel=value;
-      if(selectedManualPlace){
-        coords={latitude:selectedManualPlace.latitude,longitude:selectedManualPlace.longitude};
-        resolvedLabel=selectedManualPlace.shortLabel;
-      }else{
-        // Use the same place-search provider on Android, iOS and web.
-        // Native geocoding can fail for valid Indian city names even when
-        // the autocomplete suggestions already returned a match.
-        try{
-          const response=await fetch(
-            `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=in&q=${encodeURIComponent(value)}`,
-            {headers:{Accept:"application/json"}}
-          );
-          if(response.ok){
-            const results=await response.json();
-            const p=Array.isArray(results)?results[0]:null;
-            if(p&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))){
-              coords={latitude:Number(p.lat),longitude:Number(p.lon)};
-              const a=p.address||{};
-              resolvedLabel=[a.city||a.town||a.village||a.suburb||a.county||a.state_district||p.name,a.state||a.region,"India"].filter(Boolean).join(", ");
-            }
-          }
-        }catch{
-          // Fall back to the device geocoder if the network geocoder is unavailable.
-        }
-        if(!coords){
-          try{
-            const places=await Location.geocodeAsync(value);
-            const p=places?.[0];
-            if(p)coords={latitude:p.latitude,longitude:p.longitude};
-          }catch{
-            // A clear validation message is shown below if neither provider resolves it.
-          }
-        }
-      }
-      if(!coords)throw new Error("Location not found");
-      setLocationError("");
-      setUserCoords(coords);
-      setLocationLabel(resolvedLabel);
+      const place=selectedManualPlace;
+      const coords={latitude:place.latitude,longitude:place.longitude};
+      const resolvedLabel=place.label;
+      setUserCoords(coords);setLocationLabel(resolvedLabel);
       cachedMarketplaceLocation={coords,label:resolvedLabel,manual:true};
-      setManualLocation("");
-      setLocationSuggestions([]);
-      setSelectedManualPlace(null);
-      setLocationPickerOpen(false);
-      await searchProfessionals(coords);
-    }catch(error){
-      setLocationError(error instanceof Error && error.message==="Location not found" ? "Location not found. Enter a full place name and select a matching suggestion." : "Could not resolve this location. Check the spelling or select a suggestion.");
-      setLoading(false);
-    }finally{
-      setLocationBusy(false);
-    }
+      await setKamproLocation({...coords,label:resolvedLabel,manual:true});
+      setManualLocation("");setLocationSuggestions([]);setSelectedManualPlace(null);
+      setLocationPickerOpen(false);await searchProfessionals(coords);
+    }catch(e:any){setLocationError(e?.message||"Could not resolve this location. Try another spelling.");setLoading(false);}
+    finally{setLocationBusy(false);}
   }
 
   async function searchProfessionals(coords:Coords){
@@ -315,20 +249,22 @@ function MarketplaceScreen(){
         {!loading&&visibleItems.length===0?(searchError?<View style={s.empty}><Text style={s.empty}>{searchError}</Text><Pressable style={s.locationButton} onPress={requestLocation}><Text style={s.locationButtonText}>Try again</Text></Pressable></View>:<Text style={s.empty}>No professionals found in this area.</Text>):null}
       </View>
     </ScrollView>
-<Modal visible={locationPickerOpen} transparent animationType="slide" onRequestClose={()=>setLocationPickerOpen(false)}>
-        <View style={s.modalBackdrop}>
-          <View style={s.filterSheet}>
+<Modal visible={locationPickerOpen} transparent animationType={Platform.OS==="android"?"none":"slide"} hardwareAccelerated statusBarTranslucent={false} onRequestClose={()=>setLocationPickerOpen(false)}>
+        <KeyboardAvoidingView style={s.modalBackdrop} behavior={Platform.OS==="ios"?"padding":undefined} enabled={Platform.OS==="ios"}>
+          <View style={[s.filterSheet,s.locationSheet]}>
+            <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="none" contentContainerStyle={s.locationSheetContent} nestedScrollEnabled>
             <View style={s.sheetHead}><Text style={s.sheetTitle}>Change Location</Text><Pressable onPress={()=>setLocationPickerOpen(false)}><Text style={s.close}>×</Text></Pressable></View>
             <Text style={s.filterHint}>Use GPS automatically or enter a city/area manually.</Text>
             <Pressable style={s.locationCurrentButton} onPress={()=>{setLocationPickerOpen(false);void requestLocation();}}>
               <Text style={s.locationCurrentButtonText}>⌖  Use current GPS location</Text>
             </Pressable>
-            <TextInput value={manualLocation} onChangeText={(value)=>{setManualLocation(value);setSelectedManualPlace(null);setLocationError("");}} placeholder="Enter city or area (e.g. Raebareli, Uttar Pradesh)" placeholderTextColor="#8B93A1" style={s.manualLocationInput}/>
+            <TextInput value={manualLocation} onChangeText={(value)=>{setManualLocation(value);setSelectedManualPlace(null);setLocationError("");}} placeholder="Enter city or area (e.g. Raebareli, Uttar Pradesh)" placeholderTextColor="#8B93A1" style={s.manualLocationInput} returnKeyType="search" onSubmitEditing={()=>{setLocationError(locationSuggestions.length?"Please tap an address suggestion below.":"Wait for a matching address suggestion.");}}/>
             {locationError?<Text accessibilityRole="alert" style={s.locationError}>{locationError}</Text>:null}
-            {locationSuggestions.length>0?<View style={s.locationSuggestions}>{locationSuggestions.map((place,i)=><Pressable key={`${place.latitude}-${place.longitude}-${i}`} style={s.locationSuggestion} onPress={()=>{setSelectedManualPlace(place);setManualLocation(place.shortLabel);setLocationSuggestions([]);setLocationError("");}}><Text style={s.locationSuggestionTitle}>{place.shortLabel}</Text><Text style={s.locationSuggestionDetail} numberOfLines={2}>{place.label}</Text></Pressable>)}</View>:null}
+            {locationSuggestions.length>0?<View style={s.locationSuggestions}>{locationSuggestions.map((place,i)=><Pressable key={`${place.latitude}-${place.longitude}-${i}`} style={s.locationSuggestion} onPress={()=>{setSelectedManualPlace(place);setManualLocation(place.label);setLocationSuggestions([]);setLocationError("");}}><Text style={s.locationSuggestionTitle}>{place.label}</Text><Text style={s.locationSuggestionDetail} numberOfLines={2}>{place.detail}</Text></Pressable>)}</View>:null}
             <Pressable style={s.apply} onPress={changeLocationManually} disabled={locationBusy}><Text style={s.applyText}>{locationBusy?"Finding…":"Use this location"}</Text></Pressable>
+            </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
       <Modal visible={filtersOpen} transparent animationType="slide" onRequestClose={()=>setFiltersOpen(false)}>
         <View style={s.modalBackdrop}>
@@ -393,5 +329,5 @@ const s=StyleSheet.create({
   marker:{width:42,height:42,borderRadius:21,borderWidth:3,borderColor:"#fff",backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",elevation:4},markerText:{color:"#fff",fontWeight:"900",fontSize:15},
   callout:{width:190,padding:6},calloutName:{fontWeight:"800",fontSize:15,color:"#10233F"},calloutLink:{fontWeight:"900",marginTop:5,color:"#075E4D"},loadingOverlay:{position:"absolute",inset:0,backgroundColor:"rgba(255,255,255,.72)",alignItems:"center",justifyContent:"center"},loadingText:{marginTop:8,fontWeight:"700",color:"#10233F"},
   locationEmpty:{flex:1,alignItems:"center",justifyContent:"center",padding:30},locationTitle:{fontSize:18,fontWeight:"800",color:"#10233F",marginBottom:6},locationButton:{marginTop:14,backgroundColor:"#FF4B1F",paddingHorizontal:18,paddingVertical:11,borderRadius:12},locationButtonText:{color:"#fff",fontWeight:"800"},
-  modalBackdrop:{flex:1,backgroundColor:"rgba(19,32,28,.28)",justifyContent:"flex-end"},filterSheet:{backgroundColor:"#fff",borderTopLeftRadius:26,borderTopRightRadius:26,padding:22,paddingBottom:30},sheetHead:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},sheetTitle:{fontSize:21,fontWeight:"900",color:"#10233F"},close:{fontSize:28,color:"#10233F"},filterRow:{minHeight:54,flexDirection:"row",alignItems:"center",justifyContent:"space-between",borderBottomWidth:1,borderBottomColor:"#eef2f0"},filterLabel:{fontSize:15,fontWeight:"800",color:"#10233F",marginTop:16},ratingRow:{flexDirection:"row",gap:8,marginTop:10},ratingChip:{borderWidth:1,borderColor:"#CBD0D8",borderRadius:18,paddingHorizontal:14,paddingVertical:9},ratingChipOn:{backgroundColor:"#FF4B1F",borderColor:"#FF4B1F"},ratingText:{color:"#10233F",fontWeight:"700"},ratingOn:{color:"#fff",fontWeight:"800"},filterHint:{color:"#6B7280",marginTop:15},apply:{height:50,borderRadius:12,backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",marginTop:18},applyText:{color:"#fff",fontWeight:"900",fontSize:16},listHeader:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:16,paddingTop:12},listTitle:{fontSize:17,fontWeight:"900",color:"#10233F"},listHint:{fontSize:12,color:"#475467",fontWeight:"600"},workerRow:{paddingHorizontal:12,paddingBottom:18,gap:10},card:{width:"100%",borderRadius:16,borderWidth:1,borderColor:"#e2e7e6",padding:12,marginTop:8,backgroundColor:"#fff",elevation:2},cardTop:{flexDirection:"row",alignItems:"center",gap:9},avatar:{width:60,height:60,borderRadius:30,backgroundColor:"#edf1f5",alignItems:"center",justifyContent:"center",overflow:"hidden"},name:{fontSize:15,fontWeight:"900",color:"#10233F"},headline:{fontSize:12,color:"#475467",fontWeight:"500",marginTop:2},verified:{color:"#FF4B1F",fontSize:18},distance:{marginTop:10,fontSize:12,color:"#475467",fontWeight:"600"},rate:{marginTop:8,alignSelf:"flex-start",paddingHorizontal:9,paddingVertical:5,borderRadius:10,backgroundColor:"#e9f8f2"},rateText:{fontSize:12,fontWeight:"900",color:"#075E4D"},view:{marginTop:9,fontWeight:"900",color:"#075E4D"},empty:{padding:20,color:"#475467",fontSize:14,fontWeight:"500"}
+  modalBackdrop:{flex:1,backgroundColor:"rgba(19,32,28,.28)",justifyContent:"flex-end"},filterSheet:{backgroundColor:"#fff",borderTopLeftRadius:26,borderTopRightRadius:26,padding:22,paddingBottom:12},locationSheet:{maxHeight:"92%",flexShrink:1},locationSheetContent:{paddingBottom:16},sheetHead:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},sheetTitle:{fontSize:21,fontWeight:"900",color:"#10233F"},close:{fontSize:28,color:"#10233F"},filterRow:{minHeight:54,flexDirection:"row",alignItems:"center",justifyContent:"space-between",borderBottomWidth:1,borderBottomColor:"#eef2f0"},filterLabel:{fontSize:15,fontWeight:"800",color:"#10233F",marginTop:16},ratingRow:{flexDirection:"row",gap:8,marginTop:10},ratingChip:{borderWidth:1,borderColor:"#CBD0D8",borderRadius:18,paddingHorizontal:14,paddingVertical:9},ratingChipOn:{backgroundColor:"#FF4B1F",borderColor:"#FF4B1F"},ratingText:{color:"#10233F",fontWeight:"700"},ratingOn:{color:"#fff",fontWeight:"800"},filterHint:{color:"#6B7280",marginTop:15},apply:{height:50,borderRadius:12,backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",marginTop:18},applyText:{color:"#fff",fontWeight:"900",fontSize:16},listHeader:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:16,paddingTop:12},listTitle:{fontSize:17,fontWeight:"900",color:"#10233F"},listHint:{fontSize:12,color:"#475467",fontWeight:"600"},workerRow:{paddingHorizontal:12,paddingBottom:18,gap:10},card:{width:"100%",borderRadius:16,borderWidth:1,borderColor:"#e2e7e6",padding:12,marginTop:8,backgroundColor:"#fff",elevation:2},cardTop:{flexDirection:"row",alignItems:"center",gap:9},avatar:{width:60,height:60,borderRadius:30,backgroundColor:"#edf1f5",alignItems:"center",justifyContent:"center",overflow:"hidden"},name:{fontSize:15,fontWeight:"900",color:"#10233F"},headline:{fontSize:12,color:"#475467",fontWeight:"500",marginTop:2},verified:{color:"#FF4B1F",fontSize:18},distance:{marginTop:10,fontSize:12,color:"#475467",fontWeight:"600"},rate:{marginTop:8,alignSelf:"flex-start",paddingHorizontal:9,paddingVertical:5,borderRadius:10,backgroundColor:"#e9f8f2"},rateText:{fontSize:12,fontWeight:"900",color:"#075E4D"},view:{marginTop:9,fontWeight:"900",color:"#075E4D"},empty:{padding:20,color:"#475467",fontSize:14,fontWeight:"500"}
 });
