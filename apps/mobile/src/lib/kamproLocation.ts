@@ -81,52 +81,80 @@ function rankSuggestions(rows: LocationSuggestion[], query: string): LocationSug
   }).slice(0, 8);
 }
 
-export async function searchKamproLocations(query: string): Promise<LocationSuggestion[]> {
-  const q = query.trim().replace(/\s+/g, " ");
-  if (q.length < 3) return [];
+export async function searchKamproLocations(
+  query: string,
+  onSuggestions?: (rows: LocationSuggestion[]) => void
+): Promise<LocationSuggestion[]> {
+  const q = query.trim().replace(/\\s+/g, " ");
+  if (q.length < 2) return [];
   const key = q.toLocaleLowerCase();
   const cached = searchCache.get(key);
-  if (cached && Date.now() - cached.at < SEARCH_CACHE_MS) return cached.rows;
+  if (cached && Date.now() - cached.at < SEARCH_CACHE_MS) {
+    onSuggestions?.(cached.rows);
+    return cached.rows;
+  }
   const pending = searchInFlight.get(key);
-  if (pending) return pending;
+  if (pending) {
+    const rows = await pending;
+    onSuggestions?.(rows);
+    return rows;
+  }
 
   const request = (async (): Promise<LocationSuggestion[]> => {
-    const photonUrl = "https://photon.komoot.io/api/?limit=16&lang=en&q=" + encodeURIComponent(q + ", India");
-    const nominatimUrl = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=16&countrycodes=in&q=" + encodeURIComponent(q);
-    // Ask both providers together: a weak Photon match must not hide a better locality match.
-    const [photonResult, nominatimResult] = await Promise.allSettled([
-      fetchJson(photonUrl, 2400),
-      fetchJson(nominatimUrl, 2400)
-    ]);
-    const rows: LocationSuggestion[] = [];
-    if (photonResult.status === "fulfilled") {
-      rows.push(...((photonResult.value?.features || []).map((x: any) => fromPhoton(x, q)).filter(Boolean) as LocationSuggestion[]));
-    }
-    if (nominatimResult.status === "fulfilled" && Array.isArray(nominatimResult.value)) {
-      rows.push(...(nominatimResult.value.map((x: any) => fromNominatim(x, q)).filter(Boolean) as LocationSuggestion[]));
-    }
-    const ranked = rankSuggestions(rows, q);
-    if (ranked.length) {
-      searchCache.set(key, { at: Date.now(), rows: ranked });
-      return ranked;
-    }
+    const photonUrl = "https://photon.komoot.io/api/?limit=20&lang=en&q=" + encodeURIComponent(q + ", India");
+    const nominatimUrl = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=12&countrycodes=in&q=" + encodeURIComponent(q);
+    let combined: LocationSuggestion[] = [];
+    let firstUsefulResult = false;
 
-    // Native geocoding is a last fallback only when neither provider returned a result.
+    const publish = (rows: LocationSuggestion[]) => {
+      const ranked = rankSuggestions(rows, q);
+      if (ranked.length) {
+        combined = ranked;
+        firstUsefulResult = true;
+        searchCache.set(key, { at: Date.now(), rows: ranked });
+        onSuggestions?.(ranked);
+      }
+    };
+
+    // Publish the first provider's matches immediately; do not make the UI wait
+    // for the slower provider before showing selectable address suggestions.
+    const photonTask = fetchJson(photonUrl, 1800).then((value) => {
+      publish([...combined, ...((value?.features || []).map((x: any) => fromPhoton(x, q)).filter(Boolean) as LocationSuggestion[])]);
+    }).catch(() => undefined);
+    const nominatimTask = fetchJson(nominatimUrl, 1800).then((value) => {
+      if (Array.isArray(value)) {
+        publish([...combined, ...(value.map((x: any) => fromNominatim(x, q)).filter(Boolean) as LocationSuggestion[])]);
+      }
+    }).catch(() => undefined);
+
+    await Promise.all([photonTask, nominatimTask]);
+    if (firstUsefulResult && combined.length) return combined;
+
+    // Last fallback for devices where external geocoding providers are unreachable.
     try {
       const places = await Promise.race([
         Location.geocodeAsync(q + ", India"),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Address search timed out")), 3000))
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Address search timed out")), 2200))
       ]);
-      const fallback = rankSuggestions((places || []).slice(0, 8).map(p => ({
-        latitude: p.latitude, longitude: p.longitude, label: q, detail: q + ", India", manual: true
+      const fallback = rankSuggestions((places || []).slice(0, 8).map(place => ({
+        latitude: place.latitude,
+        longitude: place.longitude,
+        label: q,
+        detail: q + ", India",
+        manual: true
       })), q);
-      searchCache.set(key, { at: Date.now(), rows: fallback });
+      if (fallback.length) {
+        searchCache.set(key, { at: Date.now(), rows: fallback });
+        onSuggestions?.(fallback);
+      }
       return fallback;
     } catch {
-      searchCache.set(key, { at: Date.now(), rows: [] });
+      // Never cache an empty response: a transient network failure must not
+      // suppress suggestions for the next attempt.
       return [];
     }
   })();
+
   searchInFlight.set(key, request);
   try { return await request; }
   finally { searchInFlight.delete(key); }
