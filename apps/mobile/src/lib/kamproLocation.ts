@@ -157,7 +157,7 @@ export async function searchKamproLocations(
       // suppress suggestions for the next attempt.
       return [];
     }
-  })();;
+  })();
 
   searchInFlight.set(key, request);
   try { return await request; }
