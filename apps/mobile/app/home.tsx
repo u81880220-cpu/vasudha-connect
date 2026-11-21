@@ -87,7 +87,8 @@ function CurrentLocationBar(){
   try{
    const point=await getCurrentKamproLocation();
    setLocationText(point.label);
-   await setKamproLocation({...point,manual:false});\n   setModalOpen(false);
+   await setKamproLocation({...point,manual:false});
+   setModalOpen(false);
   }catch(e:any){setError(e?.message||"Could not detect GPS location. Search for your area manually.");}
   finally{setLoadingLocation(false);}
  }
