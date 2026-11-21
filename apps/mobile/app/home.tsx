@@ -63,14 +63,13 @@ export default function HomeScreen(){
 function CurrentLocationBar(){
  const {t}=useKamproLanguage();
  const[locationText,setLocationText]=useState("Detecting your location…");
- const[coords,setCoords]=useState<{latitude:number;longitude:number}|null>(null);
  const[loadingLocation,setLoadingLocation]=useState(false);
  const[modalOpen,setModalOpen]=useState(false);
  const[manualLocation,setManualLocation]=useState("");
  const[suggestions,setSuggestions]=useState<Array<{latitude:number;longitude:number;label:string;shortLabel:string}>>([]);
  const[selectedPlace,setSelectedPlace]=useState<{latitude:number;longitude:number;label:string;shortLabel:string}|null>(null);
  const[error,setError]=useState("");
- useEffect(()=>{let active=true;(async()=>{const saved=await getKamproLocation();if(active&&saved){setCoords({latitude:saved.latitude,longitude:saved.longitude});setLocationText(saved.label);}else if(active){void detectLocation();}})();return()=>{active=false};},[]);
+ useEffect(()=>{let active=true;(async()=>{const saved=await getKamproLocation();if(active&&saved){setLocationText(saved.label);}else if(active){void detectLocation();}})();return()=>{active=false};},[]);
  useEffect(()=>{
   const query=manualLocation.trim();
   if(query.length<3){setSuggestions([]);return;}
@@ -99,7 +98,7 @@ function CurrentLocationBar(){
    const places=await Location.reverseGeocodeAsync(point);const p=places?.[0];
    const city=p?.city||p?.district||p?.subregion||p?.region||t("currentLocationFallback");
    const state=p?.region&&p.region!==city?p.region:"";const label=state?city+", "+state:city;
-   setCoords(point);setLocationText(label);await setKamproLocation({...point,label,manual:false});
+   setLocationText(label);await setKamproLocation({...point,label,manual:false});
   }catch{setLocationText(t("unableDetectLocation"));setError("Could not detect GPS location. You can search for a city or area.");}
   finally{setLoadingLocation(false);}
  }
