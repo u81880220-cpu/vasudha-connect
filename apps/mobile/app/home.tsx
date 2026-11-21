@@ -1,5 +1,5 @@
 import {Link,router} from "expo-router";
-import * as Location from "expo-location";
+import {getKamproLocation,setKamproLocation,searchKamproLocations,resolveKamproLocation,getCurrentKamproLocation,type LocationSuggestion} from "../src/lib/kamproLocation";
 import {Alert,AppState,Image,KeyboardAvoidingView,Modal,Platform,Pressable,SafeAreaView,ScrollView,StyleSheet,Switch,Text,TextInput,View,ActivityIndicator,useWindowDimensions} from "react-native";
 import {useEffect,useState} from "react";
 import {useAuth} from "../src/auth/AuthProvider";
@@ -66,55 +66,44 @@ function CurrentLocationBar(){
  const[loadingLocation,setLoadingLocation]=useState(false);
  const[modalOpen,setModalOpen]=useState(false);
  const[manualLocation,setManualLocation]=useState("");
- const[suggestions,setSuggestions]=useState<Array<{latitude:number;longitude:number;label:string;shortLabel:string}>>([]);
- const[selectedPlace,setSelectedPlace]=useState<{latitude:number;longitude:number;label:string;shortLabel:string}|null>(null);
+ const[suggestions,setSuggestions]=useState<LocationSuggestion[]>([]);
+ const[selectedPlace,setSelectedPlace]=useState<LocationSuggestion|null>(null);
  const[error,setError]=useState("");
  useEffect(()=>{let active=true;(async()=>{const saved=await getKamproLocation();if(active&&saved){setLocationText(saved.label);}else if(active){void detectLocation();}})();return()=>{active=false};},[]);
  useEffect(()=>{
   const query=manualLocation.trim();
   if(query.length<3){setSuggestions([]);return;}
-  if(selectedPlace?.shortLabel===query)return;
+  if(selectedPlace&&selectedPlace.label===query)return;
+  let active=true;
   const timer=setTimeout(async()=>{
-   try{
-    const response=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&countrycodes=in&q=${encodeURIComponent(query)}`,{headers:{Accept:"application/json"}});
-    if(!response.ok)throw new Error("Search failed");
-    const rows=await response.json();
-    setSuggestions((Array.isArray(rows)?rows:[]).filter((p:any)=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))).map((p:any)=>{
-     const a=p.address||{};const city=a.city||a.town||a.village||a.suburb||a.county||a.state_district||p.name||query;const state=a.state||a.region||"";
-     return {latitude:Number(p.lat),longitude:Number(p.lon),label:String(p.display_name||query),shortLabel:[city,state,a.country||"India"].filter(Boolean).join(", ")};
-    }));
-   }catch{setSuggestions([]);}
-  },450);
-  return()=>clearTimeout(timer);
- },[manualLocation]);
+   const rows=await searchKamproLocations(query);
+   if(active)setSuggestions(rows);
+  },350);
+  return()=>{active=false;clearTimeout(timer);};
+ },[manualLocation,selectedPlace]);
  async function detectLocation(){
   if(loadingLocation)return;
   setLoadingLocation(true);setError("");
   try{
-   const{status}=await Location.requestForegroundPermissionsAsync();
-   if(status!=="granted"){setLocationText(t("locationPermissionNeeded"));setError("Enable location permission or enter a city/area manually.");return;}
-   const pos=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});
-   const point={latitude:pos.coords.latitude,longitude:pos.coords.longitude};
-   const places=await Location.reverseGeocodeAsync(point);const p=places?.[0];
-   const city=p?.city||p?.district||p?.subregion||p?.region||t("currentLocationFallback");
-   const state=p?.region&&p.region!==city?p.region:"";const label=state?city+", "+state:city;
-   setLocationText(label);await setKamproLocation({...point,label,manual:false});
-  }catch{setLocationText(t("unableDetectLocation"));setError("Could not detect GPS location. You can search for a city or area.");}
+   const point=await getCurrentKamproLocation();
+   setLocationText(point.label);
+   await setKamproLocation({...point,manual:false});
+  }catch(e:any){setError(e?.message||"Could not detect GPS location. Search for your area manually.");}
   finally{setLoadingLocation(false);}
  }
  async function applyManualLocation(){
   if(loadingLocation)return;
   setLoadingLocation(true);setError("");
   try{
-   let place=selectedPlace;
-   if(!place&&suggestions[0])place=suggestions[0];
-   if(!place)throw new Error("Select a location suggestion first.");
-   const point={latitude:place.latitude,longitude:place.longitude};const label=place.shortLabel;
-   setCoords(point);setLocationText(label);await setKamproLocation({...point,label,manual:true});
+   const place=selectedPlace||await resolveKamproLocation(manualLocation,suggestions);
+   const saved={latitude:place.latitude,longitude:place.longitude,label:place.label,manual:true};
+   await setKamproLocation(saved);
+   setLocationText(place.label);
    setModalOpen(false);setManualLocation("");setSuggestions([]);setSelectedPlace(null);
-  }catch(e:any){setError(e?.message||"Please select a location.");}
+  }catch(e:any){setError(e?.message||"Please select a valid location.");}
   finally{setLoadingLocation(false);}
  }
+
  return <>
   <Pressable accessibilityRole="button" accessibilityLabel="Change location" onPress={()=>{setError("");setModalOpen(true);}} style={s.locationBar}>
    <View style={s.locationPin}><Text style={s.locationPinText}>⌖</Text></View>
@@ -128,8 +117,8 @@ function CurrentLocationBar(){
      <View style={s.locationModalHeader}><Text style={s.locationModalTitle}>Choose your location</Text><Pressable onPress={()=>setModalOpen(false)}><Text style={s.locationModalClose}>×</Text></Pressable></View>
      <Text style={s.locationModalHint}>Find professionals around the place where you need the service.</Text>
      <Pressable style={s.locationGpsButton} disabled={loadingLocation} onPress={()=>{setModalOpen(false);void detectLocation();}}><Text style={s.locationGpsButtonText}>⌖  Use my current GPS location</Text></Pressable>
-     <TextInput value={manualLocation} onChangeText={v=>{setManualLocation(v);setSelectedPlace(null);setError("");}} placeholder="Search city, locality or area" placeholderTextColor="#8B93A1" style={s.locationSearchInput} returnKeyType="search" onSubmitEditing={()=>{if(selectedPlace)void applyManualLocation();else if(suggestions[0]){setSelectedPlace(suggestions[0]);setManualLocation(suggestions[0].shortLabel);setSuggestions([]);}}}/>
-     {suggestions.length>0?<View style={s.locationSuggestionList}>{suggestions.map((p,i)=><Pressable key={p.latitude+"-"+p.longitude+"-"+i} style={s.locationSuggestionItem} onPress={()=>{setSelectedPlace(p);setManualLocation(p.shortLabel);setSuggestions([]);setError("");}}><Text style={s.locationSuggestionTitle}>{p.shortLabel}</Text><Text style={s.locationSuggestionDetail} numberOfLines={2}>{p.label}</Text></Pressable>)}</View>:null}
+     <TextInput value={manualLocation} onChangeText={v=>{setManualLocation(v);setSelectedPlace(null);setError("");}} placeholder="Search city, locality or area" placeholderTextColor="#8B93A1" style={s.locationSearchInput} returnKeyType="search" onSubmitEditing={()=>{void applyManualLocation();}}/>
+     {suggestions.length>0?<View style={s.locationSuggestionList}>{suggestions.map((p,i)=><Pressable key={p.latitude+"-"+p.longitude+"-"+i} style={s.locationSuggestionItem} onPress={()=>{setSelectedPlace(p);setManualLocation(p.label);setSuggestions([]);setError("");}}><Text style={s.locationSuggestionTitle}>{p.label}</Text><Text style={s.locationSuggestionDetail} numberOfLines={2}>{p.detail}</Text></Pressable>)}</View>:null}
      {error?<Text accessibilityRole="alert" style={s.locationModalError}>{error}</Text>:null}
      <Pressable style={s.locationApplyButton} disabled={loadingLocation} onPress={applyManualLocation}><Text style={s.locationApplyText}>{loadingLocation?"Please wait…":"Use this location"}</Text></Pressable>
     </View>
