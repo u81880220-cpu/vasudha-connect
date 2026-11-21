@@ -52,9 +52,13 @@ function fromNominatim(p: any, fallback: string): LocationSuggestion | null {
   return { latitude: Number(p.lat), longitude: Number(p.lon), label: label || fallback, detail: String(p.display_name || label || fallback), manual: true };
 }
 
-async function fetchJson(url: string): Promise<any> {
+const searchCache = new Map<string, { at: number; rows: LocationSuggestion[] }>();
+const searchInFlight = new Map<string, Promise<LocationSuggestion[]>>();
+const SEARCH_CACHE_MS = 5 * 60 * 1000;
+
+async function fetchJson(url: string, timeoutMs = 3500): Promise<any> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 7000);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const response = await fetch(url, { headers: { Accept: "application/json" }, signal: controller.signal });
     if (!response.ok) throw new Error("Location search unavailable");
@@ -62,27 +66,68 @@ async function fetchJson(url: string): Promise<any> {
   } finally { clearTimeout(timer); }
 }
 
+function rankSuggestions(rows: LocationSuggestion[], query: string): LocationSuggestion[] {
+  const tokens = query.toLocaleLowerCase().split(/[\\s,]+/).filter(Boolean);
+  return dedupe(rows).sort((a, b) => {
+    const score = (x: LocationSuggestion) => {
+      const label = (x.label + " " + x.detail).toLocaleLowerCase();
+      const exact = label.includes(query.toLocaleLowerCase()) ? 100 : 0;
+      const matched = tokens.filter(token => label.includes(token)).length * 12;
+      const locality = /khand|nagar|colony|sector|vihar|puram|marg|road|locality/i.test(x.label) ? 5 : 0;
+      const india = /india/i.test(label) ? 2 : 0;
+      return exact + matched + locality + india;
+    };
+    return score(b) - score(a);
+  }).slice(0, 8);
+}
+
 export async function searchKamproLocations(query: string): Promise<LocationSuggestion[]> {
-  const q = query.trim();
+  const q = query.trim().replace(/\\s+/g, " ");
   if (q.length < 3) return [];
-  const photonUrl = "https://photon.komoot.io/api/?limit=8&lang=en&q=" + encodeURIComponent(q + ", India");
-  try {
-    const data = await fetchJson(photonUrl);
-    const rows = (data?.features || []).map((x: any) => fromPhoton(x, q)).filter(Boolean) as LocationSuggestion[];
-    if (rows.length) return dedupe(rows);
-  } catch {}
-  try {
-    const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=8&countrycodes=in&q=" + encodeURIComponent(q);
-    const data = await fetchJson(url);
-    const rows = (Array.isArray(data) ? data : []).map((x: any) => fromNominatim(x, q)).filter(Boolean) as LocationSuggestion[];
-    if (rows.length) return dedupe(rows);
-  } catch {}
-  try {
-    const places = await Location.geocodeAsync(q + ", India");
-    return dedupe((places || []).slice(0, 5).map(p => ({
-      latitude: p.latitude, longitude: p.longitude, label: q, detail: q + ", India", manual: true
-    })));
-  } catch { return []; }
+  const key = q.toLocaleLowerCase();
+  const cached = searchCache.get(key);
+  if (cached && Date.now() - cached.at < SEARCH_CACHE_MS) return cached.rows;
+  const pending = searchInFlight.get(key);
+  if (pending) return pending;
+
+  const request = (async (): Promise<LocationSuggestion[]> => {
+    const photonUrl = "https://photon.komoot.io/api/?limit=12&lang=en&q=" + encodeURIComponent(q + ", India");
+    try {
+      const data = await fetchJson(photonUrl);
+      const rows = rankSuggestions((data?.features || []).map((x: any) => fromPhoton(x, q)).filter(Boolean) as LocationSuggestion[], q);
+      if (rows.length) {
+        searchCache.set(key, { at: Date.now(), rows });
+        return rows;
+      }
+    } catch {}
+
+    // Secondary providers are used only when the fast primary search has no results.
+    // This avoids serial network waits on every keystroke.
+    try {
+      const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=12&countrycodes=in&q=" + encodeURIComponent(q);
+      const data = await fetchJson(url, 4000);
+      const rows = rankSuggestions((Array.isArray(data) ? data : []).map((x: any) => fromNominatim(x, q)).filter(Boolean) as LocationSuggestion[], q);
+      if (rows.length) {
+        searchCache.set(key, { at: Date.now(), rows });
+        return rows;
+      }
+    } catch {}
+
+    try {
+      const places = await Location.geocodeAsync(q + ", India");
+      const rows = rankSuggestions((places || []).slice(0, 8).map(p => ({
+        latitude: p.latitude, longitude: p.longitude, label: q, detail: q + ", India", manual: true
+      })), q);
+      searchCache.set(key, { at: Date.now(), rows });
+      return rows;
+    } catch {
+      searchCache.set(key, { at: Date.now(), rows: [] });
+      return [];
+    }
+  })();
+  searchInFlight.set(key, request);
+  try { return await request; }
+  finally { searchInFlight.delete(key); }
 }
 
 function dedupe(rows: LocationSuggestion[]): LocationSuggestion[] {
@@ -91,7 +136,7 @@ function dedupe(rows: LocationSuggestion[]): LocationSuggestion[] {
     const key = x.latitude.toFixed(4) + ":" + x.longitude.toFixed(4);
     if (seen.has(key)) return false;
     seen.add(key); return true;
-  }).slice(0, 8);
+  }).slice(0, 12);
 }
 
 export async function resolveKamproLocation(query: string, suggestions: LocationSuggestion[] = []): Promise<LocationSuggestion> {
