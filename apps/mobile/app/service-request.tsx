@@ -94,18 +94,14 @@ export default function ServiceRequest(){
    setSubmitMessage("Please enter the service address or area. The professional needs this to navigate to the job.");
    return;
   }
-  if(serviceLatitude==null||serviceLongitude==null||!selectedLocation){
+  if(serviceLatitude==null||serviceLongitude==null){
    setSubmitMessage(locationSuggestions.length?"Please select the correct address from the suggestions below. Typing alone does not confirm a location.":"Wait for address suggestions and select the correct place, or use GPS.");
    return;
   }
   setBusy(true);
   try{
-   let latitude:number|null=serviceLatitude, longitude:number|null=serviceLongitude;
-   if(latitude==null||longitude==null){
-    const place=selectedLocation;
-    latitude=place.latitude;longitude=place.longitude;
-    setServiceLatitude(latitude);setServiceLongitude(longitude);
-   }
+   const latitude:number=serviceLatitude!;
+   const longitude:number=serviceLongitude!;
    const {data:requestId,error}=await supabase.rpc("create_service_request",{
     p_professional_id:professionalId,
     p_service_id:selection.serviceId,
