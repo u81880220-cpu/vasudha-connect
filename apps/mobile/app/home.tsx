@@ -122,8 +122,7 @@ function CurrentLocationBar(){
    hardwareAccelerated
    onRequestClose={()=>setModalOpen(false)}
   >
-   {Platform.OS==="ios"?
-    <KeyboardAvoidingView style={s.locationModalBackdrop} behavior="padding">
+   <KeyboardAvoidingView style={s.locationModalBackdrop} behavior={Platform.OS==="ios"?"padding":"height"} enabled>
      <View style={s.locationModal}>
       <ScrollView keyboardShouldPersistTaps="always" keyboardDismissMode="none" contentContainerStyle={s.locationModalScroll} nestedScrollEnabled>
        <View style={s.locationModalHeader}><Text style={s.locationModalTitle}>Choose your location</Text><Pressable onPress={()=>setModalOpen(false)}><Text style={s.locationModalClose}>×</Text></Pressable></View>
@@ -149,8 +148,7 @@ function CurrentLocationBar(){
        <Pressable style={s.locationApplyButton} disabled={loadingLocation} onPress={applyManualLocation}><Text style={s.locationApplyText}>{loadingLocation?"Please wait…":"Use this location"}</Text></Pressable>
       </ScrollView>
      </View>
-    </View>
-   }
+   </KeyboardAvoidingView>
   </Modal>
  </>;
 }
