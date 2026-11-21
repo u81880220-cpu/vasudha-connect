@@ -106,9 +106,10 @@ function MarketplaceScreen(){
     const value=manualLocation.trim();
     if(locationBusy)return;
     if(value.length<3){setLocationError("Enter a city, locality or area (at least 3 characters).");return;}
+    if(!selectedManualPlace){setLocationError(locationSuggestions.length?"Please tap an address suggestion before continuing.":"Wait for address suggestions, then select the correct place.");return;}
     setLocationError("");setLocationBusy(true);setLoading(true);
     try{
-      const place=selectedManualPlace||await resolveKamproLocation(value,locationSuggestions);
+      const place=selectedManualPlace;
       const coords={latitude:place.latitude,longitude:place.longitude};
       const resolvedLabel=place.label;
       setUserCoords(coords);setLocationLabel(resolvedLabel);
@@ -252,7 +253,7 @@ function MarketplaceScreen(){
             <Pressable style={s.locationCurrentButton} onPress={()=>{setLocationPickerOpen(false);void requestLocation();}}>
               <Text style={s.locationCurrentButtonText}>⌖  Use current GPS location</Text>
             </Pressable>
-            <TextInput value={manualLocation} onChangeText={(value)=>{setManualLocation(value);setSelectedManualPlace(null);setLocationError("");}} placeholder="Enter city or area (e.g. Raebareli, Uttar Pradesh)" placeholderTextColor="#8B93A1" style={s.manualLocationInput} returnKeyType="search" onSubmitEditing={()=>{void changeLocationManually();}}/>
+            <TextInput value={manualLocation} onChangeText={(value)=>{setManualLocation(value);setSelectedManualPlace(null);setLocationError("");}} placeholder="Enter city or area (e.g. Raebareli, Uttar Pradesh)" placeholderTextColor="#8B93A1" style={s.manualLocationInput} returnKeyType="search" onSubmitEditing={()=>{setLocationError(locationSuggestions.length?"Please tap an address suggestion below.":"Wait for a matching address suggestion.");}}/>
             {locationError?<Text accessibilityRole="alert" style={s.locationError}>{locationError}</Text>:null}
             {locationSuggestions.length>0?<View style={s.locationSuggestions}>{locationSuggestions.map((place,i)=><Pressable key={`${place.latitude}-${place.longitude}-${i}`} style={s.locationSuggestion} onPress={()=>{setSelectedManualPlace(place);setManualLocation(place.label);setLocationSuggestions([]);setLocationError("");}}><Text style={s.locationSuggestionTitle}>{place.label}</Text><Text style={s.locationSuggestionDetail} numberOfLines={2}>{place.detail}</Text></Pressable>)}</View>:null}
             <Pressable style={s.apply} onPress={changeLocationManually} disabled={locationBusy}><Text style={s.applyText}>{locationBusy?"Finding…":"Use this location"}</Text></Pressable>
