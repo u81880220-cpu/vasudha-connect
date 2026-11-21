@@ -249,8 +249,8 @@ function MarketplaceScreen(){
         {!loading&&visibleItems.length===0?(searchError?<View style={s.empty}><Text style={s.empty}>{searchError}</Text><Pressable style={s.locationButton} onPress={requestLocation}><Text style={s.locationButtonText}>Try again</Text></Pressable></View>:<Text style={s.empty}>No professionals found in this area.</Text>):null}
       </View>
     </ScrollView>
-<Modal visible={locationPickerOpen} transparent animationType="slide" onRequestClose={()=>setLocationPickerOpen(false)}>
-        <KeyboardAvoidingView style={s.modalBackdrop} behavior={Platform.OS==="ios"?"padding":"height"} enabled>
+<Modal visible={locationPickerOpen} transparent animationType={Platform.OS==="android"?"none":"slide"} hardwareAccelerated statusBarTranslucent={false} onRequestClose={()=>setLocationPickerOpen(false)}>
+        <KeyboardAvoidingView style={s.modalBackdrop} behavior={Platform.OS==="ios"?"padding":undefined} enabled={Platform.OS==="ios"}>
           <View style={[s.filterSheet,s.locationSheet]}>
             <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="none" contentContainerStyle={s.locationSheetContent} nestedScrollEnabled>
             <View style={s.sheetHead}><Text style={s.sheetTitle}>Change Location</Text><Pressable onPress={()=>setLocationPickerOpen(false)}><Text style={s.close}>×</Text></Pressable></View>
