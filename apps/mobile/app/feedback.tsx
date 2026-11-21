@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View, Platform } from "react-native";
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View, Platform } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import Constants from "expo-constants";
 import { usePathname, router } from "expo-router";
@@ -47,7 +47,7 @@ export default function FeedbackScreen() {
   <Text style={s.label}>Attach a screenshot (optional)</Text><Pressable style={s.attach} onPress={chooseAttachment}><Text style={s.attachText}>{attachment?.name||"Choose image from your device"}</Text></Pressable>{attachment&&<Pressable onPress={()=>setAttachment(null)}><Text style={s.remove}>Remove attachment</Text></Pressable>}
   <View style={s.meta}><Text style={s.metaText}>Account: {mode==="professional"?"Professional":"Customer"}</Text><Text style={s.metaText}>App version: {Constants.expoConfig?.version||"unknown"} • {Platform.OS}</Text><Text style={s.metaText}>Current screen: {pathname||"unknown"}</Text></View>
   <Pressable disabled={sending} style={[s.submit,sending&&{opacity:0.65}]} onPress={submit}>{sending?<ActivityIndicator color="#fff"/>:<Text style={s.submitText}>Send feedback</Text>}</Pressable>
-  <Text style={s.privacy}>Your report is visible to the KAMPRO admin team and linked to your account so we can investigate.</Text>
+  <Text style={s.privacy}>Your report is visible to the KAMPRO admin team and linked to your account so we can investigate.</Text><Pressable accessibilityRole="link" onPress={()=>Linking.openURL("mailto:kampro.pro1@gmail.com")}><Text style={[s.privacy,{color:"#075B3A",fontWeight:"800"}]}>For direct support, email kampro.pro1@gmail.com</Text></Pressable>
  </ScrollView></KamproPage><AppBottomNav active="profile"/></>;
 }
 const s=StyleSheet.create({content:{padding:18,paddingBottom:110},label:{color:"#10233F",fontSize:15,fontWeight:"800",marginTop:18,marginBottom:9},categories:{flexDirection:"row",flexWrap:"wrap",gap:8},chip:{borderWidth:1,borderColor:"#DDE3E0",borderRadius:20,paddingVertical:9,paddingHorizontal:13,backgroundColor:"#fff"},chipActive:{borderColor:"#FF4B1F",backgroundColor:"#FFF1EC"},chipText:{color:"#344054",fontWeight:"700",fontSize:13},chipTextActive:{color:"#D83B16"},textarea:{minHeight:150,borderWidth:1,borderColor:"#DDE3E0",borderRadius:12,padding:13,backgroundColor:"#fff",color:"#10233F"},hint:{color:"#667085",fontSize:12,marginTop:5,textAlign:"right"},attach:{borderWidth:1,borderStyle:"dashed",borderColor:"#C8D0D9",borderRadius:12,padding:15,backgroundColor:"#FAFBFC"},attachText:{color:"#344054",fontWeight:"700"},remove:{color:"#B42318",marginTop:8,fontWeight:"700"},meta:{marginTop:20,padding:13,borderRadius:12,backgroundColor:"#F7F8FA",gap:5},metaText:{color:"#667085",fontSize:12},submit:{marginTop:20,minHeight:50,backgroundColor:"#FF4B1F",borderRadius:12,alignItems:"center",justifyContent:"center"},submitText:{color:"#fff",fontWeight:"900",fontSize:15},privacy:{color:"#667085",fontSize:12,lineHeight:18,marginTop:12,textAlign:"center"}});
