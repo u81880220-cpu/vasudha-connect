@@ -22,7 +22,7 @@ export default function ServiceRequest(){
 
  useEffect(()=>{
   const query=location.trim();
-  if(query.length<3){setLocationSuggestions([]);return;}
+  if(query.length<2){setLocationSuggestions([]);return;}
   if(selectedLocation&&selectedLocation.label===query)return;
   let active=true;
   const timer=setTimeout(async()=>{const rows=await searchKamproLocations(query, partial=>{if(active)setLocationSuggestions(partial);});if(active)setLocationSuggestions(rows);},100);
