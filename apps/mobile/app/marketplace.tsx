@@ -8,7 +8,7 @@ import { AppBottomNav } from "../src/components/AppBottomNav";
 import { ServicePicker, ServiceSelection } from "../src/components/ServicePicker";
 import { LanguageSwitch } from "../src/components/LanguageSwitch";
 import { useKamproLanguage } from "../src/i18n/LanguageProvider";
-import {getKamproLocation,setKamproLocation,searchKamproLocations,resolveKamproLocation,getCurrentKamproLocation,type LocationSuggestion} from "../src/lib/kamproLocation";
+import {getKamproLocation,setKamproLocation,searchKamproLocations,getCurrentKamproLocation,type LocationSuggestion} from "../src/lib/kamproLocation";
 
 type Professional={
   professional_id:string; display_name:string; headline:string|null; city:string|null; state:string|null;
