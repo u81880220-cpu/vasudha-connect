@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import {getCurrentKamproLocation,searchKamproLocations,resolveKamproLocation,type LocationSuggestion} from "../src/lib/kamproLocation";
+import {getCurrentKamproLocation,searchKamproLocations,type LocationSuggestion} from "../src/lib/kamproLocation";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { VasudhaLogo } from "../src/components/VasudhaLogo";
 import { useLocalSearchParams, router } from "expo-router";
