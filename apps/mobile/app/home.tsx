@@ -69,7 +69,7 @@ function CurrentLocationBar(){
  const[suggestions,setSuggestions]=useState<LocationSuggestion[]>([]);
  const[selectedPlace,setSelectedPlace]=useState<LocationSuggestion|null>(null);
  const[error,setError]=useState("");
- useEffect(()=>{let active=true;(async()=>{const saved=await getKamproLocation();if(active&&saved){setLocationText(saved.label);}else if(active){void detectLocation();}})();return()=>{active=false};},[]);
+ useEffect(()=>{let active=true;(async()=>{const saved=await getKamproLocation();if(active&&saved){setLocationText(saved.label);}else if(active){void detectLocation(false);}})();return()=>{active=false};},[]);
  useEffect(()=>{
   const query=manualLocation.trim();
   if(query.length<2){setSuggestions([]);return;}
@@ -81,14 +81,14 @@ function CurrentLocationBar(){
   }, 250);
   return()=>{active=false;clearTimeout(timer);};
  },[manualLocation,selectedPlace]);
- async function detectLocation(){
+ async function detectLocation(closePickerOnSuccess=true){
   if(loadingLocation)return;
   setLoadingLocation(true);setError("");
   try{
    const point=await getCurrentKamproLocation();
    setLocationText(point.label);
    await setKamproLocation({...point,manual:false});
-   setModalOpen(false);
+   if(closePickerOnSuccess)setModalOpen(false);
   }catch(e:any){setError(e?.message||"Could not detect GPS location. Search for your area manually.");}
   finally{setLoadingLocation(false);}
  }
@@ -111,7 +111,7 @@ function CurrentLocationBar(){
   <Pressable accessibilityRole="button" accessibilityLabel="Change location" onPress={()=>{setError("");setModalOpen(true);}} style={s.locationBar}>
    <View style={s.locationPin}><Text style={s.locationPinText}>⌖</Text></View>
    <View style={{flex:1,minWidth:0}}><Text style={s.locationLabel}>{t("currentLocation")}</Text><Text style={s.locationValue} numberOfLines={2}>{loadingLocation?t("detectingLocation"):locationText}</Text></View>
-   <Pressable accessibilityRole="button" onPress={detectLocation} style={s.locationGps}><Text style={s.locationGpsText}>⌾</Text></Pressable>
+   <Pressable accessibilityRole="button" onPress={()=>{void detectLocation(true);}} style={s.locationGps}><Text style={s.locationGpsText}>⌾</Text></Pressable>
    <Text style={s.changeLocationText}>Change</Text>
   </Pressable>
   <Modal
@@ -127,7 +127,7 @@ function CurrentLocationBar(){
      <ScrollView keyboardShouldPersistTaps="always" keyboardDismissMode="none" contentContainerStyle={s.locationModalScroll} nestedScrollEnabled>
       <View style={s.locationModalHeader}><Text style={s.locationModalTitle}>Choose your location</Text><Pressable onPress={()=>setModalOpen(false)}><Text style={s.locationModalClose}>×</Text></Pressable></View>
       <Text style={s.locationModalHint}>Find professionals around the place where you need the service.</Text>
-      <Pressable style={s.locationGpsButton} disabled={loadingLocation} onPress={()=>{void detectLocation();}}><Text style={s.locationGpsButtonText}>⌖  Use my current GPS location</Text></Pressable>
+      <Pressable style={s.locationGpsButton} disabled={loadingLocation} onPress={()=>{void detectLocation(true);}}><Text style={s.locationGpsButtonText}>⌖  Use my current GPS location</Text></Pressable>
       <TextInput value={manualLocation} onChangeText={v=>{setManualLocation(v);setSelectedPlace(null);setError("");}} placeholder="Search city, locality or area" placeholderTextColor="#8B93A1" style={s.locationSearchInput} returnKeyType="search" onSubmitEditing={()=>{setError(suggestions.length?"Please tap an address suggestion below.":"Wait for a matching address suggestion.");}}/>
       {suggestions.length>0?<ScrollView style={s.locationSuggestionList} keyboardShouldPersistTaps="always" keyboardDismissMode="none" nestedScrollEnabled>{suggestions.map((p,i)=><Pressable key={p.latitude+"-"+p.longitude+"-"+i} style={s.locationSuggestionItem} onPress={()=>{setSelectedPlace(p);setManualLocation(p.label);setSuggestions([]);setError("");}}><Text style={s.locationSuggestionTitle}>{p.label}</Text><Text style={s.locationSuggestionDetail} numberOfLines={2}>{p.detail}</Text></Pressable>)}</ScrollView>:null}
       {error?<Text accessibilityRole="alert" style={s.locationModalError}>{error}</Text>:null}
