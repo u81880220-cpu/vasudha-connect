@@ -119,6 +119,7 @@ function CurrentLocationBar(){
    transparent
    animationType={Platform.OS==="android"?"none":"fade"}
    statusBarTranslucent={false}
+   hardwareAccelerated
    onRequestClose={()=>setModalOpen(false)}
   >
    {Platform.OS==="ios"?
