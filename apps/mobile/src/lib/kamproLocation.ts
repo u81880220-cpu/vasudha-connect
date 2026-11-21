@@ -124,7 +124,7 @@ export async function searchKamproLocations(
 
     // Publish each provider's results as soon as it responds. Do not wait for
     // the slower provider before showing the first matching locality.
-    const providers = await Promise.allSettled([
+    await Promise.allSettled([
       fetchJson(photonUrl, 4500).then(value => {
         const rows = ((value?.features || []).map((x: any) => fromPhoton(x, q)).filter(Boolean) as LocationSuggestion[]);
         publish(rows);
