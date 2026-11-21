@@ -85,7 +85,7 @@ export async function searchKamproLocations(
   query: string,
   onSuggestions?: (rows: LocationSuggestion[]) => void
 ): Promise<LocationSuggestion[]> {
-  const q = query.trim().replace(/\\s+/g, " ");
+  const q = query.trim().replace(/\s+/g, " ");
   if (q.length < 2) return [];
   const key = q.toLocaleLowerCase();
   const cached = searchCache.get(key);
