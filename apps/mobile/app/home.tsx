@@ -112,8 +112,8 @@ function CurrentLocationBar(){
    <Pressable accessibilityRole="button" onPress={detectLocation} style={s.locationGps}><Text style={s.locationGpsText}>⌾</Text></Pressable>
    <Text style={s.changeLocationText}>Change</Text>
   </Pressable>
-  <Modal visible={modalOpen} transparent animationType="slide" onRequestClose={()=>setModalOpen(false)}>
-   <KeyboardAvoidingView style={s.locationModalBackdrop} behavior={Platform.OS==="ios"?"padding":"height"}>
+  <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={()=>setModalOpen(false)}>
+   <KeyboardAvoidingView style={s.locationModalBackdrop} behavior={Platform.OS==="ios"?"padding":undefined} enabled={Platform.OS==="ios"}>
     <View style={s.locationModal}>
      <View style={s.locationModalHeader}><Text style={s.locationModalTitle}>Choose your location</Text><Pressable onPress={()=>setModalOpen(false)}><Text style={s.locationModalClose}>×</Text></Pressable></View>
      <Text style={s.locationModalHint}>Find professionals around the place where you need the service.</Text>
