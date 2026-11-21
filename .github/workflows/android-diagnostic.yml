@@ -1,11 +1,7 @@
 name: KAMPRO Android Signed Test Release
 
 on:
-  push:
-    branches: [feature/customer-location-and-auth-ux]
-    paths:
-      - "apps/mobile/**"
-      - ".github/workflows/android-diagnostic.yml"
+  workflow_dispatch:
 
 jobs:
   android-test-release:
