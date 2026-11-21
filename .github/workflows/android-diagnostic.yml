@@ -100,13 +100,13 @@ jobs:
           body = "\n            signingConfig signingConfigs.kamproUpload\n" + body
           p.write_text(s[:start] + tail[:pos] + body + tail[i-1:])
           PY
-      - name: Build signed release APK
+      - name: Build signed release APK and Play Store App Bundle
         working-directory: apps/mobile/android
         env:
           EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
           EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
           GOOGLE_MAPS_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
-        run: ./gradlew assembleRelease --no-daemon
+        run: ./gradlew assembleRelease bundleRelease --no-daemon
       - name: Verify APK signature and package
         working-directory: apps/mobile/android
         shell: bash
@@ -120,9 +120,20 @@ jobs:
           test -x "$AAPT" || { echo "::error::aapt not found in Android SDK build-tools"; exit 1; }
           "$APKSIGNER" verify --verbose app/build/outputs/apk/release/app-release.apk
           "$AAPT" dump badging app/build/outputs/apk/release/app-release.apk | grep "package: name='com.vasudha.connect'"
-      - name: Upload signed test release APK
+      - name: Verify signed Play Store App Bundle
+        working-directory: apps/mobile/android
+        shell: bash
+        run: |
+          set -euo pipefail
+          AAB="app/build/outputs/bundle/release/app-release.aab"
+          test -s "$AAB" || { echo "::error::Release AAB was not generated"; exit 1; }
+          jarsigner -verify -verbose -certs "$AAB" >/dev/null
+          echo "Verified signed AAB: $AAB"
+      - name: Upload signed Play Store App Bundle and test APK
         uses: actions/upload-artifact@v4
         with:
-          name: kampro-android-signed-test-release
-          path: apps/mobile/android/app/build/outputs/apk/release/*.apk
+          name: kampro-play-store-aab-and-test-apk
+          path: |
+            apps/mobile/android/app/build/outputs/bundle/release/*.aab
+            apps/mobile/android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
