@@ -9,7 +9,7 @@ import { AppBottomNav } from "../src/components/AppBottomNav";
 import { ServicePicker, ServiceSelection } from "../src/components/ServicePicker";
 import { LanguageSwitch } from "../src/components/LanguageSwitch";
 import { useKamproLanguage } from "../src/i18n/LanguageProvider";
-import {getKamproLocation,setKamproLocation} from "../src/lib/kamproLocation";
+import {getKamproLocation,setKamproLocation,searchKamproLocations,resolveKamproLocation,getCurrentKamproLocation,type LocationSuggestion} from "../src/lib/kamproLocation";
 
 type Professional={
   professional_id:string; display_name:string; headline:string|null; city:string|null; state:string|null;
@@ -49,8 +49,8 @@ function MarketplaceScreen(){
   const[locationPickerOpen,setLocationPickerOpen]=useState(false);
   const[locationLabel,setLocationLabel]=useState(cachedMarketplaceLocation?.label??"Detecting location…");
   const[manualLocation,setManualLocation]=useState("");
-  const[locationSuggestions,setLocationSuggestions]=useState<Array<{latitude:number;longitude:number;label:string;shortLabel:string}>>([]);
-  const[selectedManualPlace,setSelectedManualPlace]=useState<{latitude:number;longitude:number;label:string;shortLabel:string}|null>(null);
+  const[locationSuggestions,setLocationSuggestions]=useState<LocationSuggestion[]>([]);
+  const[selectedManualPlace,setSelectedManualPlace]=useState<LocationSuggestion|null>(null);
   const[locationBusy,setLocationBusy]=useState(false);
   const[locationError,setLocationError]=useState("");
   const verifiedOnly=true;
@@ -80,119 +80,45 @@ function MarketplaceScreen(){
   useEffect(()=>{
     const query=manualLocation.trim();
     if(query.length<3){setLocationSuggestions([]);return;}
-    if(selectedManualPlace?.shortLabel===query)return;
-    const timer=setTimeout(async()=>{
-      try{
-        const response=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&countrycodes=in&q=${encodeURIComponent(query)}`,{headers:{Accept:"application/json"}});
-        if(!response.ok)throw new Error("Location search failed");
-        const results=await response.json();
-        const suggestions=(Array.isArray(results)?results:[]).filter((p:any)=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))).map((p:any)=>{
-          const a=p.address||{};
-          const locality=a.city||a.town||a.village||a.suburb||a.county||a.state_district||p.name||query;
-          const state=a.state||a.region||"";
-          const country=a.country||"India";
-          const shortLabel=[locality,state,country].filter(Boolean).join(", ");
-          return {latitude:Number(p.lat),longitude:Number(p.lon),label:String(p.display_name||shortLabel),shortLabel};
-        });
-        setLocationSuggestions(suggestions);
-      }catch{setLocationSuggestions([]);}
-    },450);
-    return ()=>clearTimeout(timer);
-  },[manualLocation]);
+    if(selectedManualPlace&&selectedManualPlace.label===query)return;
+    let active=true;
+    const timer=setTimeout(async()=>{const rows=await searchKamproLocations(query);if(active)setLocationSuggestions(rows);},350);
+    return()=>{active=false;clearTimeout(timer);};
+  },[manualLocation,selectedManualPlace]);
 
   async function requestLocation(){
-    setLoading(true);
-    setLocationBusy(true);
+    if(locationBusy)return;
+    setLoading(true);setLocationBusy(true);setLocationError("");
     try{
-      const permission=await Location.requestForegroundPermissionsAsync();
-      if(permission.status!=="granted"){
-        setLocationLabel("Location permission required");
-        setLoading(false);
-        return;
-      }
-      let pos=await Location.getLastKnownPositionAsync({maxAge:120000,requiredAccuracy:1500}).catch(()=>null);
-      if(!pos){pos=await Promise.race([Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced}),new Promise<never>((_,reject)=>setTimeout(()=>reject(new Error("Location timed out")),12000))]);}
-      const coords={latitude:pos.coords.latitude,longitude:pos.coords.longitude};
-      setUserCoords(coords);
-      cachedMarketplaceLocation={coords,label:"Current location",manual:false};
-      const places=await Location.reverseGeocodeAsync(coords).catch(()=>[]);
-      const p=places?.[0];
-      const city=p?.city||p?.district||p?.subregion||p?.region||"Current location";
-      const state=p?.region&&p.region!==city?p.region:"";
-      const label=state?city+", "+state:city;
-      setLocationLabel(label);
-      cachedMarketplaceLocation={coords,label,manual:false};
-      await setKamproLocation({...coords,label,manual:false});
+      const point=await getCurrentKamproLocation();
+      const coords={latitude:point.latitude,longitude:point.longitude};
+      setUserCoords(coords);setLocationLabel(point.label);
+      cachedMarketplaceLocation={coords,label:point.label,manual:false};
+      await setKamproLocation({...point,manual:false});
       await searchProfessionals(coords);
-    }catch{
+    }catch(e:any){
       setLocationLabel("Unable to detect location");
+      setLocationError(e?.message||"GPS could not detect your location. Search manually.");
       setLoading(false);
-    }finally{
-      setLocationBusy(false);
-    }
+    }finally{setLocationBusy(false);}
   }
 
   async function changeLocationManually(){
     const value=manualLocation.trim();
     if(locationBusy)return;
-    if(value.length<3){setLocationError("Enter a full city or area name (at least 3 characters).");return;}
-    setLocationError("");
-    setLocationBusy(true);
-    setLoading(true);
+    if(value.length<3){setLocationError("Enter a city, locality or area (at least 3 characters).");return;}
+    setLocationError("");setLocationBusy(true);setLoading(true);
     try{
-      let coords:Coords|null=null;
-      let resolvedLabel=value;
-      if(selectedManualPlace){
-        coords={latitude:selectedManualPlace.latitude,longitude:selectedManualPlace.longitude};
-        resolvedLabel=selectedManualPlace.shortLabel;
-      }else{
-        // Use the same place-search provider on Android, iOS and web.
-        // Native geocoding can fail for valid Indian city names even when
-        // the autocomplete suggestions already returned a match.
-        try{
-          const response=await fetch(
-            `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=in&q=${encodeURIComponent(value)}`,
-            {headers:{Accept:"application/json"}}
-          );
-          if(response.ok){
-            const results=await response.json();
-            const p=Array.isArray(results)?results[0]:null;
-            if(p&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))){
-              coords={latitude:Number(p.lat),longitude:Number(p.lon)};
-              const a=p.address||{};
-              resolvedLabel=[a.city||a.town||a.village||a.suburb||a.county||a.state_district||p.name,a.state||a.region,"India"].filter(Boolean).join(", ");
-            }
-          }
-        }catch{
-          // Fall back to the device geocoder if the network geocoder is unavailable.
-        }
-        if(!coords){
-          try{
-            const places=await Location.geocodeAsync(value);
-            const p=places?.[0];
-            if(p)coords={latitude:p.latitude,longitude:p.longitude};
-          }catch{
-            // A clear validation message is shown below if neither provider resolves it.
-          }
-        }
-      }
-      if(!coords)throw new Error("Location not found");
-      setLocationError("");
-      setUserCoords(coords);
-      setLocationLabel(resolvedLabel);
+      const place=selectedManualPlace||await resolveKamproLocation(value,locationSuggestions);
+      const coords={latitude:place.latitude,longitude:place.longitude};
+      const resolvedLabel=place.label;
+      setUserCoords(coords);setLocationLabel(resolvedLabel);
       cachedMarketplaceLocation={coords,label:resolvedLabel,manual:true};
       await setKamproLocation({...coords,label:resolvedLabel,manual:true});
-      setManualLocation("");
-      setLocationSuggestions([]);
-      setSelectedManualPlace(null);
-      setLocationPickerOpen(false);
-      await searchProfessionals(coords);
-    }catch(error){
-      setLocationError(error instanceof Error && error.message==="Location not found" ? "Location not found. Enter a full place name and select a matching suggestion." : "Could not resolve this location. Check the spelling or select a suggestion.");
-      setLoading(false);
-    }finally{
-      setLocationBusy(false);
-    }
+      setManualLocation("");setLocationSuggestions([]);setSelectedManualPlace(null);
+      setLocationPickerOpen(false);await searchProfessionals(coords);
+    }catch(e:any){setLocationError(e?.message||"Could not resolve this location. Try another spelling.");setLoading(false);}
+    finally{setLocationBusy(false);}
   }
 
   async function searchProfessionals(coords:Coords){
