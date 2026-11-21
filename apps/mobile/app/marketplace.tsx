@@ -1,4 +1,3 @@
-import * as Location from "expo-location";
 import React,{ useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Dimensions, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
