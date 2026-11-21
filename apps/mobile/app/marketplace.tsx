@@ -81,7 +81,7 @@ function MarketplaceScreen(){
     if(query.length<3){setLocationSuggestions([]);return;}
     if(selectedManualPlace&&selectedManualPlace.label===query)return;
     let active=true;
-    const timer=setTimeout(async()=>{const rows=await searchKamproLocations(query);if(active)setLocationSuggestions(rows);},100);
+    const timer=setTimeout(async()=>{const rows=await searchKamproLocations(query, partial=>{if(active)setLocationSuggestions(partial);});if(active)setLocationSuggestions(rows);},100);
     return()=>{active=false;clearTimeout(timer);};
   },[manualLocation,selectedManualPlace]);
 
