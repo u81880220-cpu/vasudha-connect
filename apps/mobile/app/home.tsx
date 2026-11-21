@@ -78,7 +78,7 @@ function CurrentLocationBar(){
   const timer=setTimeout(async()=>{
    const rows=await searchKamproLocations(query,partial=>{if(active)setSuggestions(partial);});
    if(active)setSuggestions(rows);
-  },100);
+  }, 250);
   return()=>{active=false;clearTimeout(timer);};
  },[manualLocation,selectedPlace]);
  async function detectLocation(){
