@@ -101,54 +101,46 @@ export async function searchKamproLocations(
   }
 
   const request = (async (): Promise<LocationSuggestion[]> => {
-    const photonUrl = "https://photon.komoot.io/api/?limit=20&lang=en&q=" + encodeURIComponent(q + ", India");
-    const nominatimUrl = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=12&countrycodes=in&q=" + encodeURIComponent(q);
     let combined: LocationSuggestion[] = [];
     const publish = (rows: LocationSuggestion[]) => {
-      combined = rankSuggestions([...combined, ...rows], q);
+      const useful = rows.filter(row => {
+        const detail = (row.label + " " + row.detail).toLocaleLowerCase();
+        // Reject bare geocoder fallbacks such as "Vibhuti, India".
+        // A selectable result must identify a locality plus useful
+        // administrative/address context, not merely repeat the typed text.
+        const hasContext = /\b(india|uttar pradesh|maharashtra|karnataka|delhi|madhya pradesh|rajasthan|bihar|west bengal|gujarat|haryana|punjab|telangana|andhra pradesh|tamil nadu|kerala|assam|uttarakhand|jharkhand|chhattisgarh|odisha|goa|city|district|nagar|khand|colony|sector|vihar|puram|road|street|locality|ward|tehsil)\b/i.test(detail);
+        const meaningfulDetail = row.detail.trim().length > q.length + 5;
+        return hasContext && meaningfulDetail;
+      });
+      combined = rankSuggestions([...combined, ...useful], q);
       if (combined.length) {
         searchCache.set(key, { at: Date.now(), rows: combined });
         onSuggestions?.(combined);
       }
     };
 
-    // Query both providers concurrently. Publish partial matches as soon as
-    // either responds, then publish the combined and ranked list.
-    const [photonResult, nominatimResult] = await Promise.allSettled([
-      fetchJson(photonUrl, 3000),
-      fetchJson(nominatimUrl, 3500)
+    const photonUrl = "https://photon.komoot.io/api/?limit=30&lang=en&q=" + encodeURIComponent(q);
+    const nominatimUrl = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=20&countrycodes=in&q=" + encodeURIComponent(q);
+
+    // Publish each provider's results as soon as it responds. Do not wait for
+    // the slower provider before showing the first matching locality.
+    const providers = await Promise.allSettled([
+      fetchJson(photonUrl, 4500).then(value => {
+        const rows = ((value?.features || []).map((x: any) => fromPhoton(x, q)).filter(Boolean) as LocationSuggestion[]);
+        publish(rows);
+        return rows;
+      }),
+      fetchJson(nominatimUrl, 5000).then(value => {
+        const rows = (Array.isArray(value) ? value.map((x: any) => fromNominatim(x, q)).filter(Boolean) : []) as LocationSuggestion[];
+        publish(rows);
+        return rows;
+      })
     ]);
 
-    if (photonResult.status === "fulfilled") {
-      const rows = ((photonResult.value?.features || []).map((x: any) => fromPhoton(x, q)).filter(Boolean) as LocationSuggestion[]);
-      publish(rows);
-    }
-    if (nominatimResult.status === "fulfilled" && Array.isArray(nominatimResult.value)) {
-      const rows = (nominatimResult.value.map((x: any) => fromNominatim(x, q)).filter(Boolean) as LocationSuggestion[]);
-      publish(rows);
-    }
-
-    if (combined.length) return combined;
-
-    try {
-      const places = await Promise.race([
-        Location.geocodeAsync(q + ", India"),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Address search timed out")), 2500))
-      ]);
-      const fallback = rankSuggestions((places || []).slice(0, 8).map(place => ({
-        latitude: place.latitude, longitude: place.longitude,
-        label: q, detail: q + ", India", manual: true
-      })), q);
-      if (fallback.length) {
-        searchCache.set(key, { at: Date.now(), rows: fallback });
-        onSuggestions?.(fallback);
-      }
-      return fallback;
-    } catch {
-      return [];
-    }
+    // Never turn arbitrary typed text into a fake geocoded location. If both
+    // providers fail or return only generic matches, return no selectable row.
+    return combined;
   })();
-
   searchInFlight.set(key, request);
   try { return await request; }
   finally { searchInFlight.delete(key); }
