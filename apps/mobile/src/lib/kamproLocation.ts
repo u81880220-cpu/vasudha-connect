@@ -108,7 +108,7 @@ export async function searchKamproLocations(
         // Reject bare geocoder fallbacks such as "Vibhuti, India".
         // A selectable result must identify a locality plus useful
         // administrative/address context, not merely repeat the typed text.
-        const hasContext = /\b(india|uttar pradesh|maharashtra|karnataka|delhi|madhya pradesh|rajasthan|bihar|west bengal|gujarat|haryana|punjab|telangana|andhra pradesh|tamil nadu|kerala|assam|uttarakhand|jharkhand|chhattisgarh|odisha|goa|city|district|nagar|khand|colony|sector|vihar|puram|road|street|locality|ward|tehsil)\b/i.test(detail);
+        const hasContext = /\b(uttar pradesh|maharashtra|karnataka|delhi|madhya pradesh|rajasthan|bihar|west bengal|gujarat|haryana|punjab|telangana|andhra pradesh|tamil nadu|kerala|assam|uttarakhand|jharkhand|chhattisgarh|odisha|goa|city|district|nagar|khand|colony|sector|vihar|puram|road|street|locality|ward|tehsil)\b/i.test(detail);
         const meaningfulDetail = row.detail.trim().length > q.length + 5;
         return hasContext && meaningfulDetail;
       });
