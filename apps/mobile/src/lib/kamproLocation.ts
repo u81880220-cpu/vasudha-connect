@@ -67,7 +67,7 @@ async function fetchJson(url: string, timeoutMs = 3500): Promise<any> {
 }
 
 function rankSuggestions(rows: LocationSuggestion[], query: string): LocationSuggestion[] {
-  const tokens = query.toLocaleLowerCase().split(/[\\s,]+/).filter(Boolean);
+  const tokens = query.toLocaleLowerCase().split(/[\s,]+/).filter(Boolean);
   return dedupe(rows).sort((a, b) => {
     const score = (x: LocationSuggestion) => {
       const label = (x.label + " " + x.detail).toLocaleLowerCase();
@@ -82,7 +82,7 @@ function rankSuggestions(rows: LocationSuggestion[], query: string): LocationSug
 }
 
 export async function searchKamproLocations(query: string): Promise<LocationSuggestion[]> {
-  const q = query.trim().replace(/\\s+/g, " ");
+  const q = query.trim().replace(/\s+/g, " ");
   if (q.length < 3) return [];
   const key = q.toLocaleLowerCase();
   const cached = searchCache.get(key);
@@ -91,35 +91,37 @@ export async function searchKamproLocations(query: string): Promise<LocationSugg
   if (pending) return pending;
 
   const request = (async (): Promise<LocationSuggestion[]> => {
-    const photonUrl = "https://photon.komoot.io/api/?limit=12&lang=en&q=" + encodeURIComponent(q + ", India");
-    try {
-      const data = await fetchJson(photonUrl);
-      const rows = rankSuggestions((data?.features || []).map((x: any) => fromPhoton(x, q)).filter(Boolean) as LocationSuggestion[], q);
-      if (rows.length) {
-        searchCache.set(key, { at: Date.now(), rows });
-        return rows;
-      }
-    } catch {}
+    const photonUrl = "https://photon.komoot.io/api/?limit=16&lang=en&q=" + encodeURIComponent(q + ", India");
+    const nominatimUrl = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=16&countrycodes=in&q=" + encodeURIComponent(q);
+    // Ask both providers together: a weak Photon match must not hide a better locality match.
+    const [photonResult, nominatimResult] = await Promise.allSettled([
+      fetchJson(photonUrl, 2400),
+      fetchJson(nominatimUrl, 2400)
+    ]);
+    const rows: LocationSuggestion[] = [];
+    if (photonResult.status === "fulfilled") {
+      rows.push(...((photonResult.value?.features || []).map((x: any) => fromPhoton(x, q)).filter(Boolean) as LocationSuggestion[]));
+    }
+    if (nominatimResult.status === "fulfilled" && Array.isArray(nominatimResult.value)) {
+      rows.push(...(nominatimResult.value.map((x: any) => fromNominatim(x, q)).filter(Boolean) as LocationSuggestion[]));
+    }
+    const ranked = rankSuggestions(rows, q);
+    if (ranked.length) {
+      searchCache.set(key, { at: Date.now(), rows: ranked });
+      return ranked;
+    }
 
-    // Secondary providers are used only when the fast primary search has no results.
-    // This avoids serial network waits on every keystroke.
+    // Native geocoding is a last fallback only when neither provider returned a result.
     try {
-      const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=12&countrycodes=in&q=" + encodeURIComponent(q);
-      const data = await fetchJson(url, 4000);
-      const rows = rankSuggestions((Array.isArray(data) ? data : []).map((x: any) => fromNominatim(x, q)).filter(Boolean) as LocationSuggestion[], q);
-      if (rows.length) {
-        searchCache.set(key, { at: Date.now(), rows });
-        return rows;
-      }
-    } catch {}
-
-    try {
-      const places = await Location.geocodeAsync(q + ", India");
-      const rows = rankSuggestions((places || []).slice(0, 8).map(p => ({
+      const places = await Promise.race([
+        Location.geocodeAsync(q + ", India"),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Address search timed out")), 3000))
+      ]);
+      const fallback = rankSuggestions((places || []).slice(0, 8).map(p => ({
         latitude: p.latitude, longitude: p.longitude, label: q, detail: q + ", India", manual: true
       })), q);
-      searchCache.set(key, { at: Date.now(), rows });
-      return rows;
+      searchCache.set(key, { at: Date.now(), rows: fallback });
+      return fallback;
     } catch {
       searchCache.set(key, { at: Date.now(), rows: [] });
       return [];
