@@ -72,7 +72,7 @@ function CurrentLocationBar(){
  useEffect(()=>{let active=true;(async()=>{const saved=await getKamproLocation();if(active&&saved){setLocationText(saved.label);}else if(active){void detectLocation();}})();return()=>{active=false};},[]);
  useEffect(()=>{
   const query=manualLocation.trim();
-  if(query.length<3){setSuggestions([]);return;}
+  if(query.length<2){setSuggestions([]);return;}
   if(selectedPlace&&selectedPlace.label===query)return;
   let active=true;
   const timer=setTimeout(async()=>{
