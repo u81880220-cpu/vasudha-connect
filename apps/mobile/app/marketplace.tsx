@@ -1,6 +1,6 @@
 import * as Location from "expo-location";
 import React,{ useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Dimensions, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../src/lib/supabase";
@@ -316,19 +316,19 @@ function MarketplaceScreen(){
       </View>
     </ScrollView>
 <Modal visible={locationPickerOpen} transparent animationType="slide" onRequestClose={()=>setLocationPickerOpen(false)}>
-        <View style={s.modalBackdrop}>
+        <KeyboardAvoidingView style={s.modalBackdrop} behavior={Platform.OS==="ios"?"padding":"height"}>
           <View style={s.filterSheet}>
             <View style={s.sheetHead}><Text style={s.sheetTitle}>Change Location</Text><Pressable onPress={()=>setLocationPickerOpen(false)}><Text style={s.close}>×</Text></Pressable></View>
             <Text style={s.filterHint}>Use GPS automatically or enter a city/area manually.</Text>
             <Pressable style={s.locationCurrentButton} onPress={()=>{setLocationPickerOpen(false);void requestLocation();}}>
               <Text style={s.locationCurrentButtonText}>⌖  Use current GPS location</Text>
             </Pressable>
-            <TextInput value={manualLocation} onChangeText={(value)=>{setManualLocation(value);setSelectedManualPlace(null);setLocationError("");}} placeholder="Enter city or area (e.g. Raebareli, Uttar Pradesh)" placeholderTextColor="#8B93A1" style={s.manualLocationInput}/>
+            <TextInput value={manualLocation} onChangeText={(value)=>{setManualLocation(value);setSelectedManualPlace(null);setLocationError("");}} placeholder="Enter city or area (e.g. Raebareli, Uttar Pradesh)" placeholderTextColor="#8B93A1" style={s.manualLocationInput} returnKeyType="search" onSubmitEditing={()=>{if(selectedManualPlace)void changeLocationManually();else if(locationSuggestions[0]){const p=locationSuggestions[0];setSelectedManualPlace(p);setManualLocation(p.shortLabel);setLocationSuggestions([]);}}}/>
             {locationError?<Text accessibilityRole="alert" style={s.locationError}>{locationError}</Text>:null}
             {locationSuggestions.length>0?<View style={s.locationSuggestions}>{locationSuggestions.map((place,i)=><Pressable key={`${place.latitude}-${place.longitude}-${i}`} style={s.locationSuggestion} onPress={()=>{setSelectedManualPlace(place);setManualLocation(place.shortLabel);setLocationSuggestions([]);setLocationError("");}}><Text style={s.locationSuggestionTitle}>{place.shortLabel}</Text><Text style={s.locationSuggestionDetail} numberOfLines={2}>{place.label}</Text></Pressable>)}</View>:null}
             <Pressable style={s.apply} onPress={changeLocationManually} disabled={locationBusy}><Text style={s.applyText}>{locationBusy?"Finding…":"Use this location"}</Text></Pressable>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
       <Modal visible={filtersOpen} transparent animationType="slide" onRequestClose={()=>setFiltersOpen(false)}>
         <View style={s.modalBackdrop}>
