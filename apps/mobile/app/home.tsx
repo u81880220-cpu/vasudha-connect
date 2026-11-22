@@ -221,7 +221,7 @@ function ProfessionalHome(){
    if(active&&!error)setActiveJob(data?.[0]||null);
   }
   void refreshActiveJob();
-  const channel=supabase.channel("professional-home-active-job-"+session.user.id).on("postgres_changes",{event:"*",schema:"public",table:"jobs",filter:"professional_id=eq."+session.user.id},()=>{void refreshActiveJob()}).subscribe();
+  // Give every effect setup its own topic. React can remount/re-run effects while a previous Supabase channel is still leaving; reusing the same topic can return an already-subscribed channel and make .on() throw.\n  const channelTopic="professional-home-active-job-"+session.user.id+"-"+Date.now()+"-"+Math.random().toString(36).slice(2);\n  const channel=supabase.channel(channelTopic).on("postgres_changes",{event:"*",schema:"public",table:"jobs",filter:"professional_id=eq."+session.user.id},()=>{void refreshActiveJob()}).subscribe();
   const interval=setInterval(()=>{void refreshActiveJob()},15000);
   return()=>{active=false;clearInterval(interval);void supabase.removeChannel(channel)};
  },[session?.user.id]);

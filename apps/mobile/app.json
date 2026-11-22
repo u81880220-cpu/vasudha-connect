@@ -13,7 +13,7 @@
     ],
     "android": {
       "package": "com.vasudha.connect",
-      "versionCode": 26,
+      "versionCode": 27,
       "permissions": [
         "POST_NOTIFICATIONS",
         "ACCESS_COARSE_LOCATION",
