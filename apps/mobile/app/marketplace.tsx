@@ -1,5 +1,5 @@
 import React,{ useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Dimensions, Image, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../src/lib/supabase";
@@ -8,7 +8,8 @@ import { AppBottomNav } from "../src/components/AppBottomNav";
 import { ServicePicker, ServiceSelection } from "../src/components/ServicePicker";
 import { LanguageSwitch } from "../src/components/LanguageSwitch";
 import { useKamproLanguage } from "../src/i18n/LanguageProvider";
-import {getKamproLocation,setKamproLocation,searchKamproLocations,getCurrentKamproLocation,type LocationSuggestion} from "../src/lib/kamproLocation";
+import {getKamproLocation,setKamproLocation,getCurrentKamproLocation} from "../src/lib/kamproLocation";
+import { KamproLocationPicker } from "../src/components/KamproLocationPicker";
 
 type Professional={
   professional_id:string; display_name:string; headline:string|null; city:string|null; state:string|null;
@@ -47,9 +48,6 @@ function MarketplaceScreen(){
   const[filtersOpen,setFiltersOpen]=useState(false);
   const[locationPickerOpen,setLocationPickerOpen]=useState(false);
   const[locationLabel,setLocationLabel]=useState(cachedMarketplaceLocation?.label??"Detecting location…");
-  const[manualLocation,setManualLocation]=useState("");
-  const[locationSuggestions,setLocationSuggestions]=useState<LocationSuggestion[]>([]);
-  const[selectedManualPlace,setSelectedManualPlace]=useState<LocationSuggestion|null>(null);
   const[locationBusy,setLocationBusy]=useState(false);
   const[locationError,setLocationError]=useState("");
   const verifiedOnly=true;
@@ -76,20 +74,6 @@ function MarketplaceScreen(){
   useEffect(()=>{let active=true;(async()=>{const shared=await getKamproLocation();if(!active)return;if(shared){const coords={latitude:shared.latitude,longitude:shared.longitude};setUserCoords(coords);setLocationLabel(shared.label);cachedMarketplaceLocation={coords,label:shared.label,manual:shared.manual};setLoading(false);void searchProfessionals(coords);}else if(cachedMarketplaceLocation){setUserCoords(cachedMarketplaceLocation.coords);setLocationLabel(cachedMarketplaceLocation.label);setLoading(false);void searchProfessionals(cachedMarketplaceLocation.coords);}else{void requestLocation();}})();return()=>{active=false};},[]);
   useEffect(()=>{if(userCoords) searchProfessionals(userCoords);},[selection.categoryId,selection.serviceId,selection.subServiceId,radius]);
   useEffect(()=>{if(!userCoords||query.trim().length===0)return;const timer=setTimeout(()=>{void searchProfessionals(userCoords);},250);return()=>clearTimeout(timer);},[query,userCoords]);
-  useEffect(()=>{
-    const query=manualLocation.trim();
-    if(query.length<2){setLocationSuggestions([]);return;}
-    if(selectedManualPlace&&selectedManualPlace.label===query)return;
-    let active=true;
-    const timer=setTimeout(async()=>{
-      // Keep the picker list stable while both geocoders respond. Streaming
-      // partial arrays caused the sheet to resize/reorder repeatedly on mobile.
-      const rows=await searchKamproLocations(query);
-      if(active)setLocationSuggestions(rows);
-    }, 300);
-    return()=>{active=false;clearTimeout(timer);};
-  },[manualLocation,selectedManualPlace]);
-
   async function requestLocation(){
     if(locationBusy)return;
     setLoading(true);setLocationBusy(true);setLocationError("");
@@ -107,23 +91,12 @@ function MarketplaceScreen(){
     }finally{setLocationBusy(false);}
   }
 
-  async function changeLocationManually(){
-    const value=manualLocation.trim();
-    if(locationBusy)return;
-    if(value.length<3){setLocationError("Enter a city, locality or area (at least 3 characters).");return;}
-    if(!selectedManualPlace){setLocationError(locationSuggestions.length?"Please tap an address suggestion before continuing.":"Wait for address suggestions, then select the correct place.");return;}
-    setLocationError("");setLocationBusy(true);setLoading(true);
-    try{
-      const place=selectedManualPlace;
-      const coords={latitude:place.latitude,longitude:place.longitude};
-      const resolvedLabel=place.label;
-      setUserCoords(coords);setLocationLabel(resolvedLabel);
-      cachedMarketplaceLocation={coords,label:resolvedLabel,manual:true};
-      await setKamproLocation({...coords,label:resolvedLabel,manual:true});
-      setManualLocation("");setLocationSuggestions([]);setSelectedManualPlace(null);
-      setLocationPickerOpen(false);await searchProfessionals(coords);
-    }catch(e:any){setLocationError(e?.message||"Could not resolve this location. Try another spelling.");setLoading(false);}
-    finally{setLocationBusy(false);}
+  async function applyPickerLocation(location:{latitude:number;longitude:number;label:string;manual:boolean}){
+    const coords={latitude:location.latitude,longitude:location.longitude};
+    setUserCoords(coords);setLocationLabel(location.label);
+    cachedMarketplaceLocation={coords,label:location.label,manual:location.manual};
+    setLoading(true);
+    await searchProfessionals(coords);
   }
 
   async function searchProfessionals(coords:Coords){
@@ -249,23 +222,7 @@ function MarketplaceScreen(){
         {!loading&&visibleItems.length===0?(searchError?<View style={s.empty}><Text style={s.empty}>{searchError}</Text><Pressable style={s.locationButton} onPress={requestLocation}><Text style={s.locationButtonText}>Try again</Text></Pressable></View>:<Text style={s.empty}>No professionals found in this area.</Text>):null}
       </View>
     </ScrollView>
-<Modal visible={locationPickerOpen} transparent animationType={Platform.OS==="android"?"none":"slide"} hardwareAccelerated statusBarTranslucent={false} onRequestClose={()=>setLocationPickerOpen(false)}>
-        <KeyboardAvoidingView style={s.modalBackdrop} behavior={Platform.OS==="ios"?"padding":undefined} enabled={Platform.OS==="ios"}>
-          <View style={[s.filterSheet,s.locationSheet]}>
-            <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="none" contentContainerStyle={s.locationSheetContent} nestedScrollEnabled>
-            <View style={s.sheetHead}><Text style={s.sheetTitle}>Change Location</Text><Pressable onPress={()=>setLocationPickerOpen(false)}><Text style={s.close}>×</Text></Pressable></View>
-            <Text style={s.filterHint}>Use GPS automatically or enter a city/area manually.</Text>
-            <Pressable style={s.locationCurrentButton} onPress={()=>{setLocationPickerOpen(false);void requestLocation();}}>
-              <Text style={s.locationCurrentButtonText}>⌖  Use current GPS location</Text>
-            </Pressable>
-            <TextInput value={manualLocation} onChangeText={(value)=>{setManualLocation(value);setSelectedManualPlace(null);setLocationError("");}} placeholder="Enter city or area (e.g. Raebareli, Uttar Pradesh)" placeholderTextColor="#8B93A1" style={s.manualLocationInput} returnKeyType="search" onSubmitEditing={()=>{setLocationError(locationSuggestions.length?"Please tap an address suggestion below.":"Wait for a matching address suggestion.");}}/>
-            {locationError?<Text accessibilityRole="alert" style={s.locationError}>{locationError}</Text>:null}
-            {locationSuggestions.length>0?<View style={s.locationSuggestions}>{locationSuggestions.map((place,i)=><Pressable key={`${place.latitude}-${place.longitude}-${i}`} style={s.locationSuggestion} onPress={()=>{setSelectedManualPlace(place);setManualLocation(place.label);setLocationSuggestions([]);setLocationError("");}}><Text style={s.locationSuggestionTitle}>{place.label}</Text><Text style={s.locationSuggestionDetail} numberOfLines={2}>{place.detail}</Text></Pressable>)}</View>:null}
-            <Pressable style={s.apply} onPress={changeLocationManually} disabled={locationBusy}><Text style={s.applyText}>{locationBusy?"Finding…":"Use this location"}</Text></Pressable>
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+<KamproLocationPicker visible={locationPickerOpen} onClose={()=>setLocationPickerOpen(false)} onSelect={applyPickerLocation} title="Change Location"/>
       <Modal visible={filtersOpen} transparent animationType="slide" onRequestClose={()=>setFiltersOpen(false)}>
         <View style={s.modalBackdrop}>
           <View style={s.filterSheet}>
