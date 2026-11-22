@@ -42,7 +42,8 @@
     "@msg91comm/sendotp-react-native": "^3.1.0",
     "expo-web-browser": "~15.0.8",
     "expo-linking": "~8.0.8",
-    "react-native-razorpay": "^2.3.0"
+    "react-native-razorpay": "^2.3.0",
+    "expo-image-manipulator": "~14.0.7"
   },
   "engines": {
     "node": "22.x"
