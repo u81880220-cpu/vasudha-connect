@@ -109,12 +109,10 @@ function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
    }
   }
   void loadHomeServices();
-  const channel=supabase.channel("customer-home-service-catalogue")
-   .on("postgres_changes",{event:"*",schema:"public",table:"service_catalogue_services"},()=>{void loadHomeServices()})
-   .on("postgres_changes",{event:"*",schema:"public",table:"service_categories"},()=>{void loadHomeServices()})
-   .subscribe();
-  const interval=setInterval(()=>{void loadHomeServices()},30000);
-  return()=>{active=false;clearInterval(interval);void supabase.removeChannel(channel)};
+  // Refresh the catalogue on a timer while avoiding a Realtime callback
+  // registration race seen on Android customer login/Home mount.
+  const interval=setInterval(()=>{void loadHomeServices()},15000);
+  return()=>{active=false;clearInterval(interval)};
  },[]);
  useEffect(()=>{
   if(!session?.user.id)return;
