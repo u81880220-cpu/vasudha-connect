@@ -12,6 +12,7 @@ import { KAMPRO } from "../src/components/kamproTheme";
 import { ProfilePhotoPicker } from "../src/components/ProfilePhotoPicker";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImageManipulator from "expo-image-manipulator";
+import * as FileSystem from "expo-file-system/legacy";
 
 
 export default function ProfessionalProfile(){
@@ -73,13 +74,36 @@ export default function ProfessionalProfile(){
   const result=await DocumentPicker.getDocumentAsync({type:["image/jpeg","image/png","image/webp"],copyToCacheDirectory:true,multiple:false});
   if(!result.canceled&&result.assets?.[0])setSelectedPortfolioImage({uri:result.assets[0].uri,name:result.assets[0].name||"work-photo.jpg"});
  }
+ function decodeBase64ToArrayBuffer(base64:string):ArrayBuffer{
+  const alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  const clean=base64.replace(/[^A-Za-z0-9+/]/g,"");
+  const bytes=new Uint8Array(Math.floor(clean.length*3/4));
+  let buffer=0,bits=0,index=0;
+  for(let i=0;i<clean.length;i++){
+   const value=alphabet.indexOf(clean[i]);if(value<0)continue;
+   buffer=(buffer<<6)|value;bits+=6;
+   if(bits>=8){bits-=8;bytes[index++]=(buffer>>bits)&255;}
+  }
+  return bytes.slice(0,index).buffer;
+ }
  async function uploadPortfolioImage(uri:string){
-  const compressed=await ImageManipulator.manipulateAsync(uri,[{resize:{width:1400}}],{compress:0.76,format:ImageManipulator.SaveFormat.JPEG});
-  const blob=await (await fetch(compressed.uri)).blob();
-  const path=uid+"/portfolio-"+Date.now()+"-"+Math.random().toString(36).slice(2,8)+".jpg";
-  const{error}=await supabase.storage.from("professional-work-photos").upload(path,blob,{contentType:"image/jpeg",upsert:false});
-  if(error)throw error;
-  return supabase.storage.from("professional-work-photos").getPublicUrl(path).data.publicUrl;
+  let stage="image compression";
+  try{
+   const compressed=await ImageManipulator.manipulateAsync(uri,[{resize:{width:1400}}],{compress:0.76,format:ImageManipulator.SaveFormat.JPEG});
+   stage="reading compressed image";
+   const base64=await FileSystem.readAsStringAsync(compressed.uri,{encoding:FileSystem.EncodingType.Base64});
+   if(!base64)throw new Error("The selected image could not be read from device storage.");
+   const body=decodeBase64ToArrayBuffer(base64);
+   if(body.byteLength>8*1024*1024)throw new Error("Compressed image is larger than 8 MB. Please choose a smaller photo.");
+   stage="uploading to KAMPRO storage";
+   const path=uid+"/portfolio-"+Date.now()+"-"+Math.random().toString(36).slice(2,8)+".jpg";
+   const{error}=await supabase.storage.from("professional-work-photos").upload(path,body,{contentType:"image/jpeg",upsert:false});
+   if(error)throw error;
+   return supabase.storage.from("professional-work-photos").getPublicUrl(path).data.publicUrl;
+  }catch(error:any){
+   console.error("KAMPRO portfolio upload failed at "+stage,error);
+   throw new Error((error?.message||"Network request failed")+" (stage: "+stage+")");
+  }
  }
  async function addPortfolio(){
   if(!uid||portfolioBusy)return;
