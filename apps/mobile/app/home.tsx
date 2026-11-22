@@ -6,7 +6,7 @@ import {useAuth} from "../src/auth/AuthProvider";
 import {VasudhaLogo} from "../src/components/VasudhaLogo";
 import {AppBottomNav} from "../src/components/AppBottomNav";
 import {ServiceIcon} from "../src/components/ServiceIcon";
-import {supabase} from "../src/lib/supabase";
+import {supabase,createRealtimeChannel} from "../src/lib/supabase";
 import {registerForPushNotifications,registerNotificationTapHandler} from "../src/lib/pushNotifications";
 import { KamproPage, KamproCard, KamproPrimary, KamproSection } from "../src/components/KamproUI";
 import { LanguageSwitch } from "../src/components/LanguageSwitch";
@@ -129,7 +129,7 @@ function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
   void refreshHomeItems();
   // Home can remain mounted while the user cancels a job on another screen.
   // Refresh on database changes and periodically so stale request banners disappear.
-  const channel=supabase.channel("customer-home-job-lifecycle-"+session.user.id)
+  const channel=createRealtimeChannel("customer-home-job-lifecycle-"+session.user.id)
    .on("postgres_changes",{event:"*",schema:"public",table:"connection_wallets",filter:"user_id=eq."+session.user.id},()=>{void refreshHomeItems()})
     .on("postgres_changes",{event:"*",schema:"public",table:"jobs",filter:"customer_id=eq."+session.user.id},()=>{void refreshHomeItems()})
    .on("postgres_changes",{event:"*",schema:"public",table:"service_requests",filter:"customer_id=eq."+session.user.id},()=>{void refreshHomeItems()})

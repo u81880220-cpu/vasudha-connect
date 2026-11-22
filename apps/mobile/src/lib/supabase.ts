@@ -13,6 +13,16 @@ const publishableKey=
 
 const isWeb=typeof window!=="undefined";
 
+let realtimeChannelSequence=0;
+
+// Give every mounted effect its own topic. A screen can unmount and remount
+// before Realtime finishes removing its previous channel; reusing the same
+// topic in that window can hand back a channel that is already subscribed.
+export function createRealtimeChannel(topic:string){
+  realtimeChannelSequence+=1;
+  return supabase.channel(`${topic}-${realtimeChannelSequence}`);
+}
+
 export const supabase=createClient(url,publishableKey,{
   auth:{storage:AsyncStorage,autoRefreshToken:true,persistSession:true,detectSessionInUrl:isWeb}
 });
