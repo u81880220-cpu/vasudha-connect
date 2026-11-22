@@ -69,10 +69,58 @@ export default function ProfessionalProfile(){
   }catch(e:any){const message=e?.message||"Something went wrong while saving. Please try again.";setSaveMessage({type:"error",text:message});Alert.alert("Save failed",message);}
   finally{setSaving(false);}
  }
+ async function pickPortfolioImage(){
+  const result=await DocumentPicker.getDocumentAsync({type:["image/jpeg","image/png","image/webp"],copyToCacheDirectory:true,multiple:false});
+  if(!result.canceled&&result.assets?.[0])setSelectedPortfolioImage({uri:result.assets[0].uri,name:result.assets[0].name||"work-photo.jpg"});
+ }
+ async function uploadPortfolioImage(uri:string){
+  const compressed=await ImageManipulator.manipulateAsync(uri,[{resize:{width:1400}}],{compress:0.76,format:ImageManipulator.SaveFormat.JPEG});
+  const blob=await (await fetch(compressed.uri)).blob();
+  const path=uid+"/portfolio-"+Date.now()+"-"+Math.random().toString(36).slice(2,8)+".jpg";
+  const{error}=await supabase.storage.from("professional-work-photos").upload(path,blob,{contentType:"image/jpeg",upsert:false});
+  if(error)throw error;
+  return supabase.storage.from("professional-work-photos").getPublicUrl(path).data.publicUrl;
+ }
  async function addPortfolio(){
-  if(!port.title.trim())return Alert.alert("Portfolio","Enter a title.");
-  const{error}=await supabase.from("portfolio_items").insert({professional_id:uid,title:port.title.trim(),description:port.description.trim()||null,media_url:port.media_url.trim()||null});
-  if(error)Alert.alert("Portfolio",error.message);else{setPort({title:"",description:"",media_url:""});Alert.alert("Added","Portfolio item added.")}
+  if(!uid||portfolioBusy)return;
+  if(portfolioItems.length>=15)return Alert.alert("Portfolio limit","You can keep up to 15 photos.");
+  if(!port.title.trim()||!selectedPortfolioImage)return Alert.alert("Portfolio","Enter a title and choose a work photo.");
+  setPortfolioBusy(true);
+  try{
+   const mediaUrl=await uploadPortfolioImage(selectedPortfolioImage.uri);
+   const{data,error}=await supabase.from("portfolio_items").insert({professional_id:uid,title:port.title.trim(),description:port.description.trim()||null,media_url:mediaUrl}).select("id,title,description,media_url,moderation_status,created_at").single();
+   if(error)throw error;
+   setPortfolioItems(items=>[data,...items]);setPort({title:"",description:"",media_url:""});setSelectedPortfolioImage(null);
+   Alert.alert("Photo submitted","Your photo is awaiting moderation before it appears publicly.");
+  }catch(e:any){Alert.alert("Upload failed",e?.message||"Please try again.");}
+  finally{setPortfolioBusy(false);}
+ }
+ async function replacePortfolioPhoto(item:any){
+  if(!uid||portfolioBusy)return;
+  const result=await DocumentPicker.getDocumentAsync({type:["image/jpeg","image/png","image/webp"],copyToCacheDirectory:true,multiple:false});
+  if(result.canceled||!result.assets?.[0])return;
+  setPortfolioBusy(true);
+  try{
+   const mediaUrl=await uploadPortfolioImage(result.assets[0].uri);
+   const{error}=await supabase.from("portfolio_items").update({media_url:mediaUrl,moderation_status:"pending",moderation_note:null,reviewed_by:null,reviewed_at:null}).eq("id",item.id).eq("professional_id",uid);
+   if(error)throw error;
+   setPortfolioItems(items=>items.map(x=>x.id===item.id?{...x,media_url:mediaUrl,moderation_status:"pending"}:x));
+   Alert.alert("Photo replaced","The new photo is awaiting moderation.");
+  }catch(e:any){Alert.alert("Replace failed",e?.message||"Please try again.");}
+  finally{setPortfolioBusy(false);}
+ }
+ async function deletePortfolioItem(item:any){
+  if(!uid||portfolioBusy)return;
+  Alert.alert("Delete photo","Delete this portfolio photo?",[{text:"Cancel",style:"cancel"},{text:"Delete",style:"destructive",onPress:async()=>{
+   setPortfolioBusy(true);
+   try{
+    const{error}=await supabase.from("portfolio_items").delete().eq("id",item.id).eq("professional_id",uid);if(error)throw error;
+    const marker="/storage/v1/object/public/professional-work-photos/";const at=String(item.media_url||"").indexOf(marker);
+    if(at>=0){const path=decodeURIComponent(String(item.media_url).slice(at+marker.length).split("?")[0]);await supabase.storage.from("professional-work-photos").remove([path]);}
+    setPortfolioItems(items=>items.filter(x=>x.id!==item.id));
+   }catch(e:any){Alert.alert("Delete failed",e?.message||"Please try again.");}
+   finally{setPortfolioBusy(false);}
+  }}]);
  }
  return <SafeAreaView style={s.safe} edges={["top"]}>
   <ScrollView contentContainerStyle={s.c} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
