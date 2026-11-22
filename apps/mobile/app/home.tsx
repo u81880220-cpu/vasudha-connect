@@ -6,7 +6,7 @@ import {useAuth} from "../src/auth/AuthProvider";
 import {VasudhaLogo} from "../src/components/VasudhaLogo";
 import {AppBottomNav} from "../src/components/AppBottomNav";
 import {ServiceIcon} from "../src/components/ServiceIcon";
-import {supabase} from "../src/lib/supabase";
+import {supabase,createRealtimeChannel} from "../src/lib/supabase";
 import {registerForPushNotifications,registerNotificationTapHandler} from "../src/lib/pushNotifications";
 import { KamproPage, KamproCard, KamproPrimary, KamproSection } from "../src/components/KamproUI";
 import { LanguageSwitch } from "../src/components/LanguageSwitch";
@@ -111,7 +111,7 @@ function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
    }
   }
   void loadHomeServices();
-  const channel=supabase.channel("customer-home-service-catalogue")
+  const channel=createRealtimeChannel("customer-home-service-catalogue")
    .on("postgres_changes",{event:"*",schema:"public",table:"service_catalogue_services"},()=>{void loadHomeServices()})
    .on("postgres_changes",{event:"*",schema:"public",table:"service_categories"},()=>{void loadHomeServices()})
    .subscribe();
@@ -133,7 +133,7 @@ function CustomerHome({name,avatarUrl}:{name:string;avatarUrl:string|null}){
   void refreshHomeItems();
   // Home can remain mounted while the user cancels a job on another screen.
   // Refresh on database changes and periodically so stale request banners disappear.
-  const channel=supabase.channel("customer-home-job-lifecycle-"+session.user.id)
+  const channel=createRealtimeChannel("customer-home-job-lifecycle-"+session.user.id)
    .on("postgres_changes",{event:"*",schema:"public",table:"connection_wallets",filter:"user_id=eq."+session.user.id},()=>{void refreshHomeItems()})
     .on("postgres_changes",{event:"*",schema:"public",table:"jobs",filter:"customer_id=eq."+session.user.id},()=>{void refreshHomeItems()})
    .on("postgres_changes",{event:"*",schema:"public",table:"service_requests",filter:"customer_id=eq."+session.user.id},()=>{void refreshHomeItems()})
@@ -223,7 +223,7 @@ function ProfessionalHome(){
    if(active&&!error)setActiveJob(data?.[0]||null);
   }
   void refreshActiveJob();
-  const channel=supabase.channel("professional-home-active-job-"+session.user.id).on("postgres_changes",{event:"*",schema:"public",table:"jobs",filter:"professional_id=eq."+session.user.id},()=>{void refreshActiveJob()}).subscribe();
+  const channel=createRealtimeChannel("professional-home-active-job-"+session.user.id).on("postgres_changes",{event:"*",schema:"public",table:"jobs",filter:"professional_id=eq."+session.user.id},()=>{void refreshActiveJob()}).subscribe();
   const interval=setInterval(()=>{void refreshActiveJob()},15000);
   return()=>{active=false;clearInterval(interval);void supabase.removeChannel(channel)};
  },[session?.user.id]);
@@ -241,7 +241,7 @@ function ProfessionalHome(){
    setIncomingJobs(pendingIncoming.map((x:any)=>({...x,customer_name:names[x.customer_id]||"Customer"})));
    setStats(x=>({...x,requests:pendingIncoming.length}));
   }
-  const channel=supabase.channel("home-service-requests-"+session.user.id).on("postgres_changes",{event:"*",schema:"public",table:"service_requests",filter:"professional_id=eq."+session.user.id},()=>{void refreshIncoming()}).subscribe();
+  const channel=createRealtimeChannel("home-service-requests-"+session.user.id).on("postgres_changes",{event:"*",schema:"public",table:"service_requests",filter:"professional_id=eq."+session.user.id},()=>{void refreshIncoming()}).subscribe();
   const interval=setInterval(()=>{void refreshIncoming()},15000);
   return()=>{active=false;clearInterval(interval);void supabase.removeChannel(channel)};
  },[session?.user.id]);
@@ -283,7 +283,7 @@ function ProfessionalHome(){
    const{data,error}=await supabase.from("professional_profiles").select("is_available").eq("user_id",session!.user.id).maybeSingle();
    if(active&&!error&&data)setStats(x=>({...x,available:!!data.is_available}));
   }
-  const channel=supabase.channel("professional-availability-"+session.user.id)
+  const channel=createRealtimeChannel("professional-availability-"+session.user.id)
    .on("postgres_changes",{event:"UPDATE",schema:"public",table:"professional_profiles",filter:"user_id=eq."+session.user.id},payload=>{
     const row=payload.new as any;
     if(active&&typeof row?.is_available==="boolean")setStats(x=>({...x,available:row.is_available}));
