@@ -1,0 +1,139 @@
+name: KAMPRO Android Signed Test Release
+
+on:
+  push:
+    branches: [fix/android-password-reset-diagnostics]
+    paths:
+      - "apps/mobile/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/android-diagnostic.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/android-diagnostic.yml"
+
+jobs:
+  android-test-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout diagnostic branch
+        uses: actions/checkout@v4
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Install dependencies
+        run: npm install
+      - name: Generate Android project
+        working-directory: apps/mobile
+        env:
+          EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
+          EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
+          GOOGLE_MAPS_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
+        run: npx expo prebuild --platform android --non-interactive
+      - name: Configure release signing
+        working-directory: apps/mobile/android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ANDROID_KEYSTORE_BASE64:-}" || { echo "::error::Missing ANDROID_KEYSTORE_BASE64 secret"; exit 1; }
+          test -n "${ANDROID_KEYSTORE_PASSWORD:-}" || { echo "::error::Missing ANDROID_KEYSTORE_PASSWORD secret"; exit 1; }
+          test -n "${ANDROID_KEY_ALIAS:-}" || { echo "::error::Missing ANDROID_KEY_ALIAS secret"; exit 1; }
+          test -n "${ANDROID_KEY_PASSWORD:-}" || { echo "::error::Missing ANDROID_KEY_PASSWORD secret"; exit 1; }
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/kampro-upload.jks"
+          keytool -list -keystore "$RUNNER_TEMP/kampro-upload.jks" -storepass "$ANDROID_KEYSTORE_PASSWORD" -alias "$ANDROID_KEY_ALIAS" >/dev/null
+          echo "KAMPRO_KEYSTORE_FILE=$RUNNER_TEMP/kampro-upload.jks" >> "$GITHUB_ENV"
+          echo "KAMPRO_KEY_ALIAS=$ANDROID_KEY_ALIAS" >> "$GITHUB_ENV"
+          echo "KAMPRO_KEYSTORE_PASSWORD=$ANDROID_KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "KAMPRO_KEY_PASSWORD=$ANDROID_KEY_PASSWORD" >> "$GITHUB_ENV"
+      - name: Configure generated Gradle release signing
+        working-directory: apps/mobile/android
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path("app/build.gradle")
+          s = p.read_text()
+          m = re.search(r'(?m)^\s*buildTypes\s*\{', s)
+          if not m:
+              raise SystemExit("Cannot locate buildTypes block")
+          indent = re.match(r'\s*', m.group(0)).group(0)
+          config = (indent + "signingConfigs {\n" +
+              indent + "    kamproUpload {\n" +
+              indent + '        storeFile file(System.getenv("KAMPRO_KEYSTORE_FILE"))\n' +
+              indent + '        storePassword System.getenv("KAMPRO_KEYSTORE_PASSWORD")\n' +
+              indent + '        keyAlias System.getenv("KAMPRO_KEY_ALIAS")\n' +
+              indent + '        keyPassword System.getenv("KAMPRO_KEY_PASSWORD")\n' +
+              indent + "    }\n" + indent + "}\n\n")
+          s = s[:m.start()] + config + s[m.start():]
+          start = s.find("buildTypes {")
+          tail = s[start:]
+          m = re.search(r'(?m)^\s*release\s*\{', tail)
+          if not m:
+              raise SystemExit("Cannot locate release build type")
+          pos = m.end()
+          depth = 1
+          i = pos
+          while i < len(tail) and depth:
+              if tail[i] == "{": depth += 1
+              elif tail[i] == "}": depth -= 1
+              i += 1
+          if depth: raise SystemExit("Invalid Gradle release block")
+          body = tail[pos:i-1]
+          body = re.sub(r'(?m)^\s*signingConfig\s+signingConfigs\.\w+\s*\n?', '', body)
+          body = "\n            signingConfig signingConfigs.kamproUpload\n" + body
+          p.write_text(s[:start] + tail[:pos] + body + tail[i-1:])
+          PY
+      - name: Build signed release APK and Play Store App Bundle
+        working-directory: apps/mobile/android
+        env:
+          EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
+          EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
+          GOOGLE_MAPS_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
+        run: ./gradlew assembleRelease bundleRelease --no-daemon
+      - name: Verify APK signature and package
+        working-directory: apps/mobile/android
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          test -n "$SDK_ROOT" || { echo "::error::Android SDK path is not configured"; exit 1; }
+          APKSIGNER="$(find "$SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          AAPT="$(find "$SDK_ROOT/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -x "$APKSIGNER" || { echo "::error::apksigner not found in Android SDK build-tools"; exit 1; }
+          test -x "$AAPT" || { echo "::error::aapt not found in Android SDK build-tools"; exit 1; }
+          "$APKSIGNER" verify --verbose app/build/outputs/apk/release/app-release.apk
+          "$AAPT" dump badging app/build/outputs/apk/release/app-release.apk | grep "package: name='com.vasudha.connect'"
+      - name: Verify signed Play Store App Bundle
+        working-directory: apps/mobile/android
+        shell: bash
+        run: |
+          set -euo pipefail
+          AAB="app/build/outputs/bundle/release/app-release.aab"
+          test -s "$AAB" || { echo "::error::Release AAB was not generated"; exit 1; }
+          jarsigner -verify -verbose -certs "$AAB" >/dev/null
+          echo "Verified signed AAB: $AAB"
+      - name: Upload signed Play Store App Bundle and test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kampro-play-store-aab-and-test-apk
+          path: |
+            apps/mobile/android/app/build/outputs/bundle/release/*.aab
+            apps/mobile/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
