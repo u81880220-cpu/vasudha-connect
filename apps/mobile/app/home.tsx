@@ -1,5 +1,5 @@
 import {Link,router} from "expo-router";
-import {getKamproLocation,setKamproLocation,searchKamproLocations,getCurrentKamproLocation,type LocationSuggestion} from "../src/lib/kamproLocation";
+import {getKamproLocation,setKamproLocation,getCurrentKamproLocation} from "../src/lib/kamproLocation";
 import {Alert,AppState,Image,KeyboardAvoidingView,Modal,Platform,Pressable,SafeAreaView,ScrollView,StyleSheet,Switch,Text,TextInput,View,ActivityIndicator,useWindowDimensions} from "react-native";
 import {useEffect,useState} from "react";
 import {useAuth} from "../src/auth/AuthProvider";
