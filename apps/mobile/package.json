@@ -43,7 +43,8 @@
     "expo-web-browser": "~15.0.8",
     "expo-linking": "~8.0.8",
     "react-native-razorpay": "^2.3.0",
-    "expo-image-manipulator": "~14.0.7"
+    "expo-image-manipulator": "~14.0.7",
+    "expo-file-system": "~19.0.21"
   },
   "engines": {
     "node": "22.x"
