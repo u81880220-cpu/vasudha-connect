@@ -221,9 +221,10 @@ function ProfessionalHome(){
    if(active&&!error)setActiveJob(data?.[0]||null);
   }
   void refreshActiveJob();
-  const channel=supabase.channel("professional-home-active-job-"+session.user.id).on("postgres_changes",{event:"*",schema:"public",table:"jobs",filter:"professional_id=eq."+session.user.id},()=>{void refreshActiveJob()}).subscribe();
+  // Polling is already enabled for this section. Temporarily avoid Realtime
+  // channel teardown while isolating the professional lifecycle crash.
   const interval=setInterval(()=>{void refreshActiveJob()},15000);
-  return()=>{active=false;clearInterval(interval);void supabase.removeChannel(channel)};
+  return()=>{active=false;clearInterval(interval)};
  },[session?.user.id]);
  useEffect(()=>{
   if(!session?.user.id)return;
@@ -239,9 +240,10 @@ function ProfessionalHome(){
    setIncomingJobs(pendingIncoming.map((x:any)=>({...x,customer_name:names[x.customer_id]||"Customer"})));
    setStats(x=>({...x,requests:pendingIncoming.length}));
   }
-  const channel=supabase.channel("home-service-requests-"+session.user.id).on("postgres_changes",{event:"*",schema:"public",table:"service_requests",filter:"professional_id=eq."+session.user.id},()=>{void refreshIncoming()}).subscribe();
+  // Pending requests are refreshed periodically; avoid Realtime teardown
+  // while isolating the professional lifecycle crash.
   const interval=setInterval(()=>{void refreshIncoming()},15000);
-  return()=>{active=false;clearInterval(interval);void supabase.removeChannel(channel)};
+  return()=>{active=false;clearInterval(interval)};
  },[session?.user.id]);
  useEffect(()=>{
   if(!session?.user.id||!stats.available)return;
@@ -281,13 +283,10 @@ function ProfessionalHome(){
    const{data,error}=await supabase.from("professional_profiles").select("is_available").eq("user_id",session!.user.id).maybeSingle();
    if(active&&!error&&data)setStats(x=>({...x,available:!!data.is_available}));
   }
-  const channel=supabase.channel("professional-availability-"+session.user.id)
-   .on("postgres_changes",{event:"UPDATE",schema:"public",table:"professional_profiles",filter:"user_id=eq."+session.user.id},payload=>{
-    const row=payload.new as any;
-    if(active&&typeof row?.is_available==="boolean")setStats(x=>({...x,available:row.is_available}));
-   }).subscribe();
+  // Availability is also refreshed periodically. Keep this lifecycle free
+  // of Realtime channel creation/removal during professional login/logout.
   const interval=setInterval(()=>{void refreshSavedAvailability()},15000);
-  return()=>{active=false;clearInterval(interval);void supabase.removeChannel(channel)};
+  return()=>{active=false;clearInterval(interval)};
  },[session?.user.id]);
  async function toggleAvailability(v:boolean){
   if(busy)return;setBusy(true);
