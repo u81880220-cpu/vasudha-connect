@@ -10,6 +10,7 @@ import {supabase} from "../src/lib/supabase";
 import {registerForPushNotifications,registerNotificationTapHandler} from "../src/lib/pushNotifications";
 import { KamproPage, KamproCard, KamproPrimary, KamproSection } from "../src/components/KamproUI";
 import { LanguageSwitch } from "../src/components/LanguageSwitch";
+import { KamproLocationPicker } from "../src/components/KamproLocationPicker";
 import { useKamproLanguage } from "../src/i18n/LanguageProvider";
 
 // KAMPRO QA: authenticated landing screen
@@ -65,77 +66,22 @@ function CurrentLocationBar(){
  const[locationText,setLocationText]=useState("Detecting your location…");
  const[loadingLocation,setLoadingLocation]=useState(false);
  const[modalOpen,setModalOpen]=useState(false);
- const[manualLocation,setManualLocation]=useState("");
- const[suggestions,setSuggestions]=useState<LocationSuggestion[]>([]);
- const[selectedPlace,setSelectedPlace]=useState<LocationSuggestion|null>(null);
- const[error,setError]=useState("");
- useEffect(()=>{let active=true;(async()=>{const saved=await getKamproLocation();if(active&&saved){setLocationText(saved.label);}else if(active){void detectLocation(false);}})();return()=>{active=false};},[]);
- useEffect(()=>{
-  const query=manualLocation.trim();
-  if(query.length<2){setSuggestions([]);return;}
-  if(selectedPlace&&selectedPlace.label===query)return;
-  let active=true;
-  const timer=setTimeout(async()=>{
-   const rows=await searchKamproLocations(query,partial=>{if(active)setSuggestions(partial);});
-   if(active)setSuggestions(rows);
-  }, 250);
-  return()=>{active=false;clearTimeout(timer);};
- },[manualLocation,selectedPlace]);
- async function detectLocation(closePickerOnSuccess=true){
+ useEffect(()=>{let active=true;(async()=>{const saved=await getKamproLocation();if(active&&saved){setLocationText(saved.label);}else if(active){try{const point=await getCurrentKamproLocation();if(!active)return;setLocationText(point.label);await setKamproLocation({...point,manual:false});}catch{}}})();return()=>{active=false};},[]);
+ async function detectLocation(){
   if(loadingLocation)return;
-  setLoadingLocation(true);setError("");
-  try{
-   const point=await getCurrentKamproLocation();
-   setLocationText(point.label);
-   await setKamproLocation({...point,manual:false});
-   if(closePickerOnSuccess)setModalOpen(false);
-  }catch(e:any){setError(e?.message||"Could not detect GPS location. Search for your area manually.");}
-  finally{setLoadingLocation(false);}
- }
- async function applyManualLocation(){
-  if(loadingLocation)return;
-  setError("");
-  if(!selectedPlace){setError(suggestions.length?"Please tap an address suggestion before continuing.":"Wait for address suggestions, then select the correct place.");return;}
   setLoadingLocation(true);
-  try{
-   const place=selectedPlace;
-   const saved={latitude:place.latitude,longitude:place.longitude,label:place.label,manual:true};
-   await setKamproLocation(saved);
-   setLocationText(place.label);
-   setModalOpen(false);setManualLocation("");setSuggestions([]);setSelectedPlace(null);
-  }catch(e:any){setError(e?.message||"Please select a valid location.");}
+  try{const point=await getCurrentKamproLocation();setLocationText(point.label);await setKamproLocation({...point,manual:false});}
+  catch(e:any){Alert.alert("Location unavailable",e?.message||"Could not detect GPS location. Search manually.");}
   finally{setLoadingLocation(false);}
  }
-
  return <>
-  <Pressable accessibilityRole="button" accessibilityLabel="Change location" onPress={()=>{setError("");setModalOpen(true);}} style={s.locationBar}>
+  <Pressable accessibilityRole="button" accessibilityLabel="Change location" onPress={()=>setModalOpen(true)} style={s.locationBar}>
    <View style={s.locationPin}><Text style={s.locationPinText}>⌖</Text></View>
    <View style={{flex:1,minWidth:0}}><Text style={s.locationLabel}>{t("currentLocation")}</Text><Text style={s.locationValue} numberOfLines={2}>{loadingLocation?t("detectingLocation"):locationText}</Text></View>
-   <Pressable accessibilityRole="button" onPress={()=>{void detectLocation(true);}} style={s.locationGps}><Text style={s.locationGpsText}>⌾</Text></Pressable>
+   <Pressable accessibilityRole="button" onPress={()=>{void detectLocation();}} style={s.locationGps}><Text style={s.locationGpsText}>⌾</Text></Pressable>
    <Text style={s.changeLocationText}>Change</Text>
   </Pressable>
-  <Modal
-   visible={modalOpen}
-   transparent
-   animationType={Platform.OS==="android"?"none":"fade"}
-   statusBarTranslucent={false}
-   hardwareAccelerated
-   onRequestClose={()=>setModalOpen(false)}
-  >
-   <KeyboardAvoidingView style={s.locationModalBackdrop} behavior={Platform.OS==="ios"?"padding":"height"} enabled>
-    <View style={s.locationModal}>
-     <ScrollView keyboardShouldPersistTaps="always" keyboardDismissMode="none" contentContainerStyle={s.locationModalScroll} nestedScrollEnabled>
-      <View style={s.locationModalHeader}><Text style={s.locationModalTitle}>Choose your location</Text><Pressable onPress={()=>setModalOpen(false)}><Text style={s.locationModalClose}>×</Text></Pressable></View>
-      <Text style={s.locationModalHint}>Find professionals around the place where you need the service.</Text>
-      <Pressable style={s.locationGpsButton} disabled={loadingLocation} onPress={()=>{void detectLocation(true);}}><Text style={s.locationGpsButtonText}>⌖  Use my current GPS location</Text></Pressable>
-      <TextInput value={manualLocation} onChangeText={v=>{setManualLocation(v);setSelectedPlace(null);setError("");}} placeholder="Search city, locality or area" placeholderTextColor="#8B93A1" style={s.locationSearchInput} returnKeyType="search" onSubmitEditing={()=>{setError(suggestions.length?"Please tap an address suggestion below.":"Wait for a matching address suggestion.");}}/>
-      {suggestions.length>0?<ScrollView style={s.locationSuggestionList} keyboardShouldPersistTaps="always" keyboardDismissMode="none" nestedScrollEnabled>{suggestions.map((p,i)=><Pressable key={p.latitude+"-"+p.longitude+"-"+i} style={s.locationSuggestionItem} onPress={()=>{setSelectedPlace(p);setManualLocation(p.label);setSuggestions([]);setError("");}}><Text style={s.locationSuggestionTitle}>{p.label}</Text><Text style={s.locationSuggestionDetail} numberOfLines={2}>{p.detail}</Text></Pressable>)}</ScrollView>:null}
-      {error?<Text accessibilityRole="alert" style={s.locationModalError}>{error}</Text>:null}
-      <Pressable style={s.locationApplyButton} disabled={loadingLocation} onPress={applyManualLocation}><Text style={s.locationApplyText}>{loadingLocation?"Please wait…":"Use this location"}</Text></Pressable>
-     </ScrollView>
-    </View>
-   </KeyboardAvoidingView>
-  </Modal>
+  <KamproLocationPicker visible={modalOpen} onClose={()=>setModalOpen(false)} onSelect={location=>setLocationText(location.label)} title="Choose your location"/>
  </>;
 }
 
