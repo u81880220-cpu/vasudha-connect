@@ -1,9 +1,10 @@
 name: KAMPRO Android Release
 # Release signing validation run after configuring repository secrets.
+# KAMPRO v33 release branch: build the selected ref, not main.
 
 on:
   push:
-    branches: [main]
+    branches: [main, release/version32-chat-closure-profession-fix]
     paths:
       - "apps/mobile/**"
       - "package.json"
@@ -17,10 +18,10 @@ jobs:
     timeout-minutes: 35
 
     steps:
-      - name: Checkout latest main
+      - name: Checkout selected release ref
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.ref }}
           fetch-depth: 1
 
       - name: Show source commit
