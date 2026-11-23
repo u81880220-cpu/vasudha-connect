@@ -14,13 +14,13 @@ begin
 
   if new.status::text in ('customer_confirmed','cancelled') then
     update public.professional_connections
-       set expires_at = least(coalesce(expires_at, now()), now()),
+       set expires_at = now(),
            last_accessed_at = now()
      where customer_id = new.customer_id
        and professional_id = new.professional_id;
   elsif tg_op = 'INSERT' then
     update public.professional_connections
-       set expires_at = least(coalesce(expires_at, new.created_at + interval '24 hours'), new.created_at + interval '24 hours')
+       set expires_at = new.created_at + interval '24 hours'
      where customer_id = new.customer_id
        and professional_id = new.professional_id;
   end if;
@@ -36,7 +36,7 @@ for each row execute function public.apply_job_connection_expiry();
 
 -- Apply the same rule to jobs that already exist.
 update public.professional_connections pc
-   set expires_at = least(pc.expires_at, j.created_at + interval '24 hours')
+   set expires_at = j.created_at + interval '24 hours'
   from public.jobs j
  where j.customer_id = pc.customer_id
    and j.professional_id = pc.professional_id
@@ -44,7 +44,7 @@ update public.professional_connections pc
    and j.status::text not in ('customer_confirmed','cancelled');
 
 update public.professional_connections pc
-   set expires_at = least(coalesce(pc.expires_at, now()), now())
+   set expires_at = now()
   from public.jobs j
  where j.customer_id = pc.customer_id
    and j.professional_id = pc.professional_id
