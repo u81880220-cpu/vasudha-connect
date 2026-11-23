@@ -13,7 +13,7 @@ import { useKamproLanguage } from "../src/i18n/LanguageProvider";
 type Professional={
   professional_id:string; display_name:string; headline:string|null; city:string|null; state:string|null;
   avatar_url:string|null; trust_score:number; verification_status:string; is_available:boolean;
-  distance_km:number; latitude:number; longitude:number; profile_completion:number;
+  distance_km:number; latitude:number; longitude:number; profile_completion:number; average_rating:number|null; review_count:number;
   skills:{id:string;name:string;category:string;primary:boolean}[]
 };
 type Coords={latitude:number;longitude:number};
@@ -249,7 +249,16 @@ function MarketplaceScreen(){
           }
         }
       }
-      setItems(professionals.map((professional)=>({...professional,skills:[...(professional.skills||[]),...(catalogueSkills.get(professional.professional_id)||[])]})));
+      const {data:ratingRows}=professionalIds.length
+        ? await supabase.rpc("marketplace_professional_ratings",{p_professional_ids:professionalIds})
+        : {data:[] as any[]};
+      const ratingsById=new Map((ratingRows||[]).map((row:any)=>[row.professional_id,row]));
+      setItems(professionals.map((professional)=>({
+        ...professional,
+        average_rating:(ratingsById.get(professional.professional_id) as any)?.average_rating??null,
+        review_count:Number((ratingsById.get(professional.professional_id) as any)?.review_count??0),
+        skills:[...(professional.skills||[]),...(catalogueSkills.get(professional.professional_id)||[])]
+      })));
     }
     setLoading(false);
   }
@@ -317,7 +326,11 @@ function MarketplaceScreen(){
             {item.verification_status==="verified"?<Text style={s.verified}>✓</Text>:null}
           </View>
           <Text style={s.distance}>⌖ {item.distance_km} km away</Text>
-          <View style={s.rate}><Text style={s.rateText}>Trust {Math.round(item.trust_score)}/100</Text></View>
+          <View style={s.cardMetrics}>
+            <View style={s.metricBox}><Text style={s.metricValue}>{Math.round(item.trust_score)}</Text><Text style={s.metricLabel}>Trust</Text></View>
+            <View style={s.metricBox}><Text style={s.metricValue}>{item.review_count>0&&item.average_rating!==null?Number(item.average_rating).toFixed(1)+" ★":"—"}</Text><Text style={s.metricLabel}>Rating</Text></View>
+            <View style={s.metricBox}><Text style={s.metricValue}>{Math.max(0,Math.min(100,Math.round(item.profile_completion||0)))}%</Text><Text style={s.metricLabel}>Completion</Text></View>
+          </View>
           <Text style={s.view}>View profile →</Text>
         </Pressable>)}
         {!loading&&visibleItems.length===0?(searchError?<View style={s.empty}><Text style={s.empty}>{searchError}</Text><Pressable style={s.locationButton} onPress={requestLocation}><Text style={s.locationButtonText}>Try again</Text></Pressable></View>:<Text style={s.empty}>No professionals found in this area.</Text>):null}
@@ -401,5 +414,5 @@ const s=StyleSheet.create({
   marker:{width:42,height:42,borderRadius:21,borderWidth:3,borderColor:"#fff",backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",elevation:4},markerText:{color:"#fff",fontWeight:"900",fontSize:15},
   callout:{width:190,padding:6},calloutName:{fontWeight:"800",fontSize:15,color:"#10233F"},calloutLink:{fontWeight:"900",marginTop:5,color:"#075E4D"},loadingOverlay:{position:"absolute",inset:0,backgroundColor:"rgba(255,255,255,.72)",alignItems:"center",justifyContent:"center"},loadingText:{marginTop:8,fontWeight:"700",color:"#10233F"},
   locationEmpty:{flex:1,alignItems:"center",justifyContent:"center",padding:30},locationTitle:{fontSize:18,fontWeight:"800",color:"#10233F",marginBottom:6},locationButton:{marginTop:14,backgroundColor:"#FF4B1F",paddingHorizontal:18,paddingVertical:11,borderRadius:12},locationButtonText:{color:"#fff",fontWeight:"800"},
-  modalBackdrop:{flex:1,backgroundColor:"rgba(19,32,28,.28)",justifyContent:"flex-end"},filterSheet:{backgroundColor:"#fff",borderTopLeftRadius:26,borderTopRightRadius:26,padding:22,paddingBottom:30},sheetHead:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},sheetTitle:{fontSize:21,fontWeight:"900",color:"#10233F"},close:{fontSize:28,color:"#10233F"},filterRow:{minHeight:54,flexDirection:"row",alignItems:"center",justifyContent:"space-between",borderBottomWidth:1,borderBottomColor:"#eef2f0"},filterLabel:{fontSize:15,fontWeight:"800",color:"#10233F",marginTop:16},ratingRow:{flexDirection:"row",gap:8,marginTop:10},ratingChip:{borderWidth:1,borderColor:"#CBD0D8",borderRadius:18,paddingHorizontal:14,paddingVertical:9},ratingChipOn:{backgroundColor:"#FF4B1F",borderColor:"#FF4B1F"},ratingText:{color:"#10233F",fontWeight:"700"},ratingOn:{color:"#fff",fontWeight:"800"},filterHint:{color:"#6B7280",marginTop:15},apply:{height:50,borderRadius:12,backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",marginTop:18},applyText:{color:"#fff",fontWeight:"900",fontSize:16},listHeader:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:16,paddingTop:12},listTitle:{fontSize:17,fontWeight:"900",color:"#10233F"},listHint:{fontSize:12,color:"#475467",fontWeight:"600"},workerRow:{paddingHorizontal:12,paddingBottom:18,gap:10},card:{width:"100%",borderRadius:16,borderWidth:1,borderColor:"#e2e7e6",padding:12,marginTop:8,backgroundColor:"#fff",elevation:2},cardTop:{flexDirection:"row",alignItems:"center",gap:9},avatar:{width:60,height:60,borderRadius:30,backgroundColor:"#edf1f5",alignItems:"center",justifyContent:"center",overflow:"hidden"},name:{fontSize:15,fontWeight:"900",color:"#10233F"},headline:{fontSize:12,color:"#475467",fontWeight:"500",marginTop:2},verified:{color:"#FF4B1F",fontSize:18},distance:{marginTop:10,fontSize:12,color:"#475467",fontWeight:"600"},rate:{marginTop:8,alignSelf:"flex-start",paddingHorizontal:9,paddingVertical:5,borderRadius:10,backgroundColor:"#e9f8f2"},rateText:{fontSize:12,fontWeight:"900",color:"#075E4D"},view:{marginTop:9,fontWeight:"900",color:"#075E4D"},empty:{padding:20,color:"#475467",fontSize:14,fontWeight:"500"}
+  modalBackdrop:{flex:1,backgroundColor:"rgba(19,32,28,.28)",justifyContent:"flex-end"},filterSheet:{backgroundColor:"#fff",borderTopLeftRadius:26,borderTopRightRadius:26,padding:22,paddingBottom:30},sheetHead:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},sheetTitle:{fontSize:21,fontWeight:"900",color:"#10233F"},close:{fontSize:28,color:"#10233F"},filterRow:{minHeight:54,flexDirection:"row",alignItems:"center",justifyContent:"space-between",borderBottomWidth:1,borderBottomColor:"#eef2f0"},filterLabel:{fontSize:15,fontWeight:"800",color:"#10233F",marginTop:16},ratingRow:{flexDirection:"row",gap:8,marginTop:10},ratingChip:{borderWidth:1,borderColor:"#CBD0D8",borderRadius:18,paddingHorizontal:14,paddingVertical:9},ratingChipOn:{backgroundColor:"#FF4B1F",borderColor:"#FF4B1F"},ratingText:{color:"#10233F",fontWeight:"700"},ratingOn:{color:"#fff",fontWeight:"800"},filterHint:{color:"#6B7280",marginTop:15},apply:{height:50,borderRadius:12,backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",marginTop:18},applyText:{color:"#fff",fontWeight:"900",fontSize:16},listHeader:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:16,paddingTop:12},listTitle:{fontSize:17,fontWeight:"900",color:"#10233F"},listHint:{fontSize:12,color:"#475467",fontWeight:"600"},workerRow:{paddingHorizontal:12,paddingBottom:18,gap:10},card:{width:"100%",borderRadius:16,borderWidth:1,borderColor:"#e2e7e6",padding:12,marginTop:8,backgroundColor:"#fff",elevation:2},cardTop:{flexDirection:"row",alignItems:"center",gap:9},avatar:{width:60,height:60,borderRadius:30,backgroundColor:"#edf1f5",alignItems:"center",justifyContent:"center",overflow:"hidden"},name:{fontSize:15,fontWeight:"900",color:"#10233F"},headline:{fontSize:12,color:"#475467",fontWeight:"500",marginTop:2},verified:{color:"#FF4B1F",fontSize:18},distance:{marginTop:10,fontSize:12,color:"#475467",fontWeight:"600"},cardMetrics:{flexDirection:"row",gap:8,marginTop:8},metricBox:{flex:1,minWidth:0,borderWidth:1,borderColor:"#E5E7EB",borderRadius:12,backgroundColor:"#F8FAFC",paddingVertical:9,paddingHorizontal:4,alignItems:"center",justifyContent:"center"},metricValue:{fontSize:16,fontWeight:"900",color:"#FF4B1F"},metricLabel:{fontSize:11,color:"#6B7280",fontWeight:"600",marginTop:3},view:{marginTop:9,fontWeight:"900",color:"#075E4D"},empty:{padding:20,color:"#475467",fontSize:14,fontWeight:"500"}
 });
