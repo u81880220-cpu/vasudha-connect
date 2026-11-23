@@ -1,5 +1,6 @@
 name: KAMPRO Android Release
 # Release signing validation run after configuring repository secrets.
+# KAMPRO v33 release branch: build the selected ref, not main.
 
 on:
   push:
