@@ -3,7 +3,7 @@ name: KAMPRO Android Release
 
 on:
   push:
-    branches: [main]
+    branches: [main, release/version32-chat-closure-profession-fix]
     paths:
       - "apps/mobile/**"
       - "package.json"
