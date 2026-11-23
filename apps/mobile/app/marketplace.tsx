@@ -200,7 +200,7 @@ function MarketplaceScreen(){
         </Pressable>
       </View>
 
-      <View style={s.searchBox}><Text style={s.searchIcon}>⌕</Text><TextInput value={query} onChangeText={setQuery} placeholder={t("searchProfessionals")} placeholderTextColor="#8B93A1" style={s.searchInput}/>{query?<Pressable onPress={()=>setQuery("")}><Text style={s.clear}>×</Text></Pressable>:null}</View>
+      <View style={s.searchBox}><Text style={s.searchIcon}>⌕</Text><TextInput value={query} onChangeText={(value)=>{setQuery(value);if(value.trim().length>0){setSelection({categoryId:null,categoryName:null,serviceId:null,serviceName:null,legacySkillId:null,subServiceId:null,subServiceName:null});}}} placeholder={t("searchProfessionals")} placeholderTextColor="#8B93A1" style={s.searchInput}/>{query?<Pressable onPress={()=>setQuery("")}><Text style={s.clear}>×</Text></Pressable>:null}</View>
       <View style={{paddingHorizontal:14,paddingTop:10}}>
         <ServicePicker value={selection} optionalSubService searchQuery={query} onChange={(next)=>{setSelection(next);setQuery("");}} title={t("chooseService")}/>
       </View>
