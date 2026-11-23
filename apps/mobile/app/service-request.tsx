@@ -123,7 +123,7 @@ export default function ServiceRequest(){
     p_professional_id:professionalId,
     p_service_id:selection.serviceId,
     p_sub_service_id:selection.subServiceId||null,
-    p_title:title.trim()||null,
+    p_title:title.trim()||selection.subServiceName||selection.serviceName||null,
     p_description:description.trim()||null,
     p_preferred_date:date.trim()||null,
     p_preferred_time:time.trim()||null,
