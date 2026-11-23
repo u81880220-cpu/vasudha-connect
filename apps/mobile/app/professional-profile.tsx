@@ -10,6 +10,9 @@ import {AppBottomNav} from "../src/components/AppBottomNav";
 import { ServicePicker, ServiceSelection } from "../src/components/ServicePicker";
 import { KAMPRO } from "../src/components/kamproTheme";
 import { ProfilePhotoPicker } from "../src/components/ProfilePhotoPicker";
+import * as DocumentPicker from "expo-document-picker";
+import * as ImageManipulator from "expo-image-manipulator";
+import * as FileSystem from "expo-file-system/legacy";
 
 
 export default function ProfessionalProfile(){
@@ -19,18 +22,19 @@ export default function ProfessionalProfile(){
  const[selectedSubServices,setSelectedSubServices]=useState<any[]>([]);
  
  const[phone,setPhone]=useState("");const[phone2,setPhone2]=useState("");const[fullName,setFullName]=useState("");const[avatarUrl,setAvatarUrl]=useState<string|null>(null);
- const[port,setPort]=useState({title:"",description:"",media_url:""}),[baseLocation,setBaseLocation]=useState<{latitude:number;longitude:number}|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[locationLabel,setLocationLabel]=useState(""),[saveMessage,setSaveMessage]=useState<{type:"success"|"error";text:string}|null>(null);
+ const[port,setPort]=useState({title:"",description:"",media_url:""}),[portfolioItems,setPortfolioItems]=useState<any[]>([]),[portfolioBusy,setPortfolioBusy]=useState(false),[selectedPortfolioImage,setSelectedPortfolioImage]=useState<{uri:string;name:string}|null>(null),[baseLocation,setBaseLocation]=useState<{latitude:number;longitude:number}|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[locationLabel,setLocationLabel]=useState(""),[saveMessage,setSaveMessage]=useState<{type:"success"|"error";text:string}|null>(null);
  useEffect(()=>{if(uid)load()},[uid]);
  async function load(){
   setLoading(true);
-  const[q,ct,pss,pr]=await Promise.all([
+  const[q,ct,pss,pr,portfolioResult]=await Promise.all([
    supabase.from("professional_profiles").select("headline,about,years_experience,service_radius_km,is_available,verification_status,base_latitude,base_longitude").eq("user_id",uid).maybeSingle(),
    supabase.from("user_contact_details").select("phone,phone_2").eq("user_id",uid).maybeSingle(),
    supabase.from("professional_sub_services").select("sub_service_id").eq("professional_id",uid),
-   supabase.from("profiles").select("avatar_url,full_name,display_name").eq("id",uid).maybeSingle()
+   supabase.from("profiles").select("avatar_url,full_name,display_name").eq("id",uid).maybeSingle(),
+   supabase.from("portfolio_items").select("id,title,description,media_url,moderation_status,created_at").eq("professional_id",uid).order("created_at",{ascending:false})
   ]);
   if(q.data){setP({...q.data,years_experience:String(q.data.years_experience??0),service_radius_km:String(q.data.service_radius_km||10)});if(q.data.base_latitude!=null&&q.data.base_longitude!=null){const coords={latitude:Number(q.data.base_latitude),longitude:Number(q.data.base_longitude)};setBaseLocation(coords);try{const g=(await Location.reverseGeocodeAsync(coords))[0];setLocationLabel([g?.district||g?.city||g?.subregion||"GPS location",g?.region].filter(Boolean).join(", "));}catch{setLocationLabel("GPS coordinates saved");}}else{setBaseLocation(null);setLocationLabel("");}}
-  setPhone(ct.data?.phone||"");setPhone2(ct.data?.phone_2||"");setAvatarUrl(pr.data?.avatar_url||null);setFullName(pr.data?.full_name||pr.data?.display_name||"");
+  setPhone(ct.data?.phone||"");setPhone2(ct.data?.phone_2||"");setAvatarUrl(pr.data?.avatar_url||null);setFullName(pr.data?.full_name||pr.data?.display_name||"");setPortfolioItems(portfolioResult.data||[]);
   const ids=(pss.data||[]).map((x:any)=>x.sub_service_id);
   if(ids.length){const{data:catalog}=await supabase.from("service_catalogue_sub_services").select("id,name,service_id,service_catalogue_services(name)").in("id",ids);setSelectedSubServices((catalog||[]).map((x:any)=>({id:x.id,name:x.name,serviceId:x.service_id,serviceName:x.service_catalogue_services?.name||"Service"})));}else setSelectedSubServices([]);
   setLoading(false);
@@ -66,10 +70,81 @@ export default function ProfessionalProfile(){
   }catch(e:any){const message=e?.message||"Something went wrong while saving. Please try again.";setSaveMessage({type:"error",text:message});Alert.alert("Save failed",message);}
   finally{setSaving(false);}
  }
+ async function pickPortfolioImage(){
+  const result=await DocumentPicker.getDocumentAsync({type:["image/jpeg","image/png","image/webp"],copyToCacheDirectory:true,multiple:false});
+  if(!result.canceled&&result.assets?.[0])setSelectedPortfolioImage({uri:result.assets[0].uri,name:result.assets[0].name||"work-photo.jpg"});
+ }
+ function decodeBase64ToArrayBuffer(base64:string):ArrayBuffer{
+  const alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  const clean=base64.replace(/[^A-Za-z0-9+/]/g,"");
+  const bytes=new Uint8Array(Math.floor(clean.length*3/4));
+  let buffer=0,bits=0,index=0;
+  for(let i=0;i<clean.length;i++){
+   const value=alphabet.indexOf(clean[i]);if(value<0)continue;
+   buffer=(buffer<<6)|value;bits+=6;
+   if(bits>=8){bits-=8;bytes[index++]=(buffer>>bits)&255;}
+  }
+  return bytes.slice(0,index).buffer;
+ }
+ async function uploadPortfolioImage(uri:string){
+  let stage="image compression";
+  try{
+   const compressed=await ImageManipulator.manipulateAsync(uri,[{resize:{width:1400}}],{compress:0.76,format:ImageManipulator.SaveFormat.JPEG});
+   stage="reading compressed image";
+   const base64=await FileSystem.readAsStringAsync(compressed.uri,{encoding:FileSystem.EncodingType.Base64});
+   if(!base64)throw new Error("The selected image could not be read from device storage.");
+   const body=decodeBase64ToArrayBuffer(base64);
+   if(body.byteLength>8*1024*1024)throw new Error("Compressed image is larger than 8 MB. Please choose a smaller photo.");
+   stage="uploading to KAMPRO storage";
+   const path=uid+"/portfolio-"+Date.now()+"-"+Math.random().toString(36).slice(2,8)+".jpg";
+   const{error}=await supabase.storage.from("professional-work-photos").upload(path,body,{contentType:"image/jpeg",upsert:false});
+   if(error)throw error;
+   return supabase.storage.from("professional-work-photos").getPublicUrl(path).data.publicUrl;
+  }catch(error:any){
+   console.error("KAMPRO portfolio upload failed at "+stage,error);
+   throw new Error((error?.message||"Network request failed")+" (stage: "+stage+")");
+  }
+ }
  async function addPortfolio(){
-  if(!port.title.trim())return Alert.alert("Portfolio","Enter a title.");
-  const{error}=await supabase.from("portfolio_items").insert({professional_id:uid,title:port.title.trim(),description:port.description.trim()||null,media_url:port.media_url.trim()||null});
-  if(error)Alert.alert("Portfolio",error.message);else{setPort({title:"",description:"",media_url:""});Alert.alert("Added","Portfolio item added.")}
+  if(!uid||portfolioBusy)return;
+  if(portfolioItems.length>=15)return Alert.alert("Portfolio limit","You can keep up to 15 photos.");
+  if(!port.title.trim()||!selectedPortfolioImage)return Alert.alert("Portfolio","Enter a title and choose a work photo.");
+  setPortfolioBusy(true);
+  try{
+   const mediaUrl=await uploadPortfolioImage(selectedPortfolioImage.uri);
+   const{data,error}=await supabase.from("portfolio_items").insert({professional_id:uid,title:port.title.trim(),description:port.description.trim()||null,media_url:mediaUrl}).select("id,title,description,media_url,moderation_status,created_at").single();
+   if(error)throw error;
+   setPortfolioItems(items=>[data,...items]);setPort({title:"",description:"",media_url:""});setSelectedPortfolioImage(null);
+   Alert.alert("Photo submitted","Your photo is awaiting moderation before it appears publicly.");
+  }catch(e:any){Alert.alert("Upload failed",e?.message||"Please try again.");}
+  finally{setPortfolioBusy(false);}
+ }
+ async function replacePortfolioPhoto(item:any){
+  if(!uid||portfolioBusy)return;
+  const result=await DocumentPicker.getDocumentAsync({type:["image/jpeg","image/png","image/webp"],copyToCacheDirectory:true,multiple:false});
+  if(result.canceled||!result.assets?.[0])return;
+  setPortfolioBusy(true);
+  try{
+   const mediaUrl=await uploadPortfolioImage(result.assets[0].uri);
+   const{error}=await supabase.from("portfolio_items").update({media_url:mediaUrl,moderation_status:"pending",moderation_note:null,reviewed_by:null,reviewed_at:null}).eq("id",item.id).eq("professional_id",uid);
+   if(error)throw error;
+   setPortfolioItems(items=>items.map(x=>x.id===item.id?{...x,media_url:mediaUrl,moderation_status:"pending"}:x));
+   Alert.alert("Photo replaced","The new photo is awaiting moderation.");
+  }catch(e:any){Alert.alert("Replace failed",e?.message||"Please try again.");}
+  finally{setPortfolioBusy(false);}
+ }
+ async function deletePortfolioItem(item:any){
+  if(!uid||portfolioBusy)return;
+  Alert.alert("Delete photo","Delete this portfolio photo?",[{text:"Cancel",style:"cancel"},{text:"Delete",style:"destructive",onPress:async()=>{
+   setPortfolioBusy(true);
+   try{
+    const{error}=await supabase.from("portfolio_items").delete().eq("id",item.id).eq("professional_id",uid);if(error)throw error;
+    const marker="/storage/v1/object/public/professional-work-photos/";const at=String(item.media_url||"").indexOf(marker);
+    if(at>=0){const path=decodeURIComponent(String(item.media_url).slice(at+marker.length).split("?")[0]);await supabase.storage.from("professional-work-photos").remove([path]);}
+    setPortfolioItems(items=>items.filter(x=>x.id!==item.id));
+   }catch(e:any){Alert.alert("Delete failed",e?.message||"Please try again.");}
+   finally{setPortfolioBusy(false);}
+  }}]);
  }
  return <SafeAreaView style={s.safe} edges={["top"]}>
   <ScrollView contentContainerStyle={s.c} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -91,8 +166,7 @@ export default function ProfessionalProfile(){
    <View style={s.card}><Text style={s.helper}>Required · Choose at least one exact Category → Service → Sub-service combination. All other profile details are optional.</Text><ServicePicker requestService value={serviceSelection} onChange={v=>{setServiceSelection(v);if(v.subServiceId&&!selectedSubServices.some(x=>x.id===v.subServiceId))setSelectedSubServices(z=>[...z,{id:v.subServiceId,name:v.subServiceName||"Sub-service",serviceId:v.serviceId,serviceName:v.serviceName||"Service"}]);}}/><View style={s.selectedList}>{selectedSubServices.length===0?<Text style={s.muted}>No exact services selected yet.</Text>:selectedSubServices.map((x:any,i:number)=><View key={x.id} style={s.selectedService}><View style={{flex:1}}><Text style={s.bold}>{x.serviceName}</Text><Text style={s.muted}>{x.name}{i===0?" · Primary":""}</Text></View><Pressable onPress={()=>setSelectedSubServices(z=>z.filter(y=>y.id!==x.id))}><Text style={s.remove}>Remove</Text></Pressable></View>)}</View></View>
    <Text style={s.section}>Map location</Text>
    <View style={s.card}><Text style={s.helper}>Your saved GPS location is used for nearby customer search. Your precise home address is not shown as a public address.</Text><Text style={s.bold}>{locationLabel|| (baseLocation?"GPS coordinates saved":"Location not set")}</Text><Pressable style={s.secondary} onPress={async()=>{try{const permission=await Location.requestForegroundPermissionsAsync();if(permission.status!=="granted"){Alert.alert("Location permission","Allow location access to update your map location.");return;}const pos=await Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced});const coords={latitude:pos.coords.latitude,longitude:pos.coords.longitude};setBaseLocation(coords);const g=(await Location.reverseGeocodeAsync(coords))[0];setLocationLabel([g?.district||g?.city||g?.subregion||"GPS location",g?.region].filter(Boolean).join(", "));Alert.alert("Location captured","Tap Save profile to update your KAMPRO map location.");}catch{Alert.alert("Location unavailable","Enable GPS and try again.");}}}><Text style={s.secondaryText}>Refresh GPS location</Text></Pressable></View>
-   <Text style={s.section}>Portfolio</Text>
-   <View style={s.card}><Text style={s.helper}>Show customers examples of your work. New items go through moderation.</Text><TextInput style={s.i} placeholder="Work sample title" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={port.title} onChangeText={v=>setPort({...port,title:v})}/><TextInput style={s.i} placeholder="Description" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={port.description} onChangeText={v=>setPort({...port,description:v})}/><TextInput style={s.i} placeholder="Public image/link (optional)" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={port.media_url} onChangeText={v=>setPort({...port,media_url:v})}/><Pressable style={s.secondary} onPress={addPortfolio}><Text style={s.secondaryText}>+ Add portfolio item</Text></Pressable></View>
+   <Text style={s.section}>Portfolio ({portfolioItems.length}/15)</Text><View style={s.card}><Text style={s.helper}>Upload up to 15 real work photos. Images are resized and compressed before upload. New and replaced photos go through moderation before customers can see them.</Text><TextInput style={s.i} placeholder="Work sample title" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={port.title} onChangeText={v=>setPort({...port,title:v})}/><TextInput style={s.i} placeholder="Description (optional)" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" value={port.description} onChangeText={v=>setPort({...port,description:v})}/><Pressable style={s.secondary} onPress={pickPortfolioImage} disabled={portfolioBusy}><Text style={s.secondaryText}>{selectedPortfolioImage?"Selected: "+selectedPortfolioImage.name:"Choose work photo"}</Text></Pressable><Pressable style={[s.p,portfolioBusy&&{opacity:0.6}]} onPress={addPortfolio} disabled={portfolioBusy||portfolioItems.length>=15}><Text style={s.pt}>{portfolioBusy?"Please wait…":"+ Add portfolio photo"}</Text></Pressable><Text style={[s.helper,{marginTop:14}]}>Your uploaded photos</Text>{portfolioItems.length===0?<Text style={s.muted}>No portfolio photos uploaded yet.</Text>:portfolioItems.map(item=><View key={item.id} style={s.portfolioRow}><View style={{flex:1}}><Text style={s.bold}>{item.title}</Text><Text style={s.muted}>Status: {item.moderation_status||"pending"}</Text></View><Pressable onPress={()=>replacePortfolioPhoto(item)} disabled={portfolioBusy}><Text style={s.portfolioAction}>Replace</Text></Pressable><Pressable onPress={()=>deletePortfolioItem(item)} disabled={portfolioBusy}><Text style={s.remove}>Delete</Text></Pressable></View>)}</View>
    <Text style={s.section}>Verification</Text>
    <View style={s.card}><View style={s.verifyRow}><View style={s.verifyIcon}><Text>✓</Text></View><View style={{flex:1}}><Text style={s.bold}>Identity verification</Text><Text style={s.muted}>Status: {p.verification_status||"pending"}</Text></View></View><Link href="/professional-verification" asChild><Pressable style={s.p}><Text style={s.pt}>Open verification</Text></Pressable></Link></View>
   </ScrollView>

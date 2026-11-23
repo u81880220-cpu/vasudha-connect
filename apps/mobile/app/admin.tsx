@@ -85,6 +85,28 @@ export default function AdminScreen(){
  async function setHomeService(id:string,show:boolean,order:number){setMessage("");const{error}=await supabase.rpc("admin_set_home_service",{p_service_id:id,p_show_on_home:show,p_home_display_order:order});if(error){setMessage("Could not update home page service: "+error.message);return;}setMessage(show?"Service will appear on the home page.":"Service hidden from the home page.");await loadServices();}
  async function setServiceStatus(id:string,active:boolean){await act("admin_set_service_status",{p_service_id:id,p_active:active},active?"Service activated.":"Service deactivated.",loadServices,"service",id)}
  async function setSubServiceStatus(id:string,active:boolean){await act("admin_set_sub_service_status",{p_sub_service_id:id,p_active:active},active?"Sub-service activated.":"Sub-service deactivated.",loadServices,"sub_service",id)}
+ async function refreshCategoryList(){const{data:configuration,error}=await supabase.rpc("admin_configuration");if(error){setMessage("Category saved, but category list could not refresh: "+error.message);return;}setData((v:any)=>({...v,configuration:{...(v.configuration||{}),...(configuration||{})}}));}
+ async function saveServiceCategory(x:any=null){
+  const name=window.prompt("Category name",x?.name||"")||"";
+  if(!name.trim())return;
+  const description=window.prompt("Category description (optional)",x?.description||"")||"";
+  const status=x?.id?(window.confirm("Keep this category active? Choose Cancel to deactivate it.")?"active":"inactive"):"active";
+  const categories=[...(data.configuration.categories||[])].sort((a:any,b:any)=>Number(a.sort_order||0)-Number(b.sort_order||0)||a.name.localeCompare(b.name));
+  const nextOrder=x?.id?Number(x.sort_order||0):(categories.length?Math.max(...categories.map((q:any)=>Number(q.sort_order||0)))+1:0);
+  const {error}=await supabase.rpc("admin_save_service_category",{p_action:x?.id?"update":"create",p_category_id:x?.id||null,p_name:name.trim(),p_slug:x?.slug||null,p_icon:x?.icon||null,p_description:description.trim()||null,p_status:status,p_sort_order:nextOrder});
+  if(error){setMessage("Category could not be saved: "+error.message);return;}
+  setMessage("Category saved successfully.");await refreshCategoryList();
+ }
+ async function moveServiceCategory(categoryId:string,direction:-1|1){
+  const categories=[...(data.configuration.categories||[])].sort((a:any,b:any)=>Number(a.sort_order||0)-Number(b.sort_order||0)||a.name.localeCompare(b.name));
+  const index=categories.findIndex((x:any)=>x.id===categoryId),target=index+direction;
+  if(index<0||target<0||target>=categories.length)return;
+  const reordered=[...categories];[reordered[index],reordered[target]]=[reordered[target],reordered[index]];
+  const updates=reordered.map((x:any,i:number)=>supabase.rpc("admin_save_service_category",{p_action:"update",p_category_id:x.id,p_name:x.name,p_slug:x.slug||null,p_icon:x.icon||null,p_description:x.description||null,p_status:x.status||"active",p_sort_order:i}));
+  const results=await Promise.all(updates);const failed=results.find((r:any)=>r.error);
+  if(failed){setMessage("Could not update category order: "+failed.error.message);await refreshCategoryList();return;}
+  setMessage("Category order updated. Find a Pro will use this order.");await refreshCategoryList();
+ }
  async function editCatalogueService(x:any=null){const name=window.prompt("Service name",x?.service_name||"")||"";if(!name.trim())return;const description=window.prompt("Description",x?.service_description||"")||"";const categories=data.configuration.categories||[];let categoryId=x?.category_id||null;if(!categoryId&&categories.length){const choice=window.prompt("Category: "+categories.map((q:any)=>q.name).join(", "),categories[0].name);const found=categories.find((q:any)=>q.name.toLowerCase()===String(choice||"").trim().toLowerCase());categoryId=found?.id||null}if(!categoryId){setMessage("Select a valid category.");return}const status=window.confirm("Keep service active?")?"active":"inactive";await act("admin_save_catalogue_service",{p_action:x?.service_id?"update":"create",p_service_id:x?.service_id||null,p_category_id:categoryId,p_name:name.trim(),p_slug:x?.service_slug||null,p_icon:x?.service_icon||null,p_description:description.trim()||null,p_status:status,p_sort_order:Number(x?.service_sort_order||0)},"Service saved.",loadServices,"service",x?.service_id)}
  async function editCatalogueSubService(x:any,serviceId:string){const name=window.prompt("Sub-service name",x?.sub_service_name||"")||"";if(!name.trim())return;const description=window.prompt("Description",x?.sub_service_description||"")||"";const status=window.confirm("Keep sub-service active?")?"active":"inactive";await act("admin_save_catalogue_sub_service",{p_action:x?.sub_service_id?"update":"create",p_sub_service_id:x?.sub_service_id||null,p_service_id:serviceId,p_name:name.trim(),p_slug:x?.sub_service_slug||null,p_description:description.trim()||null,p_status:status,p_sort_order:Number(x?.sub_service_sort_order||0)},"Sub-service saved.",loadServices,"sub_service",x?.sub_service_id)}
  async function deleteCatalogueService(x:any){if(!window.confirm("Delete this service? Existing sub-services must not be in use."))return;await act("admin_save_catalogue_service",{p_action:"delete",p_service_id:x.service_id},"Service deleted.",loadServices,"service",x.service_id)}
@@ -133,6 +155,27 @@ export default function AdminScreen(){
    {tab==="verification"&&<Section title="Pending verification">{!data.verification.length?<Text style={s.muted}>No pending verification requests.</Text>:data.verification.map((x:any)=><View key={x.document_id} style={s.item}><View style={{flex:1}}><Text style={s.rowTitle}>{x.professional_name||"Professional"}</Text><Text style={s.muted}>{x.document_type||"Document"} • {x.city||""} {x.state||""}</Text></View><View style={s.actions}><Pressable style={s.secondary} onPress={()=>openDocument(x.document_path)}><Text>View</Text></Pressable><Pressable style={s.secondary} onPress={()=>verify(x.document_id,"approved")}><Text>Approve</Text></Pressable><Pressable style={s.danger} onPress={()=>verify(x.document_id,"rejected")}><Text style={s.dangerText}>Reject</Text></Pressable></View></View>)}</Section>}
    {tab==="customers"&&<Section title="Customers">{!filtered("customers").length?<Text style={s.muted}>No customers match the current filters.</Text>:filtered("customers").map((x:any)=><Pressable key={x.id||x.user_id} style={s.item} onPress={()=>inspectCustomer(x.id||x.user_id)}><View style={{flex:1}}><Text style={s.rowTitle}>{x.display_name||"Customer"}</Text><Text style={s.muted}>{(x.city||"")+" "+(x.state||"")} • Trust {Math.round(x.customer_trust_score||0)}/100</Text></View><Text style={s.badge}>{x.jobs_completed||0} jobs</Text></Pressable>)}</Section>}
     {tab==="services"&&<Section title="Service catalogue">
+      <View style={s.catalog}>
+        <View style={s.catalogHead}>
+          <View style={{flex:1}}>
+            <Text style={s.rowTitle}>Manage categories</Text>
+            <Text style={s.muted}>Create and manage service categories before adding services under them.</Text>
+          </View>
+          <Pressable style={s.primary} onPress={()=>saveServiceCategory()}><Text style={s.primaryText}>Add category</Text></Pressable>
+        </View>
+        {(data.configuration.categories||[]).length===0?<Text style={s.muted}>No categories found.</Text>:[...(data.configuration.categories||[])].sort((a:any,b:any)=>Number(a.sort_order||0)-Number(b.sort_order||0)||a.name.localeCompare(b.name)).map((category:any,index:number,ordered:any[])=><View key={category.id} style={s.subRow}>
+          <View style={{width:26,alignItems:"center"}}><Text style={s.rowTitle}>{index+1}</Text></View>
+          <View style={{flex:1}}>
+            <Text style={s.rowTitle}>{category.name}</Text>
+            <Text style={s.muted}>{category.status||"active"}{category.description?" • "+category.description:""}</Text>
+          </View>
+          <View style={s.actions}>
+            <Pressable disabled={index===0} style={[s.secondary,index===0&&{opacity:0.35}]} onPress={()=>moveServiceCategory(category.id,-1)}><Text>↑</Text></Pressable>
+            <Pressable disabled={index===ordered.length-1} style={[s.secondary,index===ordered.length-1&&{opacity:0.35}]} onPress={()=>moveServiceCategory(category.id,1)}><Text>↓</Text></Pressable>
+            <Pressable style={s.secondary} onPress={()=>saveServiceCategory(category)}><Text>Edit</Text></Pressable>
+          </View>
+        </View>)}
+      </View>
       <Pressable style={s.primary} onPress={()=>editCatalogueService()}><Text style={s.primaryText}>Add service</Text></Pressable>
       {!data.services.length?<Text style={s.muted}>No services found.</Text>:Object.values(data.services.reduce((m:any,x:any)=>{(m[x.service_id]??=[]).push(x);return m},{})).map((rows:any)=>
         <View key={rows[0].service_id} style={s.catalog}>

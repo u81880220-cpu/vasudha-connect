@@ -3,7 +3,7 @@ name: KAMPRO Android APK Build
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, feature/customer-location-and-auth-ux]
     paths:
       - "apps/mobile/**"
       - ".github/workflows/kampro-android-apk.yml"

@@ -1,19 +1,11 @@
 name: KAMPRO Android Signed Test Release
 
 on:
+  workflow_dispatch:
   push:
-    branches: [fix/android-password-reset-diagnostics]
+    branches: [feature/customer-location-and-auth-ux]
     paths:
       - "apps/mobile/**"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/android-diagnostic.yml"
-  pull_request:
-    branches: [main]
-    paths:
-      - "apps/mobile/**"
-      - "package.json"
-      - "package-lock.json"
       - ".github/workflows/android-diagnostic.yml"
 
 jobs:
