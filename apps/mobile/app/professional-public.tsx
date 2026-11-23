@@ -21,6 +21,20 @@ export default function ProfessionalPublic(){
   ]);
   if(e)Alert.alert("Profile unavailable",e.message); else setData(p);
   setBalance(b||0);
+  if(currentUser?.id){
+   const {data:requests,error:requestsError}=await supabase.from("service_requests").select("id,status,created_at,title").eq("customer_id",currentUser.id).eq("professional_id",professionalId).in("status",["requested","submitted","accepted"]).order("created_at",{ascending:false});
+   if(requestsError){console.warn("KAMPRO active job check unavailable:",requestsError.message);setActiveJob(null);}
+   else if(requests?.length){
+    const {data:linkedJobs,error:jobsError}=await supabase.from("jobs").select("id,request_id,status").in("request_id",requests.map((r:any)=>r.id));
+    if(jobsError){console.warn("KAMPRO linked job check unavailable:",jobsError.message);setActiveJob(null);}
+    else{
+     const jobByRequest=new Map((linkedJobs||[]).map((j:any)=>[j.request_id,j]));
+     const pending=requests.find((r:any)=>{const job:any=jobByRequest.get(r.id);return !job||!["customer_confirmed","cancelled"].includes(String(job.status));});
+     const job:any=pending?jobByRequest.get(pending.id):null;
+     setActiveJob(pending?{...pending,jobId:job?.id||null,jobStatus:job?.status||null}:null);
+    }
+   }else setActiveJob(null);
+  }else setActiveJob(null);
   if(eligibilityError)console.warn("KAMPRO eligibility check unavailable:",eligibilityError.message); else setEligibility(eligibilityResult);
  }
  async function unlock(){
