@@ -82,6 +82,15 @@ export default function ServiceRequest(){
    setSubmitMessage("This request is not linked to a professional. Go back to Find Professionals, open a professional profile, and choose Create Job from that profile.");
    return;
   }
+  const {data:{user:currentUser},error:authError}=await supabase.auth.getUser();
+  if(authError||!currentUser){
+   setSubmitMessage("Please sign in again before creating a job.");
+   return;
+  }
+  if(currentUser.id===professionalId){
+   setSubmitMessage("You cannot book your own professional service. Please choose another professional.");
+   return;
+  }
   if(loadingSelection){
    setSubmitMessage("Please wait while the selected service loads.");
    return;
