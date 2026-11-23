@@ -14,7 +14,7 @@ export default function Connections(){
  useEffect(()=>{load();},[mode,user?.id]);
  async function load(){
   if(!user)return; setLoading(true);setError("");
-  const {data,error}=await supabase.from("professional_connections").select("id,customer_id,professional_id,expires_at,last_accessed_at").or(`customer_id.eq.${user.id},professional_id.eq.${user.id}`).order("last_accessed_at",{ascending:false});
+  const {data,error}=await supabase.from("professional_connections").select("id,customer_id,professional_id,expires_at,last_accessed_at").or(`customer_id.eq.${user.id},professional_id.eq.${user.id}`).gt("expires_at",new Date().toISOString()).order("last_accessed_at",{ascending:false});
   if(error){setError(error.message);Alert.alert("Unable to load connections",error.message);setLoading(false);return;}
   const connections=data||[];
   const otherIds=connections.map(c=>c.customer_id===user.id?c.professional_id:c.customer_id);
@@ -37,7 +37,7 @@ export default function Connections(){
     }
     return {...c,otherId,profile:profileMap.get(otherId)||null,professional:professionalMap.get(c.professional_id)||null,conversationId:conversation?.id||null,chatState};
   }));
-  setItems(rows); setLoading(false);
+  setItems(rows.filter(row=>!row.chatState||row.chatState.active!==false)); setLoading(false);
  } async function open(item:any){
   if(mode==="customer"){
    let conversationId=item.conversationId;
