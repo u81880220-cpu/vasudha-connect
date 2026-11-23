@@ -27,11 +27,16 @@ export default function Connections(){
   const profileMap=new Map((profiles||[]).map((p:any)=>[p.id,p]));
   const professionalMap=new Map((professionals||[]).map((p:any)=>[p.user_id,p]));
   const conversationMap=new Map((conversations||[]).map((x:any)=>[`${x.customer_id}:${x.professional_id}`,x]));
-  const rows=connections.map(c=>{
+  const rows=await Promise.all(connections.map(async c=>{
     const otherId=c.customer_id===user.id?c.professional_id:c.customer_id;
     const conversation=conversationMap.get(`${c.customer_id}:${c.professional_id}`);
-    return {...c,otherId,profile:profileMap.get(otherId)||null,professional:professionalMap.get(c.professional_id)||null,conversationId:conversation?.id||null,chatState:null};
-  });
+    let chatState:any=null;
+    if(conversation?.id){
+      const {data:state,error:stateError}=await supabase.rpc("get_conversation_chat_state",{p_conversation_id:conversation.id});
+      if(!stateError)chatState=state||null;
+    }
+    return {...c,otherId,profile:profileMap.get(otherId)||null,professional:professionalMap.get(c.professional_id)||null,conversationId:conversation?.id||null,chatState};
+  }));
   setItems(rows); setLoading(false);
  } async function open(item:any){
   if(mode==="customer"){
