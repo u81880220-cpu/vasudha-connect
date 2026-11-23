@@ -35,6 +35,14 @@ function MarketplaceScreen(){
   const initialServiceName=Array.isArray(routeParams.serviceName)?routeParams.serviceName[0]||"":routeParams.serviceName||"";
   const[marketplaceConfig,setMarketplaceConfig]=useState<any>(null);
   const[selection,setSelection]=useState<ServiceSelection>({categoryId:null,categoryName:null,serviceId:null,serviceName:null,subServiceId:null,subServiceName:null});
+  const emptySelection:ServiceSelection={categoryId:null,categoryName:null,serviceId:null,serviceName:null,legacySkillId:null,subServiceId:null,subServiceName:null};
+  function handleProfessionalQueryChange(value:string){
+    setQuery(value);
+    if(value.trim().length>0){
+      setSelection(emptySelection);
+      setSelectedMapPro(null);
+    }
+  }
   const[query,setQuery]=useState(initialServiceName);
   useEffect(()=>{setQuery(initialServiceName)},[initialServiceName]);
   const[selectedMapPro,setSelectedMapPro]=useState<Professional|null>(null);
@@ -273,10 +281,10 @@ function MarketplaceScreen(){
         </Pressable>
       </View>
 
-      <View style={s.searchBox}><Text style={s.searchIcon}>⌕</Text><TextInput value={query} onChangeText={setQuery} placeholder={t("searchProfessionals")} placeholderTextColor="#8B93A1" style={s.searchInput}/>{query?<Pressable onPress={()=>setQuery("")}><Text style={s.clear}>×</Text></Pressable>:null}</View>
-      <View style={{paddingHorizontal:14,paddingTop:10}}>
-        <ServicePicker value={selection} optionalSubService searchQuery={query} onChange={(next)=>{setSelection(next);setQuery("");}} title={t("chooseService")}/>
-      </View>
+      <View style={s.searchBox}><Text style={s.searchIcon}>⌕</Text><TextInput value={query} onChangeText={handleProfessionalQueryChange} placeholder={t("searchProfessionals")} placeholderTextColor="#8B93A1" style={s.searchInput}/>{query?<Pressable onPress={()=>handleProfessionalQueryChange("")}><Text style={s.clear}>×</Text></Pressable>:null}</View>
+      {!query.trim()?<View style={{paddingHorizontal:14,paddingTop:10}}>
+        <ServicePicker value={selection} optionalSubService searchQuery="" onChange={(next)=>{setSelection(next);setQuery("");}} title={t("chooseService")}/>
+      </View>:null}
 
       <View style={s.radiusRow}>
         <Text style={s.label}>{t("distance")}</Text>
