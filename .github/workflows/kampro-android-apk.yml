@@ -1,4 +1,5 @@
 name: KAMPRO Android APK Build
+# Rebuild after compact ServicePicker layout correction (APK 68 baseline).
 
 on:
   workflow_dispatch:
