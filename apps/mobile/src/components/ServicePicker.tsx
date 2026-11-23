@@ -22,6 +22,7 @@ export function ServicePicker({value,onChange,title="Choose a service",optionalS
  const[loading,setLoading]=useState(true);
  const[requestOpen,setRequestOpen]=useState(false),[requestCategory,setRequestCategory]=useState(""),[requestServiceName,setRequestServiceName]=useState(""),[requestSubService,setRequestSubService]=useState(""),[requestDescription,setRequestDescription]=useState(""),[requestBusy,setRequestBusy]=useState(false),[myRequests,setMyRequests]=useState<any[]>([]);
  useEffect(()=>{load();if(requestService)loadMyRequests();},[]);
+ useEffect(()=>{setCategoryId(value?.categoryId||null);setServiceId(value?.serviceId||null);setSubId(value?.subServiceId||null);},[value?.categoryId,value?.serviceId,value?.subServiceId]);
  async function loadMyRequests(){const{data,error}=await supabase.from("professional_service_requests").select("id,category_name,service_name,sub_service_name,status,admin_note,created_at").order("created_at",{ascending:false}).limit(5);if(!error)setMyRequests(data||[]);}
  async function submitServiceRequest(){
   if(!requestCategory.trim()||!requestServiceName.trim())return Alert.alert("Missing details","Enter the category and service name.");
