@@ -14,7 +14,7 @@ import { KamproLocationPicker } from "../src/components/KamproLocationPicker";
 type Professional={
   professional_id:string; display_name:string; headline:string|null; city:string|null; state:string|null;
   avatar_url:string|null; trust_score:number; verification_status:string; is_available:boolean;
-  distance_km:number; latitude:number; longitude:number; profile_completion:number; rating:number|null;
+  distance_km:number; latitude:number; longitude:number; profile_completion:number; rating:number|null; review_count:number;
   skills:{id:string;name:string;category:string;primary:boolean}[]
 };
 type Coords={latitude:number;longitude:number};
@@ -114,25 +114,17 @@ function MarketplaceScreen(){
       setSearchError("We couldn't load professionals right now. Please try again.");
     } else {
       const professionals=(data??[]) as Professional[];
-      // Match the rating calculation used on the professional dashboard.
+      // Use the same server-side aggregate for every customer. Individual reviews remain private.
       const professionalIds=professionals.map((x)=>x.professional_id);
-      let ratingsByProfessional=new Map<string,number>();
+      let ratingsByProfessional=new Map<string,{rating:number;count:number}>();
       if(professionalIds.length){
-        const {data:reviews,error:reviewsError}=await supabase
-          .from("customer_job_reviews")
-          .select("professional_id,punctuality,work_quality,professional_behaviour,communication,value_for_money,reliability,safety_care")
-          .in("professional_id",professionalIds);
-        if(!reviewsError&&reviews?.length){
-          const grouped=new Map<string,number[]>();
-          for(const review of reviews as any[]){
-            const values=["punctuality","work_quality","professional_behaviour","communication","value_for_money","reliability","safety_care"].map(key=>Number(review[key]));
-            if(values.some(value=>!Number.isFinite(value)))continue;
-            const score=values.reduce((sum,value)=>sum+value,0)/values.length;
-            const existing=grouped.get(review.professional_id)||[];
-            existing.push(score);
-            grouped.set(review.professional_id,existing);
+        const {data:ratingRows,error:ratingError}=await supabase.rpc("get_professional_rating_summary",{p_professional_ids:professionalIds});
+        if(!ratingError&&ratingRows?.length){
+          for(const row of ratingRows as any[]){
+            ratingsByProfessional.set(row.professional_id,{rating:Number(row.average_rating),count:Number(row.review_count)});
           }
-          ratingsByProfessional=new Map([...grouped].map(([id,scores])=>[id,scores.reduce((sum,value)=>sum+value,0)/scores.length]));
+        }else if(ratingError){
+          console.warn("Professional rating summary unavailable",ratingError.message);
         }
       }
       // Build search labels through explicit queries so nested PostgREST relationship names
@@ -168,7 +160,7 @@ function MarketplaceScreen(){
           }
         }
       }
-      setItems(professionals.map((professional)=>({...professional,rating:ratingsByProfessional.get(professional.professional_id)??null,skills:[...(professional.skills||[]),...(catalogueSkills.get(professional.professional_id)||[])]})));
+      setItems(professionals.map((professional)=>{const summary=ratingsByProfessional.get(professional.professional_id);return {...professional,rating:summary?.rating??null,review_count:summary?.count??0,skills:[...(professional.skills||[]),...(catalogueSkills.get(professional.professional_id)||[])]};}));
     }
     setLoading(false);
   }
