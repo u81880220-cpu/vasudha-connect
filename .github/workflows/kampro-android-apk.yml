@@ -79,3 +79,5 @@ jobs:
           path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
+
+# Rebuild for removal of overlapping map legend; preserve APK 68 baseline.
