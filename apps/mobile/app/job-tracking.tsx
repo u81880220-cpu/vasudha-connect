@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import * as DocumentPicker from "expo-document-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { Image } from "react-native";
 import * as Location from "expo-location";
 import { ActivityIndicator, Alert, Linking, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -89,11 +90,13 @@ export default function JobTracking(){
    let added=0;
    for(const file of selected){
     if(!file.uri)continue;
-    if((file.size||0)>8*1024*1024)throw new Error("Each photo must be 8 MB or smaller.");
-    const ext=(file.name?.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"");
-    const path=user.id+"/"+job.id+"/"+Date.now()+"-"+Math.random().toString(36).slice(2,8)+"."+ext;
-    const body=await fetch(file.uri).then(r=>r.arrayBuffer());
-    const{error:uploadError}=await supabase.storage.from("professional-work-photos").upload(path,body,{contentType:file.mimeType||"image/jpeg",upsert:false});
+    if((file.size||0)>8*1024*1024)throw new Error("Each selected photo must be 8 MB or smaller.");
+    // Normalize every selected image, including HEIC/HEIF, to JPEG before upload.
+    const converted=await ImageManipulator.manipulateAsync(file.uri,[],{compress:0.86,format:ImageManipulator.SaveFormat.JPEG});
+    const body=await fetch(converted.uri).then(r=>r.arrayBuffer());
+    if(body.byteLength>8*1024*1024)throw new Error("The converted photo is larger than 8 MB. Please choose a smaller image.");
+    const path=user.id+"/"+job.id+"/"+Date.now()+"-"+Math.random().toString(36).slice(2,8)+".jpg";
+    const{error:uploadError}=await supabase.storage.from("professional-work-photos").upload(path,body,{contentType:"image/jpeg",upsert:false});
     if(uploadError)throw uploadError;
     const{data:publicUrl}=supabase.storage.from("professional-work-photos").getPublicUrl(path);
     const{error:insertError}=await supabase.from("portfolio_items").insert({professional_id:user.id,job_id:job.id,title:"Completed work",description:"Work completed through KAMPRO",media_url:publicUrl.publicUrl,moderation_status:"pending"});
@@ -101,7 +104,7 @@ export default function JobTracking(){
     added++;
    }
    setPhotoCount(n=>Math.min(2,n+added));
-   Alert.alert("Photos submitted",added+" photo(s) submitted for review. Approved photos will appear on your public professional profile.");
+   Alert.alert("Photos submitted",added+" photo(s) converted to JPEG and submitted for review. Approved photos will appear on your public professional profile.");
   }catch(e:any){Alert.alert("Photo upload failed",e?.message||"Please try again.");}
   finally{setPhotoBusy(false);}
  }
