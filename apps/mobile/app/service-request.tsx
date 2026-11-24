@@ -143,7 +143,7 @@ export default function ServiceRequest(){
   }
  }
 
- if(mode==="professional")return <SafeAreaView style={s.safe}><View style={s.container}><VasudhaLogo compact/><Text style={s.title}>Switch to Customer mode</Text><Text style={s.muted}>Creating a job request is available only in Customer mode. Switch modes to continue.</Text><Pressable style={s.submit} onPress={async()=>{try{await setMode("customer");router.replace("/marketplace");}catch(e:any){Alert.alert("Unable to switch mode",e?.message||"Please try again.");}}}><Text style={s.submitText}>Switch to Customer mode</Text></Pressable></View></SafeAreaView>;
+ if(mode==="professional")return <SafeAreaView style={s.safe}><View style={s.container}><VasudhaLogo compact/><Text style={s.title}>Switch to Customer mode</Text><Text style={s.muted}>Creating a job request is available only in Customer mode. Switch modes to continue.</Text><Pressable style={s.primary} onPress={async()=>{try{await setMode("customer");router.replace("/marketplace");}catch(e:any){Alert.alert("Unable to switch mode",e?.message||"Please try again.");}}}><Text style={s.primaryText}>Switch to Customer mode</Text></Pressable></View></SafeAreaView>;
  return <SafeAreaView style={s.safe}><KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":"height"}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
   <VasudhaLogo compact/><Text style={s.title}>Create Job Request</Text>
   <Text style={s.muted}>Your professional and selected service are carried forward automatically. Only the service is required; the remaining details are optional.</Text>
