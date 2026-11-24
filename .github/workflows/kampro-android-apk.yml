@@ -1,4 +1,5 @@
 name: KAMPRO Android APK Build
+# Rebuild for approved map-first professional preview feature.
 # Rebuild after compact ServicePicker layout correction (APK 68 baseline).
 
 on:
