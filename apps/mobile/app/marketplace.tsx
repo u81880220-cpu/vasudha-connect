@@ -230,7 +230,7 @@ function MarketplaceScreen(){
           <Text style={s.distance}>⌖ {item.distance_km} km away</Text>
           <View style={s.cardMetrics}>
             <View style={s.metricCard}><Text style={s.metricNumber}>{Math.round(item.trust_score)}</Text><Text style={s.metricLabel}>Trust</Text></View>
-            <View style={s.metricCard}><Text style={s.metricNumber}>{item.rating==null?"—":item.rating.toFixed(1)+"★"}</Text><Text style={s.metricLabel}>Rating</Text></View>
+            <View style={s.metricCard}><Text style={s.metricNumber}>{item.rating==null?"—":item.rating.toFixed(1)+"★"}</Text><Text style={s.metricLabel}>{item.review_count>0?`${item.review_count} ${item.review_count===1?"review":"reviews"}`:"Rating"}</Text></View>
             <View style={s.metricCard}><Text style={s.metricNumber}>{Math.max(0,Math.min(100,Math.round(item.profile_completion||0)))}%</Text><Text style={s.metricLabel}>Completion</Text></View>
           </View>
           <Text style={s.view}>View profile →</Text>
