@@ -290,10 +290,6 @@ function WebMap({userCoords,items,selection,selectedMapPro,onSelect}:{userCoords
         <Pressable style={s.mapPreviewPrimary} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:selectedMapPro.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}><Text style={s.mapPreviewPrimaryText}>View profile →</Text></Pressable>
       </View>
     </View>:null}
-    <View style={s.mapLegend}>
-      <Text style={s.mapLegendTitle}>Nearby professionals</Text>
-      <Text style={s.mapLegendText}>{items.length} professionals found</Text>
-    </View>
   </View>;
 }
 
