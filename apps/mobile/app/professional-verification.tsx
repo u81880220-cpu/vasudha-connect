@@ -13,10 +13,12 @@ export default function ProfessionalVerification() {
   const [years, setYears] = useState("");
   const [status, setStatus] = useState("unverified");
   const [completeness, setCompleteness] = useState(0);
-  const [docType, setDocType] = useState("Identity / Skill document");
-  const [docName, setDocName] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [identityDocType, setIdentityDocType] = useState("Aadhaar");
+  const [skillDocType, setSkillDocType] = useState("ITI / Diploma / Skill certificate");
+  const [busyType, setBusyType] = useState<"identity" | "skill" | null>(null);
   const [docs, setDocs] = useState<any[]>([]);
+  const identityStatus = docs.find(d => !String(d.document_type).toLowerCase().startsWith("skill:"))?.status || status;
+  const skillStatus = docs.find(d => String(d.document_type).toLowerCase().startsWith("skill:"))?.status || "unverified";
 
   useEffect(() => {
     if (!loading && session && mode !== "professional") router.replace("/home");
@@ -50,7 +52,7 @@ export default function ProfessionalVerification() {
     else Alert.alert("Saved", "Professional details updated.");
   }
 
-  async function pickDocument() {
+  async function pickDocument(kind: "identity" | "skill") {
     const result = await DocumentPicker.getDocumentAsync({
       type: ["image/jpeg", "image/png", "application/pdf"],
       copyToCacheDirectory: true,
@@ -61,8 +63,7 @@ export default function ProfessionalVerification() {
       Alert.alert("File too large", "Please select a file up to 10 MB.");
       return;
     }
-    setDocName(file.name);
-    setBusy(true);
+    setBusyType(kind);
     try {
       if (!session) throw new Error("You are not signed in.");
       const ext = (file.name.split(".").pop() || "bin").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -76,20 +77,19 @@ export default function ProfessionalVerification() {
       if (uploadError) throw uploadError;
       const { error: insertError } = await supabase.from("verification_documents").insert({
         professional_id: session.user.id,
-        document_type: docType.trim() || "Identity / Skill document",
+        document_type: kind === "skill" ? "Skill: " + skillDocType.trim() : "Identity: " + identityDocType.trim(),
         document_url: path,
       });
       if (insertError) {
         await supabase.storage.from("verification-documents").remove([path]);
         throw insertError;
       }
-      setStatus("pending");
-      Alert.alert("Submitted", "Your document was uploaded securely and your verification request was sent for admin review.");
+      await load();
+      Alert.alert("Submitted", kind === "identity" ? "Your identity document was submitted for mandatory verification." : "Your skill document was submitted for optional skill verification.");
     } catch (e) {
-      setDocName("");
       Alert.alert("Upload failed", e instanceof Error ? e.message : "Please try again.");
     } finally {
-      setBusy(false);
+      setBusyType(null);
     }
   }
 
@@ -102,13 +102,20 @@ export default function ProfessionalVerification() {
     <Text style={s.label}>About</Text><TextInput style={[s.input, s.multi]} value={about} onChangeText={setAbout} placeholder="Experience, services and strengths" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" multiline/>
     <Text style={s.label}>Experience</Text><TextInput style={s.input} value={years} onChangeText={setYears} keyboardType="number-pad" placeholderTextColor="#6B7280" selectionColor="#FF4B1F" placeholderTextColor="#6B7280" selectionColor="#FF4B1F"/>
     <Pressable onPress={saveProfile} style={s.save}><Text style={s.saveText}>Save professional details</Text></Pressable>
-    <View style={s.status}><Text style={s.label}>Verification status</Text><Text style={s.badge}>{status.toUpperCase()}</Text></View>
+    <Text style={s.sectionTitle}>1. Identity verification · Mandatory</Text>
+    <View style={s.verifyCard}><View style={s.status}><Text style={s.label}>Identity status</Text><Text style={s.badge}>{String(identityStatus).toUpperCase()}</Text></View>
+      <Text style={s.note}>Government-issued identity proof is required. Admin approval is required before your profile appears in customer search.</Text>
+      <Text style={s.label}>Document type</Text><View style={s.choiceRow}>{["Aadhaar","PAN","Voter ID","Driving Licence"].map(x=><Pressable key={x} onPress={()=>setIdentityDocType(x)} style={[s.choice,identityDocType===x&&s.choiceActive]}><Text style={[s.choiceText,identityDocType===x&&s.choiceTextActive]}>{x}</Text></Pressable>)}</View>
+      <Pressable disabled={!!busyType} onPress={()=>pickDocument("identity")} style={s.primary}><Text style={s.button}>{busyType==="identity"?"Uploading...":"Upload identity document *"}</Text></Pressable>
+    </View>
+    <Text style={s.sectionTitle}>2. Skill verification · Optional</Text>
+    <View style={s.verifyCard}><View style={s.status}><Text style={s.label}>Skill status</Text><Text style={s.badge}>{String(skillStatus).toUpperCase()}</Text></View>
+      <Text style={s.note}>Optional proof: ITI, diploma, government skill certificate or previous employer experience proof. Not uploading it will not block registration.</Text>
+      <TextInput style={s.input} value={skillDocType} onChangeText={setSkillDocType} placeholder="Document type" placeholderTextColor="#6B7280" selectionColor="#FF4B1F"/>
+      <Pressable disabled={!!busyType} onPress={()=>pickDocument("skill")} style={s.secondary}><Text style={s.secondaryText}>{busyType==="skill"?"Uploading...":"Upload skill document (optional)"}</Text></Pressable>
+    </View>
     {docs.length > 0 ? <View style={s.docs}><Text style={s.label}>Submission history</Text>{docs.map(d => <View key={d.id} style={s.doc}><Text style={s.docTitle}>{d.document_type} · {String(d.status).toUpperCase()}</Text>{d.reviewer_note ? <Text style={s.muted}>{d.reviewer_note}</Text> : null}</View>)}</View> : null}
-    <Text style={s.label}>Identity document * (required)</Text><TextInput style={s.input} value={docType} onChangeText={setDocType} placeholderTextColor="#6B7280" selectionColor="#FF4B1F"/>
-    <Pressable disabled={busy} onPress={pickDocument} style={s.primary}><Text style={s.button}>{busy ? "Uploading..." : docs.some(d=>["pending","approved","verified"].includes(String(d.status).toLowerCase())) ? "Upload / replace identity document" : "Choose & upload identity document *"}</Text></Pressable>
-    {docName ? <Text style={s.file}>Selected: {docName}</Text> : null}
-    <Text style={s.note}>Required to complete professional registration. Accepted: JPG, PNG or PDF • Maximum 10 MB. Upload must finish successfully. Documents are stored privately and are not public marketplace files.</Text>
-    <Text style={s.note}>Admin approval is required before your profile appears in nearby customer search.</Text>
+    <Text style={s.note}>Accepted: JPG, PNG or PDF · Maximum 10 MB. Documents are stored privately and never shown to customers.</Text>
   </ScrollView></SafeAreaView>;
 }
 
@@ -127,6 +134,7 @@ const s = StyleSheet.create({
   scoreValue: { fontSize: 30, fontWeight: "800", marginTop: 4, color: "#10233F" },
   muted: { color: "#4B5563", fontSize: 12, marginTop: 4, lineHeight: 18 },
   label: { fontWeight: "800", color: "#10233F", marginTop: 14, marginBottom: 8 },
+  sectionTitle: { fontSize: 19, fontWeight: "900", color: "#10233F", marginTop: 22, marginBottom: 8 }, verifyCard: { borderWidth: 1, borderColor: "#E7EAF0", borderRadius: 16, padding: 14, backgroundColor: "#FFFFFF", marginTop: 6 }, choiceRow: { flexDirection: "row", flexWrap: "wrap", gap: 7 }, choice: { borderWidth: 1, borderColor: "#CBD0D8", borderRadius: 9, paddingHorizontal: 10, paddingVertical: 8 }, choiceActive: { borderColor: "#FF4B1F", backgroundColor: "#FFF0EA" }, choiceText: { color: "#10233F", fontSize: 12, fontWeight: "700" }, choiceTextActive: { color: "#D93812" }, secondary: { marginTop: 16, borderWidth: 1, borderColor: "#FF4B1F", borderRadius: 12, padding: 14, alignItems: "center" }, secondaryText: { color: "#D93812", fontWeight: "800" },
   input: { borderWidth: 1, borderColor: "#CBD0D8", borderRadius: 12, padding: 13, minHeight: 48, backgroundColor: "#FFFFFF", color: "#10233F" },
   multi: { minHeight: 90, textAlignVertical: "top" },
   status: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
