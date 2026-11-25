@@ -23,6 +23,11 @@
     },
     "web": {
       "output": "single"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "a5d39a0e-86e0-4681-afc4-68fcf86ed288"
+      }
     }
   }
 }
