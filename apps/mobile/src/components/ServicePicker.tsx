@@ -16,13 +16,13 @@ type Category={id:string;name:string;icon?:string|null};
 type Service={id:string;category_id:string;name:string;icon?:string|null;legacy_skill_id:string|null};
 type SubService={id:string;service_id:string;name:string};
 
-export function ServicePicker({value,onChange,title="Choose a service",optionalSubService=false,requestService=false,searchQuery=""}:{value?:Partial<ServiceSelection>;onChange:(value:ServiceSelection)=>void;title?:string;optionalSubService?:boolean;requestService?:boolean;searchQuery?:string}){
+export function ServicePicker({value,onChange,title="Choose a service",optionalSubService=false,requestService=false,searchQuery="",onCustomServiceRequestsChange}:{value?:Partial<ServiceSelection>;onChange:(value:ServiceSelection)=>void;title?:string;optionalSubService?:boolean;requestService?:boolean;searchQuery?:string;onCustomServiceRequestsChange?:(count:number)=>void}){
  const[categories,setCategories]=useState<Category[]>([]),[services,setServices]=useState<Service[]>([]),[subs,setSubs]=useState<SubService[]>([]);
  const[categoryId,setCategoryId]=useState(value?.categoryId||null),[serviceId,setServiceId]=useState(value?.serviceId||null),[subId,setSubId]=useState(value?.subServiceId||null);
  const[loading,setLoading]=useState(true);
  const[requestOpen,setRequestOpen]=useState(false),[requestCategory,setRequestCategory]=useState(""),[requestServiceName,setRequestServiceName]=useState(""),[requestSubService,setRequestSubService]=useState(""),[requestDescription,setRequestDescription]=useState(""),[requestBusy,setRequestBusy]=useState(false),[myRequests,setMyRequests]=useState<any[]>([]);
  useEffect(()=>{load();if(requestService)loadMyRequests();},[]);
- async function loadMyRequests(){const{data,error}=await supabase.from("professional_service_requests").select("id,category_name,service_name,sub_service_name,status,admin_note,created_at").order("created_at",{ascending:false}).limit(5);if(!error)setMyRequests(data||[]);}
+ async function loadMyRequests(){const{data,error}=await supabase.from("professional_service_requests").select("id,category_name,service_name,sub_service_name,status,admin_note,created_at").order("created_at",{ascending:false});if(!error){const rows=data||[];setMyRequests(rows.slice(0,5));onCustomServiceRequestsChange?.(rows.filter((r:any)=>r.status==="pending"||r.status==="approved").length);}}
  async function submitServiceRequest(){
   if(!requestCategory.trim()||!requestServiceName.trim())return Alert.alert("Missing details","Enter the category and service name.");
   setRequestBusy(true);try{const{data:userData}=await supabase.auth.getUser();if(!userData.user)throw new Error("Please sign in again.");
