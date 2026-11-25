@@ -1,5 +1,5 @@
 import React,{ useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Dimensions, Image, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "../src/lib/supabase";
@@ -44,6 +44,8 @@ function MarketplaceScreen(){
   const searchRequestRef=useRef(0);
   const[searchError,setSearchError]=useState("");
   const[userCoords,setUserCoords]=useState<Coords|null>(cachedMarketplaceLocation?.coords??null);
+  const[searchCenter,setSearchCenter]=useState<Coords|null>(cachedMarketplaceLocation?.coords??null);
+  const[pendingMapCenter,setPendingMapCenter]=useState<Coords|null>(null);
   const[radius,setRadius]=useState(25);
   const[filtersOpen,setFiltersOpen]=useState(false);
   const[locationPickerOpen,setLocationPickerOpen]=useState(false);
@@ -71,19 +73,19 @@ function MarketplaceScreen(){
   const visibleItems=[...searchedItems].filter(x=>(!verifiedOnly||x.verification_status==="verified")&&(!availableOnly||x.is_available)&&(Math.round(x.trust_score)/20)>=minRating).sort((a,b)=>{const tw=Number(marketplaceConfig?.trust_weight??0.5),dw=Number(marketplaceConfig?.distance_weight??0.3),aw=Number(marketplaceConfig?.availability_weight??0.2);const score=(x:any)=>tw*(Number(x.trust_score||0)/100)+dw*(1/(1+Number(x.distance_km||0)))+aw*(x.is_available?1:0);return score(b)-score(a)});
 
   useEffect(()=>{(async()=>{const{data}=await supabase.rpc("marketplace_configuration");const cfg=data||{};setMarketplaceConfig(cfg);setRadius(Math.min(Number(cfg.default_radius_km||25),Number(cfg.max_radius_km||50)));setMinRating(Number(cfg.min_rating||0));})();},[]);
-  useEffect(()=>{let active=true;(async()=>{const shared=await getKamproLocation();if(!active)return;if(shared){const coords={latitude:shared.latitude,longitude:shared.longitude};setUserCoords(coords);setLocationLabel(shared.label);cachedMarketplaceLocation={coords,label:shared.label,manual:shared.manual};setLoading(false);void searchProfessionals(coords);}else if(cachedMarketplaceLocation){setUserCoords(cachedMarketplaceLocation.coords);setLocationLabel(cachedMarketplaceLocation.label);setLoading(false);void searchProfessionals(cachedMarketplaceLocation.coords);}else{void requestLocation();}})();return()=>{active=false};},[]);
-  useEffect(()=>{if(userCoords) searchProfessionals(userCoords);},[selection.categoryId,selection.serviceId,selection.subServiceId,radius]);
-  useEffect(()=>{if(!userCoords||query.trim().length===0)return;const timer=setTimeout(()=>{void searchProfessionals(userCoords);},250);return()=>clearTimeout(timer);},[query,userCoords]);
+  useEffect(()=>{let active=true;(async()=>{const shared=await getKamproLocation();if(!active)return;if(shared){const coords={latitude:shared.latitude,longitude:shared.longitude};setUserCoords(coords);setSearchCenter(coords);setLocationLabel(shared.label);cachedMarketplaceLocation={coords,label:shared.label,manual:shared.manual};setLoading(false);}else if(cachedMarketplaceLocation){setUserCoords(cachedMarketplaceLocation.coords);setSearchCenter(cachedMarketplaceLocation.coords);setLocationLabel(cachedMarketplaceLocation.label);setLoading(false);}else{void requestLocation();}})();return()=>{active=false};},[]);
+  useEffect(()=>{if(searchCenter) searchProfessionals(searchCenter);},[selection.categoryId,selection.serviceId,selection.subServiceId,radius,searchCenter]);
+  useEffect(()=>{if(!searchCenter||query.trim().length===0)return;const timer=setTimeout(()=>{void searchProfessionals(searchCenter);},250);return()=>clearTimeout(timer);},[query,searchCenter]);
   async function requestLocation(){
     if(locationBusy)return;
     setLoading(true);setLocationBusy(true);setLocationError("");
     try{
       const point=await getCurrentKamproLocation();
       const coords={latitude:point.latitude,longitude:point.longitude};
-      setUserCoords(coords);setLocationLabel(point.label);
+      setUserCoords(coords);setSearchCenter(coords);setPendingMapCenter(null);setLocationLabel(point.label);
       cachedMarketplaceLocation={coords,label:point.label,manual:false};
       await setKamproLocation({...point,manual:false});
-      await searchProfessionals(coords);
+
     }catch(e:any){
       setLocationLabel("Unable to detect location");
       setLocationError(e?.message||"GPS could not detect your location. Search manually.");
@@ -93,10 +95,10 @@ function MarketplaceScreen(){
 
   async function applyPickerLocation(location:{latitude:number;longitude:number;label:string;manual:boolean}){
     const coords={latitude:location.latitude,longitude:location.longitude};
-    setUserCoords(coords);setLocationLabel(location.label);
+    setUserCoords(coords);setSearchCenter(coords);setPendingMapCenter(null);setLocationLabel(location.label);
     cachedMarketplaceLocation={coords,label:location.label,manual:location.manual};
     setLoading(true);
-    await searchProfessionals(coords);
+
   }
 
   async function searchProfessionals(coords:Coords){
@@ -205,8 +207,11 @@ function MarketplaceScreen(){
       </View>
 
       <View style={[s.mapWrap,{height:MAP_HEIGHT}]}>
-        {userCoords && (<WebMap userCoords={userCoords} items={visibleItems} selection={selection} selectedMapPro={selectedMapPro} onSelect={setSelectedMapPro}/>
+        {userCoords && (Platform.OS === "web"
+          ? <WebMap userCoords={userCoords} items={visibleItems} selection={selection} selectedMapPro={selectedMapPro} onSelect={setSelectedMapPro}/>
+          : <NativeMap userCoords={userCoords} mapCenter={searchCenter||userCoords} items={visibleItems} selection={selection} onRegionSettled={setPendingMapCenter}/>
         )}
+        {pendingMapCenter && Platform.OS !== "web" ? <Pressable style={s.searchThisArea} onPress={()=>{setSearchCenter(pendingMapCenter);setPendingMapCenter(null);}}><Text style={s.searchThisAreaText}>Search this area</Text></Pressable> : null}
         {!userCoords&&!loading&&<View style={s.locationEmpty}><Text style={s.locationTitle}>Location required</Text><Text>Allow location to see nearby professionals on the map.</Text><Pressable style={s.locationButton} onPress={requestLocation}><Text style={s.locationButtonText}>Enable location</Text></Pressable></View>}
         {loading&&<View style={s.loadingOverlay}><ActivityIndicator size="large"/><Text style={s.loadingText}>Finding nearby professionals…</Text></View>}
         <View style={s.mapBadge}><Text style={s.mapBadgeText}>{visibleItems.length} on map</Text></View>
@@ -285,14 +290,25 @@ function WebMap({userCoords,items,selection,selectedMapPro,onSelect}:{userCoords
   </View>;
 }
 
-function NativeMap({userCoords,items,selection}:{userCoords:Coords;items:Professional[];selection:ServiceSelection}) {
-  // react-native-maps is intentionally required only on native; importing it at module scope crashes Expo Web.
+function NativeMap({userCoords,mapCenter,items,selection,onRegionSettled}:{userCoords:Coords;mapCenter:Coords;items:Professional[];selection:ServiceSelection;onRegionSettled:(coords:Coords)=>void}) {
+  // Load the native map only on Android/iOS; web keeps its separate fallback.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const Maps=require("react-native-maps");
   const MapView=Maps.default||Maps;
   const Marker=Maps.Marker;
   const Callout=Maps.Callout;
-  return <MapView style={s.map} initialRegion={{...userCoords,latitudeDelta:0.12,longitudeDelta:0.12}} showsUserLocation showsMyLocationButton>
+  const regionTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  useEffect(()=>()=>{if(regionTimer.current)clearTimeout(regionTimer.current);},[]);
+  function handleRegionChange(region:any){
+    if(Math.abs(region.latitude-mapCenter.latitude)<0.001 && Math.abs(region.longitude-mapCenter.longitude)<0.001)return;
+    if(regionTimer.current)clearTimeout(regionTimer.current);
+    regionTimer.current=setTimeout(()=>onRegionSettled({latitude:region.latitude,longitude:region.longitude}),650);
+  }
+  return <MapView style={s.map}
+    initialRegion={{...mapCenter,latitudeDelta:0.12,longitudeDelta:0.12}}
+    showsUserLocation showsMyLocationButton
+    scrollEnabled zoomEnabled rotateEnabled pitchEnabled
+    onRegionChangeComplete={handleRegionChange}>
     {items.map(worker=><Marker key={worker.professional_id} coordinate={{latitude:worker.latitude,longitude:worker.longitude}} title={worker.display_name} description={`${worker.headline||"Professional details not added"} • ${worker.distance_km} km away`}>
       <View style={s.marker}>{worker.avatar_url?<Image source={{uri:worker.avatar_url}} style={s.markerImage}/>:<Text style={s.markerText}>{worker.display_name.slice(0,1).toUpperCase()}</Text>}</View>
       <Callout onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:worker.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}>
@@ -308,7 +324,7 @@ const s=StyleSheet.create({
   title:{fontSize:20,fontWeight:"900",color:"#10233F",lineHeight:26,flexShrink:1},subtitle:{marginTop:2,color:"#475467",fontSize:12,lineHeight:17,fontWeight:"600"},refresh:{width:42,height:42,borderRadius:21,backgroundColor:"#FFF0EA",borderWidth:1,borderColor:"#FFD3C2",alignItems:"center",justifyContent:"center"},refreshText:{fontSize:25,fontWeight:"900",color:"#D93812",lineHeight:29},
   skills:{paddingHorizontal:14,paddingVertical:10,gap:8},skill:{paddingHorizontal:12,paddingVertical:7,borderRadius:16,backgroundColor:"#f3f5f5",alignItems:"center",minWidth:66},skillSelected:{backgroundColor:"#FF4B1F"},skillText:{fontWeight:"700",color:"#10233F"},skillTextSelected:{color:"#fff"},
   searchBox:{marginHorizontal:14,marginTop:8,minHeight:52,borderWidth:1,borderColor:"#E7EAF0",borderRadius:16,backgroundColor:"#fff",flexDirection:"row",alignItems:"center",paddingHorizontal:14},searchIcon:{fontSize:22,color:"#FF4B1F"},searchInput:{flex:1,fontSize:15,color:"#172033",paddingHorizontal:9,paddingVertical:10},clear:{fontSize:24,color:"#6B7280",paddingHorizontal:4},radiusRow:{flexDirection:"row",alignItems:"center",gap:7,paddingHorizontal:16,paddingBottom:10},label:{fontWeight:"800",marginRight:3,color:"#10233F"},radius:{paddingHorizontal:11,paddingVertical:6,borderRadius:14,backgroundColor:"#f3f5f5"},radiusSelected:{backgroundColor:"#d8f4eb"},radiusText:{fontSize:12,color:"#10233F"},radiusTextSelected:{fontSize:12,fontWeight:"800",color:"#087D65"},
-  mapWrap:{marginHorizontal:12,overflow:"hidden",backgroundColor:"#e8eeee",borderRadius:18,borderWidth:1,borderColor:"#dbe7e3",minHeight:220},map:{flex:1},webMap:{flex:1,backgroundColor:"#e9f3ef",position:"relative",overflow:"hidden"},webMapTitle:{fontSize:18,fontWeight:"900",color:"#10233F"},webMapText:{marginTop:5,color:"#6B7280"},webMapWorker:{marginTop:12,backgroundColor:"#fff",borderRadius:12,padding:10,flexDirection:"row",alignItems:"center",gap:10},mapRoadA:{position:"absolute",width:"140%",height:24,backgroundColor:"#fff",top:"42%",left:"-20%",transform:[{rotate:"-8deg"}]},mapRoadB:{position:"absolute",width:"130%",height:18,backgroundColor:"#fff",top:"65%",left:"-15%",transform:[{rotate:"18deg"}]},mapRoadC:{position:"absolute",width:18,height:"120%",backgroundColor:"#fff",left:"54%",top:"-10%",transform:[{rotate:"22deg"}]},mapArea:{position:"absolute",left:"34%",top:"35%",padding:10,borderRadius:12,backgroundColor:"rgba(255,255,255,.75)"},mapAreaText:{fontSize:11,fontWeight:"900",color:"#6B7280",letterSpacing:1},webMarker:{position:"absolute",width:38,height:38,borderRadius:19,backgroundColor:"#FF4B1F",borderWidth:3,borderColor:"#fff",alignItems:"center",justifyContent:"center",elevation:5},webMarkerText:{color:"#fff",fontWeight:"900"},webMarkerImage:{width:32,height:32,borderRadius:16},avatarImage:{width:60,height:60,borderRadius:30},markerImage:{width:34,height:34,borderRadius:17},webMarkerImage:{width:32,height:32,borderRadius:16},avatarImage:{width:52,height:52,borderRadius:26},markerImage:{width:34,height:34,borderRadius:17},youMarker:{position:"absolute",left:"48%",top:"48%",width:18,height:18,borderRadius:9,backgroundColor:"#1976d2",borderWidth:4,borderColor:"#fff",alignItems:"center",justifyContent:"center"},youMarkerText:{color:"#1976d2",fontSize:8},mapPreview:{position:"absolute",left:10,right:10,bottom:10,backgroundColor:"#fff",borderRadius:16,padding:11,borderWidth:1,borderColor:"#DCE8E4",elevation:8,shadowColor:"#10233F",shadowOpacity:0.14,shadowRadius:8,shadowOffset:{width:0,height:3}},mapPreviewTop:{flexDirection:"row",alignItems:"center",gap:9},mapPreviewAvatar:{width:46,height:46,borderRadius:23,backgroundColor:"#FFF0EA",alignItems:"center",justifyContent:"center",overflow:"hidden"},mapPreviewAvatarImage:{width:46,height:46,borderRadius:23},mapPreviewAvatarText:{fontSize:18,fontWeight:"900",color:"#FF4B1F"},mapPreviewName:{fontSize:14,fontWeight:"900",color:"#10233F"},mapPreviewMeta:{fontSize:11,color:"#475467",marginTop:2},mapPreviewClose:{width:28,height:28,borderRadius:14,backgroundColor:"#F2F4F7",alignItems:"center",justifyContent:"center"},mapPreviewCloseText:{fontSize:20,color:"#475467",lineHeight:22},mapPreviewFooter:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8,marginTop:9},mapPreviewTrust:{fontSize:10,fontWeight:"800",color:"#087D65",flex:1},mapPreviewPrimary:{backgroundColor:"#FF4B1F",borderRadius:10,paddingHorizontal:13,paddingVertical:8},mapPreviewPrimaryText:{fontSize:12,fontWeight:"900",color:"#fff"},mapLegend:{position:"absolute",left:12,bottom:12,backgroundColor:"#fff",borderRadius:14,padding:12,elevation:4},mapLegendTitle:{fontWeight:"900",color:"#10233F"},mapLegendText:{fontSize:11,color:"#475467",fontWeight:"600",marginTop:3},mapBadge:{position:"absolute",top:12,left:12,backgroundColor:"#fff",paddingHorizontal:11,paddingVertical:7,borderRadius:16,elevation:3},mapBadgeText:{fontWeight:"800",color:"#10233F"},
+  mapWrap:{marginHorizontal:12,overflow:"hidden",backgroundColor:"#e8eeee",borderRadius:18,borderWidth:1,borderColor:"#dbe7e3",minHeight:220},searchThisArea:{position:"absolute",top:12,alignSelf:"center",backgroundColor:"#10233F",paddingHorizontal:16,paddingVertical:9,borderRadius:20,elevation:6},searchThisAreaText:{color:"#fff",fontSize:12,fontWeight:"900"},map:{flex:1},webMap:{flex:1,backgroundColor:"#e9f3ef",position:"relative",overflow:"hidden"},webMapTitle:{fontSize:18,fontWeight:"900",color:"#10233F"},webMapText:{marginTop:5,color:"#6B7280"},webMapWorker:{marginTop:12,backgroundColor:"#fff",borderRadius:12,padding:10,flexDirection:"row",alignItems:"center",gap:10},mapRoadA:{position:"absolute",width:"140%",height:24,backgroundColor:"#fff",top:"42%",left:"-20%",transform:[{rotate:"-8deg"}]},mapRoadB:{position:"absolute",width:"130%",height:18,backgroundColor:"#fff",top:"65%",left:"-15%",transform:[{rotate:"18deg"}]},mapRoadC:{position:"absolute",width:18,height:"120%",backgroundColor:"#fff",left:"54%",top:"-10%",transform:[{rotate:"22deg"}]},mapArea:{position:"absolute",left:"34%",top:"35%",padding:10,borderRadius:12,backgroundColor:"rgba(255,255,255,.75)"},mapAreaText:{fontSize:11,fontWeight:"900",color:"#6B7280",letterSpacing:1},webMarker:{position:"absolute",width:38,height:38,borderRadius:19,backgroundColor:"#FF4B1F",borderWidth:3,borderColor:"#fff",alignItems:"center",justifyContent:"center",elevation:5},webMarkerText:{color:"#fff",fontWeight:"900"},webMarkerImage:{width:32,height:32,borderRadius:16},avatarImage:{width:60,height:60,borderRadius:30},markerImage:{width:34,height:34,borderRadius:17},webMarkerImage:{width:32,height:32,borderRadius:16},avatarImage:{width:52,height:52,borderRadius:26},markerImage:{width:34,height:34,borderRadius:17},youMarker:{position:"absolute",left:"48%",top:"48%",width:18,height:18,borderRadius:9,backgroundColor:"#1976d2",borderWidth:4,borderColor:"#fff",alignItems:"center",justifyContent:"center"},youMarkerText:{color:"#1976d2",fontSize:8},mapPreview:{position:"absolute",left:10,right:10,bottom:10,backgroundColor:"#fff",borderRadius:16,padding:11,borderWidth:1,borderColor:"#DCE8E4",elevation:8,shadowColor:"#10233F",shadowOpacity:0.14,shadowRadius:8,shadowOffset:{width:0,height:3}},mapPreviewTop:{flexDirection:"row",alignItems:"center",gap:9},mapPreviewAvatar:{width:46,height:46,borderRadius:23,backgroundColor:"#FFF0EA",alignItems:"center",justifyContent:"center",overflow:"hidden"},mapPreviewAvatarImage:{width:46,height:46,borderRadius:23},mapPreviewAvatarText:{fontSize:18,fontWeight:"900",color:"#FF4B1F"},mapPreviewName:{fontSize:14,fontWeight:"900",color:"#10233F"},mapPreviewMeta:{fontSize:11,color:"#475467",marginTop:2},mapPreviewClose:{width:28,height:28,borderRadius:14,backgroundColor:"#F2F4F7",alignItems:"center",justifyContent:"center"},mapPreviewCloseText:{fontSize:20,color:"#475467",lineHeight:22},mapPreviewFooter:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8,marginTop:9},mapPreviewTrust:{fontSize:10,fontWeight:"800",color:"#087D65",flex:1},mapPreviewPrimary:{backgroundColor:"#FF4B1F",borderRadius:10,paddingHorizontal:13,paddingVertical:8},mapPreviewPrimaryText:{fontSize:12,fontWeight:"900",color:"#fff"},mapLegend:{position:"absolute",left:12,bottom:12,backgroundColor:"#fff",borderRadius:14,padding:12,elevation:4},mapLegendTitle:{fontWeight:"900",color:"#10233F"},mapLegendText:{fontSize:11,color:"#475467",fontWeight:"600",marginTop:3},mapBadge:{position:"absolute",top:12,left:12,backgroundColor:"#fff",paddingHorizontal:11,paddingVertical:7,borderRadius:16,elevation:3},mapBadgeText:{fontWeight:"800",color:"#10233F"},
   marker:{width:42,height:42,borderRadius:21,borderWidth:3,borderColor:"#fff",backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",elevation:4},markerText:{color:"#fff",fontWeight:"900",fontSize:15},
   callout:{width:190,padding:6},calloutName:{fontWeight:"800",fontSize:15,color:"#10233F"},calloutLink:{fontWeight:"900",marginTop:5,color:"#075E4D"},loadingOverlay:{position:"absolute",inset:0,backgroundColor:"rgba(255,255,255,.72)",alignItems:"center",justifyContent:"center"},loadingText:{marginTop:8,fontWeight:"700",color:"#10233F"},
   locationEmpty:{flex:1,alignItems:"center",justifyContent:"center",padding:30},locationTitle:{fontSize:18,fontWeight:"800",color:"#10233F",marginBottom:6},locationButton:{marginTop:14,backgroundColor:"#FF4B1F",paddingHorizontal:18,paddingVertical:11,borderRadius:12},locationButtonText:{color:"#fff",fontWeight:"800"},
