@@ -38,7 +38,10 @@ jobs:
             echo "::error::Missing GitHub Actions secret EXPO_PUBLIC_MSG91_WIDGET_ID. Add the MSG91 widget ID in repository Settings > Secrets and variables > Actions."
             exit 1
           fi
-          if [ -z "$GOOGLE_MAPS_ANDROID_API_KEY" ]; then\n            echo "::error::Missing GitHub Actions secret GOOGLE_MAPS_ANDROID_API_KEY. Add the Android Maps API key in repository Settings > Secrets and variables > Actions."\n            exit 1\n          fi\n          echo "MSG91 and Google Maps configuration is present."
+          if [ -z "$GOOGLE_MAPS_ANDROID_API_KEY" ]; then
+            echo "::error::Missing GitHub Actions secret GOOGLE_MAPS_ANDROID_API_KEY. Add the Android Maps API key in repository Settings > Secrets and variables > Actions."
+            exit 1
+          fi\n          echo "MSG91 and Google Maps configuration is present."
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
