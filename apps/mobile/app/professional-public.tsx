@@ -11,11 +11,11 @@ export default function ProfessionalPublic(){
  const{mode,setMode}=useAuth();
  const{professionalId,subServiceId,serviceId,serviceName,subServiceName}=useLocalSearchParams<{professionalId:string;subServiceId?:string;serviceId?:string;serviceName?:string;subServiceName?:string}>();
  const[data,setData]=useState<any>(null),[balance,setBalance]=useState(0),[busy,setBusy]=useState(false),[eligibility,setEligibility]=useState<any>(null),[isOwnProfile,setIsOwnProfile]=useState(false),[activeJob,setActiveJob]=useState<any>(null),[galleryOpen,setGalleryOpen]=useState(false),[photoOpen,setPhotoOpen]=useState<any>(null),[scrollY,setScrollY]=useState(0),[portfolioY,setPortfolioY]=useState(99999);
- useEffect(()=>{load();},[professionalId]);
+ useEffect(()=>{load();},[professionalId,mode]);
  async function load(){
   if(!professionalId)return;
   const{data:{user:currentUser}}=await supabase.auth.getUser();
-  setIsOwnProfile(!!currentUser?.id && currentUser.id===professionalId);
+  setIsOwnProfile(!!currentUser?.id && currentUser.id===professionalId);\n  // Record each genuine customer profile opening. The database sends a renewal nudge\n  // only when this professional has no currently active subscription.\n  if(currentUser?.id && currentUser.id!==professionalId && mode==="customer"){\n   const {error:visitError}=await supabase.rpc("record_professional_profile_visit",{p_professional_id:professionalId});\n   if(visitError)console.warn("KAMPRO profile visit tracking unavailable:",visitError.message);\n  }
   const[{data:p,error:e},{data:b},{data:eligibilityResult,error:eligibilityError}]=await Promise.all([
    supabase.rpc("get_professional_public_profile",{p_professional_id:professionalId}),
    supabase.rpc("get_connection_balance"),
