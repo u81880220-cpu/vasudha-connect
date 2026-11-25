@@ -35,6 +35,7 @@ async function edgeFunctionError(error: unknown, fallback: string): Promise<Erro
  return new Error(e?.message || fallback);
 }
 
+// Retry transient transport failures once; credential and function HTTP errors are returned immediately.
 async function invokeMobileLogin(body: {phone:string;password:string}) {
  let result = await supabase.functions.invoke("mobile-login", { body });
  if (result.error instanceof FunctionsFetchError || result.error instanceof FunctionsRelayError) {
