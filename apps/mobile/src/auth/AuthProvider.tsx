@@ -44,9 +44,7 @@ export function AuthProvider({children}:PropsWithChildren){
  // listener alive for the authenticated session only.
  useEffect(()=>{
    const userId=session?.user?.id;
-   if(!userId)return;
-   let active=true;
-   let tapSubscription:{remove:()=>void}|null=null;
+   if(!userId)return;let tapSubscription:{remove:()=>void}|null=null;
    void registerForPushNotifications(userId).catch(error=>{
      console.warn("KAMPRO push registration failed:",error);
    });
@@ -56,8 +54,7 @@ export function AuthProvider({children}:PropsWithChildren){
      console.warn("KAMPRO notification tap listener unavailable:",error);
    }
    return()=>{
-     active=false;
-     if(active===false)tapSubscription?.remove();
+     tapSubscription?.remove();
    };
  },[session?.user?.id]);
 
