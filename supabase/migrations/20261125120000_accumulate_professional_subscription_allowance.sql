@@ -229,7 +229,7 @@ begin
     raise exception 'Professional subscription is not active. Please ask the professional to renew or choose a plan.';
   end if;
 
-  select greatest(coalesce(s.connections_granted,0),p.connection_limit),p.price_inr,p.billing_interval
+  select greatest(coalesce(v_sub.connections_granted,0),p.connection_limit),p.price_inr,p.billing_interval
     into v_limit,v_price,v_interval
   from public.professional_subscription_plans p
   where p.id=v_sub.plan_id;
