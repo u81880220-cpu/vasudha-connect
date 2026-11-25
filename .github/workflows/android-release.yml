@@ -56,24 +56,7 @@ jobs:
           EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
           EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
           GOOGLE_MAPS_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
-        shell: bash
-        run: |
-          set +e
-          echo "=== Expo config diagnostic (capturing stdout/stderr) ==="
-          npx expo config --json --full > "$RUNNER_TEMP/expo-config.stdout" 2> "$RUNNER_TEMP/expo-config.stderr"
-          config_status=$?
-          echo "Expo config exit code: $config_status"
-          echo "--- Expo config stderr ---"
-          cat "$RUNNER_TEMP/expo-config.stderr"
-          echo "--- Expo config stdout (first 120 lines) ---"
-          sed -n '1,120p' "$RUNNER_TEMP/expo-config.stdout"
-          if [ "$config_status" -ne 0 ]; then
-            echo "=== Retry with Expo debug logging ==="
-            EXPO_DEBUG=1 npx expo config --json --full
-            exit "$config_status"
-          fi
-          echo "=== Expo Doctor ==="
-          npx expo-doctor
+        run: npx expo-doctor
 
       - name: Generate Android project
         working-directory: apps/mobile
