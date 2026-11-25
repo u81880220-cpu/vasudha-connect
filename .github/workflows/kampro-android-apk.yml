@@ -41,7 +41,8 @@ jobs:
           if [ -z "$GOOGLE_MAPS_ANDROID_API_KEY" ]; then
             echo "::error::Missing GitHub Actions secret GOOGLE_MAPS_ANDROID_API_KEY. Add the Android Maps API key in repository Settings > Secrets and variables > Actions."
             exit 1
-          fi\n          echo "MSG91 and Google Maps configuration is present."
+          fi
+          echo "MSG91 and Google Maps configuration is present."
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
