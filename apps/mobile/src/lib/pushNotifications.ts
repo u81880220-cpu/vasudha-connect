@@ -18,16 +18,16 @@ export async function registerForPushNotifications(userId:string){
  const current=await Notifications.getPermissionsAsync();
  let status=current.status;
  if(status!=="granted"){const asked=await Notifications.requestPermissionsAsync();status=asked.status;}
- if(status!=="granted")return null;
+ if(status!=="granted"){console.warn("KAMPRO push permission not granted:",status);return null;}
  if(Platform.OS==="android")await Notifications.setNotificationChannelAsync("default",{name:"VASUDHA CONNECT",importance:Notifications.AndroidImportance.DEFAULT,sound:"default"});
  try{
   const projectId=(Constants.expoConfig?.extra as any)?.eas?.projectId;
   const result=await Notifications.getExpoPushTokenAsync(projectId?{projectId}:undefined);
   const token=result.data;
   const{error}=await supabase.from("push_tokens").upsert({user_id:userId,token,platform:Platform.OS,updated_at:new Date().toISOString()},{onConflict:"token"});
-  if(error)return null;
+  if(error){console.warn("KAMPRO push token save failed:",error.message);return null;}
   return token;
- }catch{return null;}
+ }catch(error){console.warn("KAMPRO push token registration failed:",error);return null;}
 }
 
 export function registerNotificationTapHandler(){
