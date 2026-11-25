@@ -14,7 +14,7 @@ import { KamproLocationPicker } from "../src/components/KamproLocationPicker";
 type Professional={
   professional_id:string; display_name:string; headline:string|null; city:string|null; state:string|null;
   avatar_url:string|null; trust_score:number; verification_status:string; is_available:boolean;
-  distance_km:number; latitude:number; longitude:number; profile_completion:number; rating:number|null;
+  distance_km:number; latitude:number; longitude:number; profile_completion:number; rating:number|null; review_count:number;
   skills:{id:string;name:string;category:string;primary:boolean}[]
 };
 type Coords={latitude:number;longitude:number};
@@ -114,25 +114,17 @@ function MarketplaceScreen(){
       setSearchError("We couldn't load professionals right now. Please try again.");
     } else {
       const professionals=(data??[]) as Professional[];
-      // Match the rating calculation used on the professional dashboard.
+      // Use the same server-side aggregate for every customer. Individual reviews remain private.
       const professionalIds=professionals.map((x)=>x.professional_id);
-      let ratingsByProfessional=new Map<string,number>();
+      let ratingsByProfessional=new Map<string,{rating:number;count:number}>();
       if(professionalIds.length){
-        const {data:reviews,error:reviewsError}=await supabase
-          .from("customer_job_reviews")
-          .select("professional_id,punctuality,work_quality,professional_behaviour,communication,value_for_money,reliability,safety_care")
-          .in("professional_id",professionalIds);
-        if(!reviewsError&&reviews?.length){
-          const grouped=new Map<string,number[]>();
-          for(const review of reviews as any[]){
-            const values=["punctuality","work_quality","professional_behaviour","communication","value_for_money","reliability","safety_care"].map(key=>Number(review[key]));
-            if(values.some(value=>!Number.isFinite(value)))continue;
-            const score=values.reduce((sum,value)=>sum+value,0)/values.length;
-            const existing=grouped.get(review.professional_id)||[];
-            existing.push(score);
-            grouped.set(review.professional_id,existing);
+        const {data:ratingRows,error:ratingError}=await supabase.rpc("get_professional_rating_summary",{p_professional_ids:professionalIds});
+        if(!ratingError&&ratingRows?.length){
+          for(const row of ratingRows as any[]){
+            ratingsByProfessional.set(row.professional_id,{rating:Number(row.average_rating),count:Number(row.review_count)});
           }
-          ratingsByProfessional=new Map([...grouped].map(([id,scores])=>[id,scores.reduce((sum,value)=>sum+value,0)/scores.length]));
+        }else if(ratingError){
+          console.warn("Professional rating summary unavailable",ratingError.message);
         }
       }
       // Build search labels through explicit queries so nested PostgREST relationship names
@@ -168,7 +160,7 @@ function MarketplaceScreen(){
           }
         }
       }
-      setItems(professionals.map((professional)=>({...professional,rating:ratingsByProfessional.get(professional.professional_id)??null,skills:[...(professional.skills||[]),...(catalogueSkills.get(professional.professional_id)||[])]})));
+      setItems(professionals.map((professional)=>{const summary=ratingsByProfessional.get(professional.professional_id);return {...professional,rating:summary?.rating??null,review_count:summary?.count??0,skills:[...(professional.skills||[]),...(catalogueSkills.get(professional.professional_id)||[])]};}));
     }
     setLoading(false);
   }
@@ -200,7 +192,7 @@ function MarketplaceScreen(){
         </Pressable>
       </View>
 
-      <View style={s.searchBox}><Text style={s.searchIcon}>⌕</Text><TextInput value={query} onChangeText={setQuery} placeholder={t("searchProfessionals")} placeholderTextColor="#8B93A1" style={s.searchInput}/>{query?<Pressable onPress={()=>setQuery("")}><Text style={s.clear}>×</Text></Pressable>:null}</View>
+      <View style={s.searchBox}><Text style={s.searchIcon}>⌕</Text><TextInput value={query} onChangeText={(value)=>{setQuery(value);if(value.trim().length>0){setSelection({categoryId:null,categoryName:null,serviceId:null,serviceName:null,legacySkillId:null,subServiceId:null,subServiceName:null});}}} placeholder={t("searchProfessionals")} placeholderTextColor="#8B93A1" style={s.searchInput}/>{query?<Pressable onPress={()=>setQuery("")}><Text style={s.clear}>×</Text></Pressable>:null}</View>
       <View style={{paddingHorizontal:14,paddingTop:10}}>
         <ServicePicker value={selection} optionalSubService searchQuery={query} onChange={(next)=>{setSelection(next);setQuery("");}} title={t("chooseService")}/>
       </View>
@@ -238,7 +230,7 @@ function MarketplaceScreen(){
           <Text style={s.distance}>⌖ {item.distance_km} km away</Text>
           <View style={s.cardMetrics}>
             <View style={s.metricCard}><Text style={s.metricNumber}>{Math.round(item.trust_score)}</Text><Text style={s.metricLabel}>Trust</Text></View>
-            <View style={s.metricCard}><Text style={s.metricNumber}>{item.rating==null?"—":item.rating.toFixed(1)+"★"}</Text><Text style={s.metricLabel}>Rating</Text></View>
+            <View style={s.metricCard}><Text style={s.metricNumber}>{item.rating==null?"—":item.rating.toFixed(1)+"★"}</Text><Text style={s.metricLabel}>{item.review_count>0?`${item.review_count} ${item.review_count===1?"review":"reviews"}`:"Rating"}</Text></View>
             <View style={s.metricCard}><Text style={s.metricNumber}>{Math.max(0,Math.min(100,Math.round(item.profile_completion||0)))}%</Text><Text style={s.metricLabel}>Completion</Text></View>
           </View>
           <Text style={s.view}>View profile →</Text>
@@ -263,7 +255,7 @@ function MarketplaceScreen(){
   </SafeAreaView>;
 }
 
-function WebMap({userCoords,items,selection,selectedMapPro,onSelect}:{userCoords:Coords;items:Professional[];selection:ServiceSelection;selectedMapPro:Professional|null;onSelect:(worker:Professional)=>void}) {
+function WebMap({userCoords,items,selection,selectedMapPro,onSelect}:{userCoords:Coords;items:Professional[];selection:ServiceSelection;selectedMapPro:Professional|null;onSelect:(worker:Professional|null)=>void}) {
   return <View style={s.webMap}>
     <View style={s.mapRoadA}/><View style={s.mapRoadB}/><View style={s.mapRoadC}/>
     <View style={s.mapArea}><Text style={s.mapAreaText}>NEARBY AREA</Text></View>
@@ -275,11 +267,21 @@ function WebMap({userCoords,items,selection,selectedMapPro,onSelect}:{userCoords
         {worker.avatar_url?<Image source={{uri:worker.avatar_url}} style={s.webMarkerImage}/>:<Text style={s.webMarkerText}>{worker.display_name.slice(0,1).toUpperCase()}</Text>}
       </Pressable>
     )}
-    {selectedMapPro?<View style={s.mapPreview}><View style={{flex:1}}><Text style={s.mapPreviewName}>{selectedMapPro.display_name}</Text><Text style={s.mapPreviewMeta}>{selectedMapPro.headline||"Professional details not added"} • {selectedMapPro.distance_km} km</Text><Text style={s.mapPreviewTrust}>Trust {Math.round(selectedMapPro.trust_score)}/100</Text></View><View style={s.mapPreviewActions}><Pressable style={s.mapPreviewSecondary} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:selectedMapPro.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}><Text style={s.mapPreviewSecondaryText}>View Profile</Text></Pressable><Pressable style={s.mapPreviewPrimary} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:selectedMapPro.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}><Text style={s.mapPreviewPrimaryText}>Connect</Text></Pressable></View></View>:null}
-    <View style={s.mapLegend}>
-      <Text style={s.mapLegendTitle}>Nearby professionals</Text>
-      <Text style={s.mapLegendText}>{items.length} professionals found</Text>
-    </View>
+    {selectedMapPro?<View style={s.mapPreview}>
+      <View style={s.mapPreviewTop}>
+        <View style={s.mapPreviewAvatar}>{selectedMapPro.avatar_url?<Image source={{uri:selectedMapPro.avatar_url}} style={s.mapPreviewAvatarImage}/>:<Text style={s.mapPreviewAvatarText}>{selectedMapPro.display_name.slice(0,1).toUpperCase()}</Text>}</View>
+        <View style={{flex:1,minWidth:0}}>
+          <Text style={s.mapPreviewName} numberOfLines={1}>{selectedMapPro.display_name}</Text>
+          <Text style={s.mapPreviewMeta} numberOfLines={1}>{selectedMapPro.headline||selectedMapPro.skills?.[0]?.name||"Professional"}</Text>
+          <Text style={s.mapPreviewMeta} numberOfLines={1}>{selectedMapPro.rating==null?"No ratings yet":"★ "+selectedMapPro.rating.toFixed(1)}  ·  {selectedMapPro.distance_km} km away</Text>
+        </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close professional preview" onPress={()=>onSelect(null as any)} style={s.mapPreviewClose}><Text style={s.mapPreviewCloseText}>×</Text></Pressable>
+      </View>
+      <View style={s.mapPreviewFooter}>
+        <Text style={s.mapPreviewTrust}>{selectedMapPro.verification_status==="verified"?"✓ Verified":"Not verified"}  ·  {selectedMapPro.is_available?"Available":"Unavailable"}  ·  Trust {Math.round(selectedMapPro.trust_score)}</Text>
+        <Pressable style={s.mapPreviewPrimary} onPress={()=>router.push({pathname:"/professional-public",params:{professionalId:selectedMapPro.professional_id,subServiceId:selection.subServiceId||"",serviceId:selection.serviceId||"",serviceName:selection.serviceName||"",subServiceName:selection.subServiceName||""}})}><Text style={s.mapPreviewPrimaryText}>View profile →</Text></Pressable>
+      </View>
+    </View>:null}
   </View>;
 }
 
@@ -306,7 +308,7 @@ const s=StyleSheet.create({
   title:{fontSize:20,fontWeight:"900",color:"#10233F",lineHeight:26,flexShrink:1},subtitle:{marginTop:2,color:"#475467",fontSize:12,lineHeight:17,fontWeight:"600"},refresh:{width:42,height:42,borderRadius:21,backgroundColor:"#FFF0EA",borderWidth:1,borderColor:"#FFD3C2",alignItems:"center",justifyContent:"center"},refreshText:{fontSize:25,fontWeight:"900",color:"#D93812",lineHeight:29},
   skills:{paddingHorizontal:14,paddingVertical:10,gap:8},skill:{paddingHorizontal:12,paddingVertical:7,borderRadius:16,backgroundColor:"#f3f5f5",alignItems:"center",minWidth:66},skillSelected:{backgroundColor:"#FF4B1F"},skillText:{fontWeight:"700",color:"#10233F"},skillTextSelected:{color:"#fff"},
   searchBox:{marginHorizontal:14,marginTop:8,minHeight:52,borderWidth:1,borderColor:"#E7EAF0",borderRadius:16,backgroundColor:"#fff",flexDirection:"row",alignItems:"center",paddingHorizontal:14},searchIcon:{fontSize:22,color:"#FF4B1F"},searchInput:{flex:1,fontSize:15,color:"#172033",paddingHorizontal:9,paddingVertical:10},clear:{fontSize:24,color:"#6B7280",paddingHorizontal:4},radiusRow:{flexDirection:"row",alignItems:"center",gap:7,paddingHorizontal:16,paddingBottom:10},label:{fontWeight:"800",marginRight:3,color:"#10233F"},radius:{paddingHorizontal:11,paddingVertical:6,borderRadius:14,backgroundColor:"#f3f5f5"},radiusSelected:{backgroundColor:"#d8f4eb"},radiusText:{fontSize:12,color:"#10233F"},radiusTextSelected:{fontSize:12,fontWeight:"800",color:"#087D65"},
-  mapWrap:{marginHorizontal:12,overflow:"hidden",backgroundColor:"#e8eeee",borderRadius:18,borderWidth:1,borderColor:"#dbe7e3",minHeight:220},map:{flex:1},webMap:{flex:1,backgroundColor:"#e9f3ef",position:"relative",overflow:"hidden"},webMapTitle:{fontSize:18,fontWeight:"900",color:"#10233F"},webMapText:{marginTop:5,color:"#6B7280"},webMapWorker:{marginTop:12,backgroundColor:"#fff",borderRadius:12,padding:10,flexDirection:"row",alignItems:"center",gap:10},mapRoadA:{position:"absolute",width:"140%",height:24,backgroundColor:"#fff",top:"42%",left:"-20%",transform:[{rotate:"-8deg"}]},mapRoadB:{position:"absolute",width:"130%",height:18,backgroundColor:"#fff",top:"65%",left:"-15%",transform:[{rotate:"18deg"}]},mapRoadC:{position:"absolute",width:18,height:"120%",backgroundColor:"#fff",left:"54%",top:"-10%",transform:[{rotate:"22deg"}]},mapArea:{position:"absolute",left:"34%",top:"35%",padding:10,borderRadius:12,backgroundColor:"rgba(255,255,255,.75)"},mapAreaText:{fontSize:11,fontWeight:"900",color:"#6B7280",letterSpacing:1},webMarker:{position:"absolute",width:38,height:38,borderRadius:19,backgroundColor:"#FF4B1F",borderWidth:3,borderColor:"#fff",alignItems:"center",justifyContent:"center",elevation:5},webMarkerText:{color:"#fff",fontWeight:"900"},webMarkerImage:{width:32,height:32,borderRadius:16},avatarImage:{width:60,height:60,borderRadius:30},markerImage:{width:34,height:34,borderRadius:17},webMarkerImage:{width:32,height:32,borderRadius:16},avatarImage:{width:52,height:52,borderRadius:26},markerImage:{width:34,height:34,borderRadius:17},youMarker:{position:"absolute",left:"48%",top:"48%",width:18,height:18,borderRadius:9,backgroundColor:"#1976d2",borderWidth:4,borderColor:"#fff",alignItems:"center",justifyContent:"center"},youMarkerText:{color:"#1976d2",fontSize:8},mapLegend:{position:"absolute",left:12,bottom:12,backgroundColor:"#fff",borderRadius:14,padding:12,elevation:4},mapLegendTitle:{fontWeight:"900",color:"#10233F"},mapLegendText:{fontSize:11,color:"#475467",fontWeight:"600",marginTop:3},mapBadge:{position:"absolute",top:12,left:12,backgroundColor:"#fff",paddingHorizontal:11,paddingVertical:7,borderRadius:16,elevation:3},mapBadgeText:{fontWeight:"800",color:"#10233F"},
+  mapWrap:{marginHorizontal:12,overflow:"hidden",backgroundColor:"#e8eeee",borderRadius:18,borderWidth:1,borderColor:"#dbe7e3",minHeight:220},map:{flex:1},webMap:{flex:1,backgroundColor:"#e9f3ef",position:"relative",overflow:"hidden"},webMapTitle:{fontSize:18,fontWeight:"900",color:"#10233F"},webMapText:{marginTop:5,color:"#6B7280"},webMapWorker:{marginTop:12,backgroundColor:"#fff",borderRadius:12,padding:10,flexDirection:"row",alignItems:"center",gap:10},mapRoadA:{position:"absolute",width:"140%",height:24,backgroundColor:"#fff",top:"42%",left:"-20%",transform:[{rotate:"-8deg"}]},mapRoadB:{position:"absolute",width:"130%",height:18,backgroundColor:"#fff",top:"65%",left:"-15%",transform:[{rotate:"18deg"}]},mapRoadC:{position:"absolute",width:18,height:"120%",backgroundColor:"#fff",left:"54%",top:"-10%",transform:[{rotate:"22deg"}]},mapArea:{position:"absolute",left:"34%",top:"35%",padding:10,borderRadius:12,backgroundColor:"rgba(255,255,255,.75)"},mapAreaText:{fontSize:11,fontWeight:"900",color:"#6B7280",letterSpacing:1},webMarker:{position:"absolute",width:38,height:38,borderRadius:19,backgroundColor:"#FF4B1F",borderWidth:3,borderColor:"#fff",alignItems:"center",justifyContent:"center",elevation:5},webMarkerText:{color:"#fff",fontWeight:"900"},webMarkerImage:{width:32,height:32,borderRadius:16},avatarImage:{width:60,height:60,borderRadius:30},markerImage:{width:34,height:34,borderRadius:17},webMarkerImage:{width:32,height:32,borderRadius:16},avatarImage:{width:52,height:52,borderRadius:26},markerImage:{width:34,height:34,borderRadius:17},youMarker:{position:"absolute",left:"48%",top:"48%",width:18,height:18,borderRadius:9,backgroundColor:"#1976d2",borderWidth:4,borderColor:"#fff",alignItems:"center",justifyContent:"center"},youMarkerText:{color:"#1976d2",fontSize:8},mapPreview:{position:"absolute",left:10,right:10,bottom:10,backgroundColor:"#fff",borderRadius:16,padding:11,borderWidth:1,borderColor:"#DCE8E4",elevation:8,shadowColor:"#10233F",shadowOpacity:0.14,shadowRadius:8,shadowOffset:{width:0,height:3}},mapPreviewTop:{flexDirection:"row",alignItems:"center",gap:9},mapPreviewAvatar:{width:46,height:46,borderRadius:23,backgroundColor:"#FFF0EA",alignItems:"center",justifyContent:"center",overflow:"hidden"},mapPreviewAvatarImage:{width:46,height:46,borderRadius:23},mapPreviewAvatarText:{fontSize:18,fontWeight:"900",color:"#FF4B1F"},mapPreviewName:{fontSize:14,fontWeight:"900",color:"#10233F"},mapPreviewMeta:{fontSize:11,color:"#475467",marginTop:2},mapPreviewClose:{width:28,height:28,borderRadius:14,backgroundColor:"#F2F4F7",alignItems:"center",justifyContent:"center"},mapPreviewCloseText:{fontSize:20,color:"#475467",lineHeight:22},mapPreviewFooter:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",gap:8,marginTop:9},mapPreviewTrust:{fontSize:10,fontWeight:"800",color:"#087D65",flex:1},mapPreviewPrimary:{backgroundColor:"#FF4B1F",borderRadius:10,paddingHorizontal:13,paddingVertical:8},mapPreviewPrimaryText:{fontSize:12,fontWeight:"900",color:"#fff"},mapLegend:{position:"absolute",left:12,bottom:12,backgroundColor:"#fff",borderRadius:14,padding:12,elevation:4},mapLegendTitle:{fontWeight:"900",color:"#10233F"},mapLegendText:{fontSize:11,color:"#475467",fontWeight:"600",marginTop:3},mapBadge:{position:"absolute",top:12,left:12,backgroundColor:"#fff",paddingHorizontal:11,paddingVertical:7,borderRadius:16,elevation:3},mapBadgeText:{fontWeight:"800",color:"#10233F"},
   marker:{width:42,height:42,borderRadius:21,borderWidth:3,borderColor:"#fff",backgroundColor:"#FF4B1F",alignItems:"center",justifyContent:"center",elevation:4},markerText:{color:"#fff",fontWeight:"900",fontSize:15},
   callout:{width:190,padding:6},calloutName:{fontWeight:"800",fontSize:15,color:"#10233F"},calloutLink:{fontWeight:"900",marginTop:5,color:"#075E4D"},loadingOverlay:{position:"absolute",inset:0,backgroundColor:"rgba(255,255,255,.72)",alignItems:"center",justifyContent:"center"},loadingText:{marginTop:8,fontWeight:"700",color:"#10233F"},
   locationEmpty:{flex:1,alignItems:"center",justifyContent:"center",padding:30},locationTitle:{fontSize:18,fontWeight:"800",color:"#10233F",marginBottom:6},locationButton:{marginTop:14,backgroundColor:"#FF4B1F",paddingHorizontal:18,paddingVertical:11,borderRadius:12},locationButtonText:{color:"#fff",fontWeight:"800"},

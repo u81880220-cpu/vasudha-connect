@@ -1,9 +1,11 @@
 name: KAMPRO Android APK Build
+# Rebuild for approved map-first professional preview feature.
+# Rebuild after compact ServicePicker layout correction (APK 68 baseline).
 
 on:
   workflow_dispatch:
   push:
-    branches: [main, feature/customer-location-and-auth-ux]
+    branches: [main, feature/customer-location-and-auth-ux, fix/apk68-compact-service-picker]
     paths:
       - "apps/mobile/**"
       - ".github/workflows/kampro-android-apk.yml"
@@ -77,3 +79,11 @@ jobs:
           path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
           retention-days: 14
+
+# Rebuild for removal of overlapping map legend; preserve APK 68 baseline.
+
+# Rebuild APK after active-mode role guard for unlock and job creation.
+
+# Build includes consistent public aggregate professional ratings and APK 68 upgrade version code.
+
+# Build includes automatic HEIC/HEIF to JPEG conversion for completed-work photos.

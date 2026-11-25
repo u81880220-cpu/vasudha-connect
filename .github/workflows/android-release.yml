@@ -3,7 +3,7 @@ name: KAMPRO Android Release
 
 on:
   push:
-    branches: [main]
+    branches: [fix/apk68-compact-service-picker]
     paths:
       - "apps/mobile/**"
       - "package.json"
@@ -17,10 +17,10 @@ jobs:
     timeout-minutes: 35
 
     steps:
-      - name: Checkout latest main
+      - name: Checkout latest KAMPRO testing branch
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: fix/apk68-compact-service-picker
           fetch-depth: 1
 
       - name: Show source commit

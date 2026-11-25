@@ -6,8 +6,10 @@ import { useLocalSearchParams, router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { ServicePicker, ServiceSelection } from "../src/components/ServicePicker";
 import { KAMPRO } from "../src/components/kamproTheme";
+import { useAuth } from "../src/auth/AuthProvider";
 
 export default function ServiceRequest(){
+ const{mode,setMode}=useAuth();
  const raw=useLocalSearchParams<{professionalId?:string;serviceId?:string|string[];subServiceId?:string|string[];serviceName?:string|string[];subServiceName?:string|string[]}>();
  const first=(v?:string|string[])=>Array.isArray(v)?v[0]:v;
  const professionalId=first(raw.professionalId)||"";
@@ -141,6 +143,7 @@ export default function ServiceRequest(){
   }
  }
 
+ if(mode==="professional")return <SafeAreaView style={s.safe}><View style={s.container}><VasudhaLogo compact/><Text style={s.title}>Switch to Customer mode</Text><Text style={s.muted}>Creating a job request is available only in Customer mode. Switch modes to continue.</Text><Pressable style={s.primary} onPress={async()=>{try{await setMode("customer");router.replace("/marketplace");}catch(e:any){Alert.alert("Unable to switch mode",e?.message||"Please try again.");}}}><Text style={s.primaryText}>Switch to Customer mode</Text></Pressable></View></SafeAreaView>;
  return <SafeAreaView style={s.safe}><KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS==="ios"?"padding":"height"}><ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
   <VasudhaLogo compact/><Text style={s.title}>Create Job Request</Text>
   <Text style={s.muted}>Your professional and selected service are carried forward automatically. Only the service is required; the remaining details are optional.</Text>
