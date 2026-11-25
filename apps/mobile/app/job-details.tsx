@@ -50,6 +50,7 @@ export default function JobDetails(){
   Alert.alert("Cancel this job?","Cancellation is allowed before work starts. If work has already started, use Report a Problem instead.",[{text:"Keep Job",style:"cancel"},{text:"Cancel Job",style:"destructive",onPress:async()=>{const{error}=await supabase.rpc("cancel_job",{p_job_id:job.id,p_reason:"Cancelled by participant"});if(error)Alert.alert("Unable to cancel",error.message);else{Alert.alert("Job cancelled","The other participant has been notified.",[{text:"OK",onPress:load}]);}}}]);
  }
  if(!jobId)return <SafeAreaView style={{flex:1,backgroundColor:"#fff",padding:24,justifyContent:"center"}}><Text style={{fontSize:22,fontWeight:"900",color:"#10233F"}}>No job selected</Text><Text style={{marginTop:8,color:"#475467"}}>Open a job from My Jobs to view its details.</Text><Pressable onPress={()=>router.replace("/jobs")} style={{marginTop:16,padding:14,backgroundColor:"#FF4B1F",borderRadius:12,alignItems:"center"}}><Text style={{color:"#fff",fontWeight:"900"}}>Back to My Jobs</Text></Pressable></SafeAreaView>;
+ // Completed and cancelled jobs are read-only: hide contact, location actions and tracking.
  const isLiveJob=!!job&&["worker_accepted","on_the_way","arrived","work_started"].includes(String(job.status));
  return <KamproPage>
    <KamproHeader title="Job Details" back onBack={()=>router.back()}/>
