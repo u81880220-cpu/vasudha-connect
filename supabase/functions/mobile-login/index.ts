@@ -43,7 +43,7 @@ Deno.serve(async (req: Request) => {
   const phone = normalizePhone(body.phone);
   const password = typeof body.password === "string" ? body.password : "";
   if (!phone) return json({ error: "Enter a valid Indian mobile number" }, 400);
-  if (password.length < 8 || password.length > 128) return json({ error: "Incorrect mobile number or password" }, 401);
+  if (password.length < 6 || password.length > 128) return json({ error: "Incorrect mobile number or password" }, 401);
 
   // Find the existing Auth user by phone. The service-role key stays on the server.
   let matchedUser: Record<string, unknown> | null = null;
