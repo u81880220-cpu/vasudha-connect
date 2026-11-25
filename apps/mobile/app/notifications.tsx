@@ -17,11 +17,15 @@ export default function Notifications(){
  async function load(){if(!user){setLoading(false);return;}setLoading(true);const {data,error}=await supabase.from("notifications").select("*").eq("user_id",user.id).order("created_at",{ascending:false}).limit(50);if(error)Alert.alert("Unable to load notifications",error.message);else setItems(data||[]);setLoading(false);}
  async function read(id:string){const{error}=await supabase.rpc("mark_notification_read",{p_id:id});if(error){Alert.alert("Unable to mark notification",error.message);return;}setItems(x=>x.map(n=>n.id===id?{...n,read_at:new Date().toISOString()}:n));}
  async function openNotification(n:any){
-  await read(n.id);
-  const d=n.data||{};
-  if(d.conversation_id){router.push({pathname:"/chat",params:{conversationId:d.conversation_id}});return;}
-  if(d.complaint_id){router.push({pathname:"/complaints",params:{complaintId:d.complaint_id}});return;}
-  if(d.job_id){router.push({pathname:"/job-details",params:{jobId:d.job_id}});return;}
+  // Marking a notification read must never block navigation to its destination.
+  if(n?.id) void read(String(n.id));
+  const d=n?.data && typeof n.data==="object" ? n.data : {};
+  const conversationId=typeof d.conversation_id==="string"?d.conversation_id.trim():"";
+  const complaintId=typeof d.complaint_id==="string"?d.complaint_id.trim():"";
+  const jobId=typeof d.job_id==="string"?d.job_id.trim():"";
+  if(conversationId){router.push({pathname:"/chat",params:{conversationId}});return;}
+  if(complaintId){router.push({pathname:"/complaints",params:{complaintId}});return;}
+  if(jobId){router.push({pathname:"/job-details",params:{jobId}});return;}
   if(d.request_id){router.push(mode==="professional"?"/professional-dashboard":"/customer-dashboard");return;}
  }
  const tabItems=tab==="All"?items:tab==="Unread"?items.filter(n=>!n.read_at):tab==="Messages"?items.filter(n=>n.type==="message"):items.filter(n=>n.type==="job");
