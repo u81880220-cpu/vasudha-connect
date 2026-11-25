@@ -15,7 +15,13 @@ export default function ProfessionalPublic(){
  async function load(){
   if(!professionalId)return;
   const{data:{user:currentUser}}=await supabase.auth.getUser();
-  setIsOwnProfile(!!currentUser?.id && currentUser.id===professionalId);\n  // Record each genuine customer profile opening. The database sends a renewal nudge\n  // only when this professional has no currently active subscription.\n  if(currentUser?.id && currentUser.id!==professionalId && mode==="customer"){\n   const {error:visitError}=await supabase.rpc("record_professional_profile_visit",{p_professional_id:professionalId});\n   if(visitError)console.warn("KAMPRO profile visit tracking unavailable:",visitError.message);\n  }
+  setIsOwnProfile(!!currentUser?.id && currentUser.id===professionalId);
+  // Record each genuine customer profile opening. The database sends a renewal nudge
+  // only when this professional has no currently active subscription.
+  if(currentUser?.id && currentUser.id!==professionalId && mode==="customer"){
+   const {error:visitError}=await supabase.rpc("record_professional_profile_visit",{p_professional_id:professionalId});
+   if(visitError)console.warn("KAMPRO profile visit tracking unavailable:",visitError.message);
+  }
   const[{data:p,error:e},{data:b},{data:eligibilityResult,error:eligibilityError}]=await Promise.all([
    supabase.rpc("get_professional_public_profile",{p_professional_id:professionalId}),
    supabase.rpc("get_connection_balance"),
