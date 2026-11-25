@@ -63,7 +63,7 @@ export default function JobDetails(){
     {isLiveJob?<View style={s.mapCard}><Text style={s.mapCardTitle}>Service location</Text><Text style={s.mapCardText}>{privateData?.location_text||request?.location_text||"Location shared with the participants"}</Text><Text style={s.mapCardHint}>Open the location in Google Maps using the button below. The in-app native map preview is disabled on this screen to prevent Android crashes.</Text></View>:null}
     {isLiveJob?<><View style={s.actions}><Pressable style={s.secondary} onPress={call}><Text style={s.secondaryText}>Call</Text></Pressable><Pressable style={s.primary} onPress={openChat}><Text style={s.primaryText}>Message</Text></Pressable></View><Pressable style={s.navigate} onPress={navigate}><Text style={s.navigateText}>{mode==="professional"?"Navigate to Customer →":"View Service Location →"}</Text></Pressable></>:null}
     {["worker_accepted","on_the_way","arrived"].includes(job.status)?<Pressable style={s.cancel} onPress={cancelJob}><Text style={s.cancelText}>Cancel Job</Text></Pressable>:null}
-    {job.status!=="cancelled"?<Pressable style={s.track} onPress={()=>router.push({pathname:"/job-tracking",params:{jobId}})}><Text style={s.trackText}>Track Job →</Text></Pressable>:null}
+    {isLiveJob?<Pressable style={s.track} onPress={()=>router.push({pathname:"/job-tracking",params:{jobId}})}><Text style={s.trackText}>Track Job →</Text></Pressable>:null}
    </>}
  </KamproPage>;
 }
