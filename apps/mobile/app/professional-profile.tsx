@@ -23,7 +23,7 @@ export default function ProfessionalProfile(){
  
  const[phone,setPhone]=useState("");const[phone2,setPhone2]=useState("");const[fullName,setFullName]=useState("");const[avatarUrl,setAvatarUrl]=useState<string|null>(null);const[identityUploaded,setIdentityUploaded]=useState(false);
  const[port,setPort]=useState({title:"",description:"",media_url:""}),[portfolioItems,setPortfolioItems]=useState<any[]>([]),[portfolioBusy,setPortfolioBusy]=useState(false),[selectedPortfolioImage,setSelectedPortfolioImage]=useState<{uri:string;name:string}|null>(null),[baseLocation,setBaseLocation]=useState<{latitude:number;longitude:number}|null>(null),[loading,setLoading]=useState(true),[saving,setSaving]=useState(false),[locationLabel,setLocationLabel]=useState(""),[saveMessage,setSaveMessage]=useState<{type:"success"|"error";text:string}|null>(null);
- const missingRequirements=[!fullName.trim()||fullName.trim().length<2?"Professional name":!phone.trim()?"Mobile number":!selectedSubServices.length?"Service selection":!baseLocation?"Location":!identityUploaded?"Identity document upload":null].filter(Boolean) as string[];
+ const missingRequirements=[!fullName.trim()||fullName.trim().length<2?"Professional name":null,!phone.trim()?"Mobile number":null,!selectedSubServices.length?"Service selection":null,!baseLocation?"Location":null,!identityUploaded?"Identity document upload":null].filter(Boolean) as string[];
  useFocusEffect(useCallback(()=>{if(uid)void load();},[uid]));
  async function load(){
   setLoading(true);
