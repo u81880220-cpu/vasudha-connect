@@ -1,6 +1,7 @@
 import { Session } from "@supabase/supabase-js";
 import { createContext, PropsWithChildren, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { registerForPushNotifications, registerNotificationTapHandler } from "../lib/pushNotifications";
 
 type AppMode="customer"|"professional";
 type AuthContextValue={session:Session|null;user:Session["user"]|null;loading:boolean;mode:AppMode;setMode:(mode:AppMode)=>Promise<void>;signOut:()=>Promise<void>};
@@ -37,6 +38,28 @@ export function AuthProvider({children}:PropsWithChildren){
      listener.subscription.unsubscribe();
    };
  },[]);
+
+ // Register the device token after session restore and every successful login.
+ // The push helper also installs the foreground sound handler. Keep the tap
+ // listener alive for the authenticated session only.
+ useEffect(()=>{
+   const userId=session?.user?.id;
+   if(!userId)return;
+   let active=true;
+   let tapSubscription:{remove:()=>void}|null=null;
+   void registerForPushNotifications(userId).catch(error=>{
+     console.warn("KAMPRO push registration failed:",error);
+   });
+   try{
+     tapSubscription=registerNotificationTapHandler();
+   }catch(error){
+     console.warn("KAMPRO notification tap listener unavailable:",error);
+   }
+   return()=>{
+     active=false;
+     if(active===false)tapSubscription?.remove();
+   };
+ },[session?.user?.id]);
 
  async function loadMode(_userId:string,registeredMode?:unknown){
    // Always restore the account's registration role after login. Never infer the default from current_mode,
