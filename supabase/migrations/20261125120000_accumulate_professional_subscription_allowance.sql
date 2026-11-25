@@ -289,3 +289,59 @@ revoke all on function public.create_professional_subscription_payment_order(uui
 grant execute on function public.create_professional_subscription_payment_order(uuid) to authenticated;
 revoke all on function public.finalize_professional_subscription_payment(uuid,text,text,text) from public,anon,authenticated;
 grant execute on function public.finalize_professional_subscription_payment(uuid,text,text,text) to service_role;
+
+
+-- Keep the free-plan renewal path consistent with the explicit allowance field.
+create or replace function public.activate_free_professional_subscription(p_plan_id uuid)
+returns uuid language plpgsql security definer set search_path=public as $function$
+declare
+  v_user uuid:=auth.uid();
+  v_plan public.professional_subscription_plans%rowtype;
+  v_sub uuid; v_end timestamptz; v_current_end timestamptz;
+begin
+  if v_user is null then raise exception 'Unauthorized'; end if;
+  if not exists(select 1 from public.user_roles where user_id=v_user and role='professional') then
+    raise exception 'Professional account required';
+  end if;
+
+  select * into v_plan from public.professional_subscription_plans
+  where id=p_plan_id and status='active' and price_inr=0 limit 1;
+  if v_plan.id is null then raise exception 'Free subscription plan not found'; end if;
+
+  select s.id,s.current_period_end into v_sub,v_current_end
+  from public.professional_subscriptions s
+  where s.professional_id=v_user and s.status in ('trial','active','past_due')
+  order by s.created_at desc limit 1 for update of s;
+
+  if v_sub is not null and v_current_end>now() then
+    raise exception 'Your current subscription period is still active';
+  end if;
+
+  v_end:=case v_plan.billing_interval
+    when 'monthly' then now()+interval '1 month'
+    when 'two_months' then now()+interval '2 months'
+    when 'quarterly' then now()+interval '3 months'
+    when 'annual' then now()+interval '1 year'
+    else null end;
+  if v_end is null then raise exception 'Unsupported subscription duration'; end if;
+
+  if v_sub is not null then
+    update public.professional_subscriptions
+    set plan_id=v_plan.id,status='active',provider='system',
+        provider_order_id='free_'||gen_random_uuid()::text,provider_payment_id='free',
+        started_at=now(),current_period_start=now(),current_period_end=v_end,
+        connections_used=0,connections_granted=v_plan.connection_limit,
+        cancelled_at=null,updated_at=now()
+    where id=v_sub;
+  else
+    insert into public.professional_subscriptions(
+      professional_id,plan_id,status,provider,provider_order_id,provider_payment_id,
+      started_at,current_period_start,current_period_end,connections_used,connections_granted
+    ) values(
+      v_user,v_plan.id,'active','system','free_'||gen_random_uuid()::text,'free',
+      now(),now(),v_end,0,v_plan.connection_limit
+    ) returning id into v_sub;
+  end if;
+  return v_sub;
+end;
+$function$;
