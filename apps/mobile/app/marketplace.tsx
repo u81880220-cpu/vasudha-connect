@@ -71,7 +71,7 @@ function MarketplaceScreen(){
   const visibleItems=[...searchedItems].filter(x=>(!verifiedOnly||x.verification_status==="verified")&&(!availableOnly||x.is_available)&&(Math.round(x.trust_score)/20)>=minRating).sort((a,b)=>{const tw=Number(marketplaceConfig?.trust_weight??0.5),dw=Number(marketplaceConfig?.distance_weight??0.3),aw=Number(marketplaceConfig?.availability_weight??0.2);const score=(x:any)=>tw*(Number(x.trust_score||0)/100)+dw*(1/(1+Number(x.distance_km||0)))+aw*(x.is_available?1:0);return score(b)-score(a)});
 
   useEffect(()=>{(async()=>{const{data}=await supabase.rpc("marketplace_configuration");const cfg=data||{};setMarketplaceConfig(cfg);setRadius(Math.min(Number(cfg.default_radius_km||25),Number(cfg.max_radius_km||50)));setMinRating(Number(cfg.min_rating||0));})();},[]);
-  useEffect(()=>{let active=true;(async()=>{const shared=await getKamproLocation();if(!active)return;if(shared){const coords={latitude:shared.latitude,longitude:shared.longitude};setUserCoords(coords);setSearchCenter(coords);setLocationLabel(shared.label);cachedMarketplaceLocation={coords,label:shared.label,manual:shared.manual};setLoading(false);void searchProfessionals(coords);}else if(cachedMarketplaceLocation){setUserCoords(cachedMarketplaceLocation.coords);setSearchCenter(cachedMarketplaceLocation.coords);setLocationLabel(cachedMarketplaceLocation.label);setLoading(false);void searchProfessionals(cachedMarketplaceLocation.coords);}else{void requestLocation();}})();return()=>{active=false};},[]);
+  useEffect(()=>{let active=true;(async()=>{const shared=await getKamproLocation();if(!active)return;if(shared){const coords={latitude:shared.latitude,longitude:shared.longitude};setUserCoords(coords);setSearchCenter(coords);setLocationLabel(shared.label);cachedMarketplaceLocation={coords,label:shared.label,manual:shared.manual};setLoading(false);}else if(cachedMarketplaceLocation){setUserCoords(cachedMarketplaceLocation.coords);setSearchCenter(cachedMarketplaceLocation.coords);setLocationLabel(cachedMarketplaceLocation.label);setLoading(false);void searchProfessionals(cachedMarketplaceLocation.coords);}else{void requestLocation();}})();return()=>{active=false};},[]);
   useEffect(()=>{if(searchCenter) searchProfessionals(searchCenter);},[selection.categoryId,selection.serviceId,selection.subServiceId,radius,searchCenter]);
   useEffect(()=>{if(!searchCenter||query.trim().length===0)return;const timer=setTimeout(()=>{void searchProfessionals(searchCenter);},250);return()=>clearTimeout(timer);},[query,searchCenter]);
   async function requestLocation(){
@@ -83,7 +83,7 @@ function MarketplaceScreen(){
       setUserCoords(coords);setSearchCenter(coords);setPendingMapCenter(null);setLocationLabel(point.label);
       cachedMarketplaceLocation={coords,label:point.label,manual:false};
       await setKamproLocation({...point,manual:false});
-      await searchProfessionals(coords);
+
     }catch(e:any){
       setLocationLabel("Unable to detect location");
       setLocationError(e?.message||"GPS could not detect your location. Search manually.");
@@ -296,10 +296,9 @@ function NativeMap({userCoords,mapCenter,items,selection,onRegionSettled}:{userC
   const Marker=Maps.Marker;
   const Callout=Maps.Callout;
   const regionTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
-  const initialRegionEvent=useRef(true);
   useEffect(()=>()=>{if(regionTimer.current)clearTimeout(regionTimer.current);},[]);
   function handleRegionChange(region:any){
-    if(initialRegionEvent.current){initialRegionEvent.current=false;return;}
+    if(Math.abs(region.latitude-mapCenter.latitude)<0.001 && Math.abs(region.longitude-mapCenter.longitude)<0.001)return;
     if(regionTimer.current)clearTimeout(regionTimer.current);
     regionTimer.current=setTimeout(()=>onRegionSettled({latitude:region.latitude,longitude:region.longitude}),650);
   }
