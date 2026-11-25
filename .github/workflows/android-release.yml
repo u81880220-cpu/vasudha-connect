@@ -56,7 +56,11 @@ jobs:
           EXPO_PUBLIC_MSG91_TOKEN_AUTH: ${{ secrets.EXPO_PUBLIC_MSG91_TOKEN_AUTH }}
           EXPO_PUBLIC_MSG91_WIDGET_ID: ${{ secrets.EXPO_PUBLIC_MSG91_WIDGET_ID }}
           GOOGLE_MAPS_ANDROID_API_KEY: ${{ secrets.GOOGLE_MAPS_ANDROID_API_KEY }}
-        run: npx expo-doctor
+        run: |
+          echo "=== Expo config diagnostic ==="
+          npx expo config --json --full
+          echo "=== Expo Doctor ==="
+          npx expo-doctor
 
       - name: Generate Android project
         working-directory: apps/mobile
