@@ -43,7 +43,9 @@ function MarketplaceScreen(){
   const[loading,setLoading]=useState(true);
   const searchRequestRef=useRef(0);
   const[searchError,setSearchError]=useState("");
-  const[userCoords,setUserCoords]=useState<Coords|null>(cachedMarketplaceLocation?.coords??null);\n  const[searchCenter,setSearchCenter]=useState<Coords|null>(cachedMarketplaceLocation?.coords??null);\n  const[pendingMapCenter,setPendingMapCenter]=useState<Coords|null>(null);
+  const[userCoords,setUserCoords]=useState<Coords|null>(cachedMarketplaceLocation?.coords??null);
+  const[searchCenter,setSearchCenter]=useState<Coords|null>(cachedMarketplaceLocation?.coords??null);
+  const[pendingMapCenter,setPendingMapCenter]=useState<Coords|null>(null);
   const[radius,setRadius]=useState(25);
   const[filtersOpen,setFiltersOpen]=useState(false);
   const[locationPickerOpen,setLocationPickerOpen]=useState(false);
