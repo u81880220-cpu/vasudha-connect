@@ -296,8 +296,10 @@ function NativeMap({userCoords,mapCenter,items,selection,onRegionSettled}:{userC
   const Marker=Maps.Marker;
   const Callout=Maps.Callout;
   const regionTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  const initialRegionEvent=useRef(true);
   useEffect(()=>()=>{if(regionTimer.current)clearTimeout(regionTimer.current);},[]);
   function handleRegionChange(region:any){
+    if(initialRegionEvent.current){initialRegionEvent.current=false;return;}
     if(regionTimer.current)clearTimeout(regionTimer.current);
     regionTimer.current=setTimeout(()=>onRegionSettled({latitude:region.latitude,longitude:region.longitude}),650);
   }
