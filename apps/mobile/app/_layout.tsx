@@ -1,10 +1,14 @@
 import React from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View, Text, Pressable, ScrollView } from "react-native";
+import { StyleSheet, View, Text, Pressable, ScrollView, AppState } from "react-native";
+import { useEffect } from "react";
+import * as Location from "expo-location";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AuthProvider } from "../src/auth/AuthProvider";
 import { LanguageProvider } from "../src/i18n/LanguageProvider";
+import { useAuth } from "../src/auth/AuthProvider";
+import { supabase } from "../src/lib/supabase";
 
 export const unstable_settings = { anchor: "index" };
 
@@ -47,11 +51,56 @@ class AppErrorBoundary extends React.Component<React.PropsWithChildren, Boundary
   }
 }
 
+function ProfessionalLiveLocationSync(){
+  const {session,mode}=useAuth();
+  useEffect(()=>{
+    const userId=session?.user?.id;
+    if(!userId||mode==="professional")return;
+    let active=true,updating=false,permissionRequested=false;
+    async function refresh(){
+      if(!active||updating||AppState.currentState!=="active")return;
+      updating=true;
+      try{
+        const {data:profile,error:profileError}=await supabase
+          .from("professional_profiles")
+          .select("is_available")
+          .eq("user_id",userId)
+          .maybeSingle();
+        if(profileError||!profile?.is_available)return;
+        const permission=permissionRequested
+          ? await Location.getForegroundPermissionsAsync()
+          : await Location.requestForegroundPermissionsAsync();
+        permissionRequested=true;
+        if(permission.status!=="granted")return;
+        if(!(await Location.hasServicesEnabledAsync()))return;
+        const position=await Promise.race([
+          Location.getCurrentPositionAsync({accuracy:Location.Accuracy.Balanced}),
+          new Promise<never>((_,reject)=>setTimeout(()=>reject(new Error("GPS timeout")),12000))
+        ]);
+        if(!active)return;
+        const {error}=await supabase.rpc("update_professional_marketplace_location",{
+          p_latitude:position.coords.latitude,
+          p_longitude:position.coords.longitude
+        });
+        if(error)throw error;
+      }catch(error){
+        console.warn("KAMPRO professional live-location refresh skipped; registered service location remains fallback.",error);
+      }finally{updating=false;}
+    }
+    void refresh();
+    const interval=setInterval(()=>{void refresh();},120000);
+    const subscription=AppState.addEventListener("change",state=>{if(state==="active")void refresh();});
+    return()=>{active=false;clearInterval(interval);subscription.remove();};
+  },[session?.user?.id,mode]);
+  return null;
+}
+
 export default function RootLayout(){
   return (
     <LanguageProvider>
       <AuthProvider>
         <StatusBar style="dark" hidden={false} />
+        <ProfessionalLiveLocationSync />
         <View style={s.webRoot}>
           <AppErrorBoundary>
             <Stack screenOptions={{headerShown:false}} />
