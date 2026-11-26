@@ -55,7 +55,7 @@ function ProfessionalLiveLocationSync(){
   const {session,mode}=useAuth();
   useEffect(()=>{
     const userId=session?.user?.id;
-    if(!userId||mode==="professional")return;
+    if(!userId)return;
     let active=true,updating=false,permissionRequested=false;
     async function refresh(){
       if(!active||updating||AppState.currentState!=="active")return;
