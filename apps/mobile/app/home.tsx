@@ -66,7 +66,7 @@ function CurrentLocationBar(){
  const[locationText,setLocationText]=useState("Detecting your location…");
  const[loadingLocation,setLoadingLocation]=useState(false);
  const[modalOpen,setModalOpen]=useState(false);
- useEffect(()=>{let active=true;(async()=>{const saved=await getKamproLocation();if(active&&saved){setLocationText(saved.label);}else if(active){try{const point=await getCurrentKamproLocation();if(!active)return;setLocationText(point.label);await setKamproLocation({...point,manual:false});}catch{}}})();return()=>{active=false};},[]);
+ useEffect(()=>{let active=true;(async()=>{const saved=await getKamproLocation();if(!active)return;if(saved?.manual){setLocationText(saved.label+" · selected");return;}try{const point=await getCurrentKamproLocation();if(!active)return;setLocationText(point.label);await setKamproLocation({...point,manual:false});}catch{if(active&&saved)setLocationText("Using saved location · "+saved.label);else if(active)setLocationText("Location unavailable · tap GPS or choose an area");}})();return()=>{active=false};},[]);
  async function detectLocation(){
   if(loadingLocation)return;
   setLoadingLocation(true);
