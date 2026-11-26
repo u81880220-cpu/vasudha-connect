@@ -197,10 +197,9 @@ export async function getCurrentKamproLocation(): Promise<{ latitude: number; lo
   if (status !== "granted") throw new Error("Allow location permission in Android settings, or search for your area manually.");
   const enabled = await Location.hasServicesEnabledAsync();
   if (!enabled) throw new Error("Turn on your phone's Location/GPS setting and try again.");
-  const last = await Location.getLastKnownPositionAsync({ maxAge: 120000, requiredAccuracy: 1500 }).catch(() => null);
-  const position = last || await Promise.race([
+  const position = await Promise.race([
     Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
-    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("GPS is taking too long. Try again or search for your area manually.")), 12000))
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("GPS is taking too long. Try again or use your saved location.")), 12000))
   ]);
   const latitude = position.coords.latitude, longitude = position.coords.longitude;
   let label = "Current location";
