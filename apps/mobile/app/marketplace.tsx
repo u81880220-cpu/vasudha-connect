@@ -19,6 +19,8 @@ type Professional={
 };
 type Coords={latitude:number;longitude:number};
 
+function distanceLabel(distanceKm:number){return distanceKm<=1?"Within 1 km":`About ${Math.round(distanceKm)} km away`; }
+
 const MAP_HEIGHT=Math.min(Math.max(Math.round(Dimensions.get("window").height*0.30),220),300);
 let cachedMarketplaceLocation:{coords:Coords;label:string;manual:boolean}|null=null;
 
@@ -232,7 +234,7 @@ function MarketplaceScreen(){
             </View>
             {item.verification_status==="verified"?<Text style={s.verified}>✓</Text>:null}
           </View>
-          <Text style={s.distance}>⌖ {item.distance_km} km away</Text>
+          <Text style={s.distance}>⌖ {distanceLabel(item.distance_km)}</Text>
           <View style={s.cardMetrics}>
             <View style={s.metricCard}><Text style={s.metricNumber}>{Math.round(item.trust_score)}</Text><Text style={s.metricLabel}>Trust</Text></View>
             <View style={s.metricCard}><Text style={s.metricNumber}>{item.rating==null?"—":item.rating.toFixed(1)+"★"}</Text><Text style={s.metricLabel}>{item.review_count>0?`${item.review_count} ${item.review_count===1?"review":"reviews"}`:"Rating"}</Text></View>
@@ -278,7 +280,7 @@ function WebMap({userCoords,items,selection,selectedMapPro,onSelect}:{userCoords
         <View style={{flex:1,minWidth:0}}>
           <Text style={s.mapPreviewName} numberOfLines={1}>{selectedMapPro.display_name}</Text>
           <Text style={s.mapPreviewMeta} numberOfLines={1}>{selectedMapPro.headline||selectedMapPro.skills?.[0]?.name||"Professional"}</Text>
-          <Text style={s.mapPreviewMeta} numberOfLines={1}>{selectedMapPro.rating==null?"No ratings yet":"★ "+selectedMapPro.rating.toFixed(1)}  ·  {selectedMapPro.distance_km} km away</Text>
+          <Text style={s.mapPreviewMeta} numberOfLines={1}>{selectedMapPro.rating==null?"No ratings yet":"★ "+selectedMapPro.rating.toFixed(1)}  ·  {distanceLabel(selectedMapPro.distance_km)}</Text>
         </View>
         <Pressable accessibilityRole="button" accessibilityLabel="Close professional preview" onPress={()=>onSelect(null as any)} style={s.mapPreviewClose}><Text style={s.mapPreviewCloseText}>×</Text></Pressable>
       </View>
